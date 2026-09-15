@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<div class="panel"><h1>تأیید شماره</h1><p>کد ارسال‌شده برای {{phone}}</p><form method="post">{% csrf_token %}<input name="code" inputmode="numeric" maxlength="6" placeholder="کد ۶ رقمی" required><button class="btn">تأیید و ورود</button></form></div>{% endblock %}

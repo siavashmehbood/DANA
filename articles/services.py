@@ -1,0 +1,56 @@
+import logging
+import threading
+
+from django.db import close_old_connections
+
+from .models import Article
+from .translation import download_article_pdf, extract_pdf_text, translate_article
+
+logger = logging.getLogger(__name__)
+_processing = set()
+_processing_lock = threading.Lock()
+
+
+def _process_article(article_id):
+    try:
+        close_old_connections()
+        article = Article.objects.get(pk=article_id)
+        if not article.published:
+            return
+        if not article.pdf and article.pdf_url:
+            try:
+                download_article_pdf(article)
+            except Exception as exc:
+                logger.info('PDF unavailable for article %s: %s', article_id, exc)
+        if article.pdf and not article.full_text:
+            try:
+                text = extract_pdf_text(article)
+                if text:
+                    article.full_text = text
+                    article.save(update_fields=['full_text', 'updated_at'])
+            except Exception as exc:
+                logger.info('PDF extraction failed for article %s: %s', article_id, exc)
+        translate_article(article, full_text=True)
+    except Article.DoesNotExist:
+        return
+    except Exception:
+        logger.exception('Automatic article processing failed for %s', article_id)
+    finally:
+        close_old_connections()
+        with _processing_lock:
+            _processing.discard(article_id)
+
+
+def schedule_article_processing(article_id):
+    with _processing_lock:
+        if article_id in _processing:
+            return False
+        _processing.add(article_id)
+    worker = threading.Thread(
+        target=_process_article,
+        args=(article_id,),
+        name=f'article-processing-{article_id}',
+        daemon=True,
+    )
+    worker.start()
+    return True

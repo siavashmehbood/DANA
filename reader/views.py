@@ -1,0 +1,95 @@
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import JsonResponse, HttpResponseForbidden
+from django.views.decorators.http import require_POST
+from books.models import Book
+from shop.models import Entitlement
+from .models import ReadingProgress, Bookmark, Note, SavedWord
+from gamification.services import record_study_activity
+
+
+def _has_access(user, book):
+    return book.visibility == 'public' or Entitlement.objects.filter(user=user, book=book).exists()
+
+
+@login_required
+def reader(request, pk):
+    book = get_object_or_404(Book, pk=pk)
+    owned = Entitlement.objects.filter(user=request.user, book=book).exists()
+    accessible = _has_access(request.user, book)
+    saved = ReadingProgress.objects.filter(user=request.user, book=book).first()
+    bookmarks = Bookmark.objects.filter(user=request.user, book=book).order_by('page')
+    notes = Note.objects.filter(user=request.user, book=book).order_by('-created_at')
+    return render(request, 'reader/reader.html', {'book': book, 'owned': owned, 'accessible': accessible, 'saved': saved, 'bookmarks': bookmarks, 'notes': notes})
+
+
+@login_required
+@require_POST
+def progress(request, pk):
+    book = get_object_or_404(Book, pk=pk)
+    if not _has_access(request.user, book): return HttpResponseForbidden('Access denied')
+    try:
+        value=max(0,min(100,float(request.POST.get('progress',0)))); page=max(0,int(request.POST.get('page',0)))
+        seconds=max(0,int(request.POST.get('seconds',0))); audio_seconds=max(0,int(request.POST.get('audio_seconds',0)))
+        chapter_id=request.POST.get('chapter_id') or None
+    except (TypeError,ValueError): return JsonResponse({'error':'Invalid progress data'},status=400)
+    saved,_=ReadingProgress.objects.get_or_create(user=request.user,book=book); saved.progress=value; saved.current_page=page; saved.seconds=seconds; saved.audio_seconds=audio_seconds
+    if chapter_id: saved.current_chapter_id=chapter_id
+    saved.save()
+    if seconds or audio_seconds:
+        record_study_activity(request.user)
+    return JsonResponse({'ok':True,'progress':float(saved.progress),'page':saved.current_page,'audio_seconds':saved.audio_seconds})
+
+
+@login_required
+def bookmark(request, pk):
+    book=get_object_or_404(Book,pk=pk)
+    if not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
+    if request.method=='POST':
+        try: page=max(0,int(request.POST.get('page',0)))
+        except (TypeError,ValueError): return JsonResponse({'error':'Invalid page'},status=400)
+        item=Bookmark.objects.create(user=request.user,book=book,page=page,title=request.POST.get('title','')[:150])
+        return JsonResponse({'ok':True,'id':item.id,'page':item.page,'title':item.title})
+    return JsonResponse({'items':list(Bookmark.objects.filter(user=request.user,book=book).values('id','page','title'))})
+
+
+@login_required
+def note(request, pk):
+    book=get_object_or_404(Book,pk=pk)
+    if not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
+    if request.method=='POST':
+        try: page=max(0,int(request.POST.get('page',0)))
+        except (TypeError,ValueError): return JsonResponse({'error':'Invalid page'},status=400)
+        text=request.POST.get('text','').strip()[:5000]
+        if not text: return JsonResponse({'error':'Note is empty'},status=400)
+        item=Note.objects.create(user=request.user,book=book,page=page,text=text)
+        return JsonResponse({'ok':True,'id':item.id,'page':item.page,'text':item.text})
+    return JsonResponse({'items':list(Note.objects.filter(user=request.user,book=book).values('id','page','text'))})
+
+
+@login_required
+@require_POST
+def save_word(request, slug):
+    from articles.models import Article
+    import re
+    article=get_object_or_404(Article,slug=slug,published=True)
+    word=re.sub(r'\s+',' ',request.POST.get('word','').strip())
+    if not word: return JsonResponse({'ok':False,'error':'کلمه یا عبارت خالی است.'},status=400)
+    if len(word)>180: return JsonResponse({'ok':False,'error':'کلمه یا عبارت بیش از حد طولانی است.'},status=400)
+    item,created=SavedWord.objects.get_or_create(user=request.user,normalized_word=word.casefold(),defaults={'word':word,'article':article})
+    if not created and not item.article_id: item.article=article; item.save(update_fields=['article'])
+    return JsonResponse({'ok':True,'created':created,'id':item.id,'word':item.word})
+
+
+@login_required
+def vocabulary(request):
+    query=request.GET.get('q','').strip()
+    words=SavedWord.objects.filter(user=request.user).select_related('article')
+    if query: words=words.filter(word__icontains=query)
+    return render(request,'reader/vocabulary.html',{'words':words,'query':query})
+
+
+@login_required
+@require_POST
+def delete_word(request, pk):
+    item=get_object_or_404(SavedWord,pk=pk,user=request.user); item.delete(); return redirect('reader_vocabulary')

@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="panel">
+<h1>فاکتور سفارش</h1>
+<p>کد پیگیری: <strong>{{ order.tracking_code }}</strong></p>
+<p>وضعیت: <strong>{{ order.get_status_display }}</strong></p>
+<p>تاریخ: {{ order.created_at }}</p>
+<div class="stats">
+<div>مبلغ کالاها<br><b>{{ order.subtotal }}</b></div>
+<div>تخفیف<br><b>{{ order.discount }}</b></div>
+<div>مالیات ۱۰٪<br><b>{{ order.tax }}</b></div>
+<div>مبلغ نهایی<br><b>{{ order.total }}</b></div>
+</div>
+<h2>کتاب‌ها</h2>
+{% for item in order.items.all %}
+<div class="card" style="margin:8px 0;padding:12px">{{ item.book.name }} — {{ item.price }}</div>
+{% endfor %}
+<a class="btn" href="/shop/wallet/">تاریخچه کیف پول</a>
+</div>
+{% endblock %}

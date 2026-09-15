@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}لغات من | DANA{% endblock %}
+{% block content %}
+<section class="section vocabulary-page">
+  <div class="section-title"><div><h1>لغات من</h1><p class="muted">کلمه‌ها و عبارت‌هایی که هنگام مطالعه ذخیره کرده‌ای.</p></div></div>
+  <form class="reader-search" method="get"><input name="q" value="{{ query }}" placeholder="جست‌وجو در لغات من..."><button class="btn" type="submit">جست‌وجو</button></form>
+  {% if words %}
+  <div class="vocabulary-list">
+    {% for item in words %}
+    <article class="vocabulary-item">
+      <div><h3>{{ item.word }}</h3><p class="muted">{% if item.meaning_fa %}{{ item.meaning_fa }}{% else %}معنی فارسی هنوز ثبت نشده است{% endif %}</p>{% if item.article %}<a href="{% url 'article_detail' item.article.slug %}">مطالعه منبع</a>{% endif %}</div>
+      <form method="post" action="{% url 'reader_delete_word' item.pk %}">{% csrf_token %}<button class="btn danger" type="submit">حذف</button></form>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}<div class="empty-state">هنوز کلمه‌ای ذخیره نکرده‌ای.</div>{% endif %}
+</section>
+{% endblock %}

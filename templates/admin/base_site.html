@@ -1,0 +1,14 @@
+{% extends "admin/base.html" %}
+{% load static %}
+{% block title %}مدیریت دانا{% endblock %}
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/admin-dana.css' %}?v=fa-admin-4">
+<link rel="stylesheet" href="{% static 'css/admin-final.css' %}?v=sidebar-1">
+{% endblock %}
+{% block branding %}
+<div class="dana-admin-brand"><span class="dana-logo">✦</span><div><strong>دانا</strong><small>مرکز مدیریت</small></div></div>
+{% endblock %}
+{% block nav-global %}
+<div class="dana-admin-toplinks"><a href="/">مشاهده سایت</a><a href="/admin/articles/article/add/">＋ افزودن مقاله</a><a href="/admin/articles/article/">مقالات</a><a href="/admin/">داشبورد</a><span>مدیریت هوشمند کتابخانه</span></div>
+{% endblock %}
+{% block footer %}<div class="dana-admin-footer">دانا · کتابخانه هوشمند شما</div>{% endblock %}

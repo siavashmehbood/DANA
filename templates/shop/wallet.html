@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}کیف پول | دانا{% endblock %}
+{% block content %}
+<section class="section wallet-page">
+  <div class="cart-head"><div><span class="shelf-label">حساب مالی</span><h1>کیف پول من</h1><p>موجودی و گردش مالی حساب شما</p></div><a class="btn secondary" href="/books/">خرید کتاب</a></div>
+  <div class="wallet-hero">
+    <div><span>موجودی فعلی</span><strong>{{ user.wallet_balance }} تومان</strong></div>
+    <div class="wallet-icon">◈</div>
+  </div>
+  <div class="panel wallet-transactions">
+    <div class="section-title"><div><h2>تراکنش‌ها</h2><p>آخرین گردش‌های کیف پول</p></div></div>
+    {% for tx in transactions %}
+    <div class="wallet-row">
+      <div><b>{{ tx.reason }}</b><small>{{ tx.created_at|date:'Y/m/d - H:i' }}</small></div>
+      <strong class="wallet-{{ tx.type }}">{% if tx.type == 'debit' %}−{% else %}+{% endif %} {{ tx.amount }} تومان</strong>
+    </div>
+    {% empty %}<div class="empty">هنوز تراکنشی برای کیف پول ثبت نشده است.</div>{% endfor %}
+  </div>
+</section>
+{% endblock %}

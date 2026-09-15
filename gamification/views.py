@@ -1,0 +1,48 @@
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.db.models import Sum
+from django.utils import timezone
+from datetime import timedelta
+from accounts.models import User
+from .models import GamificationLevel
+
+PERIODS=[('week','این هفته'),('month','این ماه'),('year','امسال')]
+METRICS=[('level','لول'),('study_hours','ساعت مطالعه'),('admin_score','امتیاز مدیر')]
+
+def level_for(user):
+    row=GamificationLevel.objects.filter(active=True,min_xp__lte=user.xp).order_by('-min_xp').first()
+    return row.order if row else max(1,getattr(user,'level',1))
+
+def period_start(period):
+    now=timezone.now()
+    if period=='week': return now-timedelta(days=7)
+    if period=='month': return now-timedelta(days=30)
+    return now-timedelta(days=365)
+
+def metric_value(user,metric,start):
+    if metric=='level': return level_for(user)
+    if metric=='study_hours':
+        try:
+            from reader.models import ReadingProgress
+            seconds=ReadingProgress.objects.filter(user=user,updated_at__gte=start).aggregate(v=Sum('seconds'))['v'] or 0
+            return round(seconds/3600,1)
+        except Exception: return 0
+    try:
+        from reader.models import Review
+        return Review.objects.filter(user=user,created_at__gte=start,admin_score__isnull=False).aggregate(v=Sum('admin_score'))['v'] or 0
+    except Exception: return 0
+
+@login_required
+def leaderboard(request):
+    period=request.GET.get('period','week')
+    metric=request.GET.get('metric','level')
+    if period not in dict(PERIODS): period='week'
+    if metric not in dict(METRICS): metric='level'
+    start=period_start(period)
+    people=User.objects.filter(is_active=True,leaderboard_public=True)
+    rows=[{'user':u,'level':level_for(u),'value':metric_value(u,metric,start)} for u in people]
+    rows.sort(key=lambda x:(x['value'],x['user'].xp),reverse=True)
+    visible=rows[:10]
+    mine=next((x for x in rows if x['user'].pk==request.user.pk),None)
+    rank=rows.index(mine)+1 if mine else 0
+    return render(request,'gamification/leaderboard.html',{'users':visible,'rank':rank,'my_value':mine['value'] if mine else 0,'period':period,'metric':metric,'periods':PERIODS,'metrics':METRICS})

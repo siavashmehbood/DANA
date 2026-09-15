@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="panel">
+<h1>پروفایل من</h1>
+<form method="post" enctype="multipart/form-data">
+{% csrf_token %}
+{% if user.avatar %}<img src="{{ user.avatar.url }}" alt="تصویر پروفایل" style="width:72px;height:72px;border-radius:50%;object-fit:cover">{% endif %}
+<input name="avatar" type="file" accept="image/*">
+<input name="first_name" value="{{user.first_name}}" placeholder="نام">
+<input name="last_name" value="{{user.last_name}}" placeholder="نام خانوادگی">
+<input name="email" type="email" value="{{user.email}}" placeholder="ایمیل">
+<input name="new_password" type="password" minlength="8" placeholder="رمز جدید (اختیاری)">
+<button class="btn">ذخیره تغییرات</button>
+</form>
+<div class="stats">
+<div>کیف پول<br><b>{{user.wallet_balance}}</b></div>
+<div>XP<br><b>{{user.xp}}</b></div>
+<div>Level<br><b>{{user.level}}</b></div>
+<div>معرفی<br><b>{{user.referral_code}}</b></div>
+</div>
+<h2>دستگاه‌ها و نشست‌ها</h2>
+{% for session in login_sessions %}
+<div class="panel" style="margin:8px 0;padding:12px">
+<b>{{ session.device.name|default:"دستگاه" }}</b><br>
+<small>{{ session.ip|default:"-" }} · {{ session.last_seen }}</small>
+{% if session.session_key == request.session.session_key %}<strong> · این دستگاه</strong>{% endif %}
+</div>
+{% empty %}<p>نشستی ثبت نشده است.</p>{% endfor %}
+<form method="post" action="/logout-others/">{% csrf_token %}<button class="btn">خروج از دستگاه‌های دیگر</button></form>
+<a href="/deactivate/" class="danger-link">غیرفعال‌سازی حساب</a>
+</div>
+{% endblock %}

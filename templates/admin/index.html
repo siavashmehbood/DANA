@@ -1,0 +1,38 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+{% block content %}
+<div class="dana-dashboard-head">
+  <div><span class="eyebrow">DANA ADMIN</span><h1>خوش آمدید 👋</h1><p>مدیریت کتابخانه و فروش در یک نگاه</p></div>
+  <a class="dana-site-btn" href="/">↗ مشاهده سایت</a>
+</div>
+<div class="dana-kpi-grid">
+  <div class="dana-kpi"><span>👥</span><div><small>کاربران</small><b>{{ dana_stats.users }}</b></div></div>
+  <div class="dana-kpi"><span>📚</span><div><small>کتاب‌های منتشرشده</small><b>{{ dana_stats.books }}</b></div></div>
+  <div class="dana-kpi"><span>🛒</span><div><small>سفارش‌های پرداخت‌شده</small><b>{{ dana_stats.orders }}</b></div></div>
+  <div class="dana-kpi"><span>💰</span><div><small>فروش کل</small><b>{{ dana_stats.revenue|floatformat:0 }} تومان</b></div></div>
+</div>
+<div class="dana-mini-grid">
+  <div class="dana-mini"><span>🧠 مقالات منتشرشده</span><strong>{{ dana_stats.articles }}</strong></div>
+  <div class="dana-mini"><span>✅ ترجمه عنوان و چکیده</span><strong>{{ dana_stats.translated_articles }}</strong></div>
+  <div class="dana-mini"><span>📖 متن کامل فارسی</span><strong>{{ dana_stats.fulltext_articles }}</strong></div>
+  <div class="dana-mini"><span>📄 PDF دریافت‌شده</span><strong>{{ dana_stats.pdf_articles }}</strong></div>
+  <div class="dana-mini"><span>📅 فروش امروز</span><strong>{{ dana_stats.today_revenue|floatformat:0 }} تومان</strong></div>
+  <div class="dana-mini"><span>⏳ سفارش‌های در انتظار</span><strong>{{ dana_stats.pending_orders }}</strong></div>
+</div>
+<div class="dana-admin-section-title"><h2>بخش‌های مدیریت</h2><p>برای ورود به هر بخش، گزینه موردنظر را انتخاب کنید.</p></div>
+<div class="dana-app-grid">
+{% for app in app_list %}
+<section class="dana-app-card">
+  <div class="dana-app-head"><div class="dana-app-icon">✦</div><h2>{{ app.name }}</h2></div>
+  <div class="dana-model-list">
+  {% for model in app.models %}
+    <div class="dana-model-row"><a href="{{ model.admin_url }}">{{ model.name }}</a><div>
+      {% if model.add_url %}<a class="dana-add" href="{{ model.add_url }}">＋ افزودن</a>{% endif %}
+      {% if model.admin_url %}<a class="dana-open" href="{{ model.admin_url }}">مدیریت ←</a>{% endif %}
+    </div></div>
+  {% empty %}<p class="dana-muted">موردی برای نمایش نیست.</p>{% endfor %}
+  </div>
+</section>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}رتبه‌بندی | دانا{% endblock %}
+{% block content %}
+<section class="section">
+<div class="center"><span class="pill" style="background:#ede9fe;color:#5142d5">DANA LEADERBOARD</span><h1>تالار افتخار</h1><p class="muted">پیشرفتت را ببین و با جامعه دانا همراه شو.</p></div>
+<div class="tabs center">
+{% for p,label in periods %}<a class="btn {% if period == p %}secondary{% endif %}" href="?period={{p}}&metric={{metric}}">{{label}}</a>{% endfor %}
+</div>
+<div class="tabs center">
+{% for m,label in metrics %}<a class="btn {% if metric == m %}secondary{% endif %}" href="?period={{period}}&metric={{m}}">{{label}}</a>{% endfor %}
+</div>
+<div class="panel">
+{% for item in users %}<div class="rank"><strong>{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}{{forloop.counter}}{% endif %}</strong><span><b>{{item.user.first_name|default:item.user.username}}</b><small class="muted"> · لول {{item.level}}</small></span><b>{{item.value}}</b></div>{% empty %}<div class="empty">هنوز داده‌ای برای رتبه‌بندی وجود ندارد.</div>{% endfor %}
+<p class="my-rank">رتبه شما: <b>{{rank}}</b> <span class="muted"> · امتیاز: {{my_value}}</span></p>
+</div></section>
+{% endblock %}

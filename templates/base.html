@@ -1,0 +1,30 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d0d16">
+<meta name="description" content="دانا؛ کتابخانه هوشمند برای مطالعه و یادگیری">
+<link rel="manifest" href="{% url 'pwa_manifest' %}">
+<title>{% block title %}DANA | کتابخانه هوشمند{% endblock %}</title>
+<link rel="stylesheet" href="{% static 'css/app.css' %}?v=panel-final-3">
+<link rel="stylesheet" href="{% static 'css/theme-final.css' %}?v=2">
+</head>
+<body>
+<header><nav class="main-nav">
+<a class="brand" href="/">دانا</a>
+<div class="header-search"><form action="/books/" method="get"><input name="q" placeholder="جستجوی کتاب، نویسنده یا موضوع..."><button type="submit">⌕</button></form></div>
+<div class="header-links">
+<a href="/dashboard/">داشبورد من</a><a href="/books/">کتابخانه</a><a href="/articles/">مقالات</a>
+{% if user.is_authenticated %}<a href="/reader/vocabulary/">لغات من</a><a href="/gamification/leaderboard/">رتبه‌بندی</a><a href="/notifications/">اعلان‌ها</a><a href="/support/">پشتیبانی</a><a href="/shop/wallet/">کیف پول</a><a href="/profile/">پروفایل</a>{% if user.is_staff %}<a class="admin-link" href="/admin/">⚙ مدیریت</a>{% endif %}{% endif %}
+</div>
+<div class="header-auth">{% if user.is_authenticated %}<a class="auth-action" href="/logout/">خروج</a>{% else %}<a class="auth-action" href="/login/">ورود / ثبت‌نام</a>{% endif %}</div>
+</nav></header>
+{% for m in messages %}<div class="msg">{{ m }}</div>{% endfor %}
+<main>{% block content %}{% endblock %}</main>
+<button class="top" id="top" aria-label="بازگشت به بالا">↑</button>
+<script src="{% static 'js/app.js' %}"></script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('{% url 'service_worker' %}').catch(()=>{}));}</script>
+</body>
+</html>
