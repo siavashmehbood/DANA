@@ -25,7 +25,7 @@ from .translation import (
 def listing(request):
     query = request.GET.get('q', '').strip()
     category = request.GET.get('category', '').strip()
-    sort = request.GET.get('sort', 'newest').strip()
+    sort = request.GET.get('sort', 'top').strip()
     saved_only = request.GET.get('saved') == '1' and request.user.is_authenticated
     articles = Article.objects.filter(published=True).select_related('category')
     if saved_only:
@@ -41,12 +41,14 @@ def listing(request):
     if category:
         articles = articles.filter(category__slug=category)
     if sort == 'popular':
-        articles = articles.order_by('-downloads', '-year', '-created_at')
+        articles = articles.order_by('-downloads', '-citation_count', '-relevance_score', '-year', '-created_at')
+    elif sort == 'top':
+        articles = articles.order_by('-relevance_score', '-citation_count', '-downloads', '-year', '-created_at')
     elif sort == 'oldest':
         articles = articles.order_by('year', 'created_at')
     else:
         articles = articles.order_by('-created_at')
-    paginator = Paginator(articles, 20)
+    paginator = Paginator(articles, 100)
     page_obj = paginator.get_page(request.GET.get('page', 1))
     for article in page_obj.object_list:
         article.display_title = article.title_fa or rough_translate(article.title)
