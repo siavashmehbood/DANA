@@ -1,39 +1,39 @@
-﻿{% load static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0b0b12">
-<meta name="description" content="Ø¯Ø§Ù†Ø§Ø› Ú©ØªØ§Ø¨Ø®Ø§Ù†Ù‡ Ø¯ÛŒØ¬ÛŒØªØ§Ù„ Ø¨Ø±Ø§ÛŒ Ø®Ø±ÛŒØ¯ØŒ Ù…Ø·Ø§Ù„Ø¹Ù‡ Ùˆ ÛŒØ§Ø¯Ú¯ÛŒØ±ÛŒ.">
-<meta property="og:site_name" content="Ø¯Ø§Ù†Ø§">
+<meta name="description" content="دانا؛ کتابخانه دیجیتال برای خرید، مطالعه و یادگیری.">
+<meta property="og:site_name" content="دانا">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Ø¯Ø§Ù†Ø§ | Ú©ØªØ§Ø¨Ø®Ø§Ù†Ù‡ Ø¯ÛŒØ¬ÛŒØªØ§Ù„">
-<meta property="og:description" content="Ú©ØªØ§Ø¨â€ŒÙ‡Ø§ÛŒ Ø¯ÛŒØ¬ÛŒØªØ§Ù„ Ùˆ ØµÙˆØªÛŒ Ø±Ø§ Ú©Ø´ÙØŒ Ø®Ø±ÛŒØ¯ Ùˆ Ù…Ø·Ø§Ù„Ø¹Ù‡ Ú©Ù†.">
+<meta property="og:title" content="دانا | کتابخانه دیجیتال">
+<meta property="og:description" content="کتاب‌های دیجیتال و صوتی را کشف، خرید و مطالعه کن.">
 <link rel="canonical" href="{{ request.build_absolute_uri }}">
 <link rel="manifest" href="{% url 'pwa_manifest' %}">
-<title>{% block title %}Ø¯Ø§Ù†Ø§ | Ú©ØªØ§Ø¨Ø®Ø§Ù†Ù‡ Ø¯ÛŒØ¬ÛŒØªØ§Ù„{% endblock %}</title>
+<title>{% block title %}دانا | کتابخانه دیجیتال{% endblock %}</title>
 <link rel="stylesheet" href="{% static 'css/app.css' %}?v=panel-final-3">
 <link rel="stylesheet" href="{% static 'css/theme-final.css' %}?v=2">
 <link rel="stylesheet" href="{% static 'css/ui-overhaul.css' %}?v=2">
 </head>
 <body class="page-enter">
-<a class="skip-link" href="#main-content">Ù¾Ø±Ø´ Ø¨Ù‡ Ù…Ø­ØªÙˆØ§ÛŒ Ø§ØµÙ„ÛŒ</a>
-<header class="site-header"><nav class="main-nav" aria-label="Ù†Ø§ÙˆØ¨Ø±ÛŒ Ø§ØµÙ„ÛŒ">
-<a class="brand" href="/" aria-label="Ø¯Ø§Ù†Ø§ØŒ ØµÙØ­Ù‡ Ø§ØµÙ„ÛŒ">Ø¯Ø§Ù†Ø§</a>
-<div class="header-search"><form action="/books/" method="get"><input name="q" placeholder="Ø¬Ø³ØªØ¬ÙˆÛŒ Ú©ØªØ§Ø¨ØŒ Ù†ÙˆÛŒØ³Ù†Ø¯Ù‡ ÛŒØ§ Ù…ÙˆØ¶ÙˆØ¹..." aria-label="Ø¬Ø³ØªØ¬ÙˆÛŒ Ú©ØªØ§Ø¨"><button type="submit" aria-label="Ø¬Ø³ØªØ¬Ùˆ">âŒ•</button></form></div>
+<a class="skip-link" href="#main-content">پرش به محتوای اصلی</a>
+<header class="site-header"><nav class="main-nav" aria-label="ناوبری اصلی">
+<a class="brand" href="/" aria-label="دانا، صفحه اصلی">دانا</a>
+<div class="header-search"><form action="/books/" method="get"><input name="q" placeholder="جستجوی کتاب، نویسنده یا موضوع..." aria-label="جستجوی کتاب"><button type="submit" aria-label="جستجو">⌕</button></form></div>
 <div class="header-links">
-<a href="/">Ø®Ø§Ù†Ù‡</a><a href="/books/">Ú©ØªØ§Ø¨Ø®Ø§Ù†Ù‡</a><a href="/articles/">Ù…Ù‚Ø§Ù„Ø§Øª</a>
-{% if user.is_authenticated %}<a href="/dashboard/">Ø¯Ø§Ø´Ø¨ÙˆØ±Ø¯</a><a href="/library/">Ú©ØªØ§Ø¨Ø®Ø§Ù†Ù‡ Ù…Ù†</a><a href="/gamification/leaderboard/">Ø±ØªØ¨Ù‡â€ŒØ¨Ù†Ø¯ÛŒ</a>{% endif %}
+<a href="/">خانه</a><a href="/books/">کتابخانه</a><a href="/articles/">مقالات</a>
+{% if user.is_authenticated %}<a href="/dashboard/">داشبورد</a><a href="/library/">کتابخانه من</a><a href="/gamification/leaderboard/">رتبه‌بندی</a>{% endif %}
 </div>
-{% if user.is_authenticated %}<details class="header-more"><summary>Ø¨ÛŒØ´ØªØ±</summary><div class="header-more-menu"><a href="/notifications/">Ø§Ø¹Ù„Ø§Ù†â€ŒÙ‡Ø§</a><a href="/support/">Ù¾Ø´ØªÛŒØ¨Ø§Ù†ÛŒ</a><a href="/shop/wallet/">Ú©ÛŒÙ Ù¾ÙˆÙ„</a><a href="/shop/cart/" class="header-cart">Ø³Ø¨Ø¯ Ø®Ø±ÛŒØ¯</a><a href="/profile/">Ù¾Ø±ÙˆÙØ§ÛŒÙ„</a>{% if user.is_staff %}<a class="admin-link" href="/admin/">âš™ Ù…Ø¯ÛŒØ±ÛŒØª</a>{% endif %}<a href="/logout/">Ø®Ø±ÙˆØ¬</a></div></details>{% endif %}
-<div class="header-auth">{% if user.is_authenticated %}<a class="auth-action" href="/profile/" aria-label="Ù¾Ø±ÙˆÙØ§ÛŒÙ„ Ú©Ø§Ø±Ø¨Ø±ÛŒ">Ù¾Ø±ÙˆÙØ§ÛŒÙ„</a>{% else %}<a class="auth-action" href="/login/">ÙˆØ±ÙˆØ¯ / Ø«Ø¨Øªâ€ŒÙ†Ø§Ù…</a>{% endif %}</div>
+{% if user.is_authenticated %}<details class="header-more"><summary>بیشتر</summary><div class="header-more-menu"><a href="/notifications/">اعلان‌ها</a><a href="/support/">پشتیبانی</a><a href="/shop/wallet/">کیف پول</a><a href="/shop/cart/" class="header-cart">سبد خرید</a><a href="/profile/">پروفایل</a>{% if user.is_staff %}<a class="admin-link" href="/admin/">⚙ مدیریت</a>{% endif %}<a href="/logout/">خروج</a></div></details>{% endif %}
+<div class="header-auth">{% if user.is_authenticated %}<a class="auth-action" href="/profile/" aria-label="پروفایل کاربری">پروفایل</a>{% else %}<a class="auth-action" href="/login/">ورود / ثبت‌نام</a>{% endif %}</div>
 </nav></header>
 {% for m in messages %}<div class="msg">{{ m }}</div>{% endfor %}
 <main id="main-content">{% block content %}{% endblock %}</main>
-<footer class="dana-footer"><div class="dana-footer-inner"><div><a class="dana-footer-brand" href="/">âœ¦ Ø¯Ø§Ù†Ø§</a><p>Ú©ØªØ§Ø¨ØŒ Ù…Ø·Ø§Ù„Ø¹Ù‡ Ùˆ ÛŒØ§Ø¯Ú¯ÛŒØ±ÛŒØ› Ø¯Ø± ÛŒÚ© ØªØ¬Ø±Ø¨Ù‡ ÛŒÚ©Ù¾Ø§Ø±Ú†Ù‡.</p></div><div class="dana-footer-links"><a href="/books/">Ú©ØªØ§Ø¨Ø®Ø§Ù†Ù‡</a><a href="/articles/">Ù…Ù‚Ø§Ù„Ø§Øª</a><a href="/support/">Ù¾Ø´ØªÛŒØ¨Ø§Ù†ÛŒ</a><a href="/">Ø¯Ø±Ø¨Ø§Ø±Ù‡ Ø¯Ø§Ù†Ø§</a></div><div class="dana-footer-copy">Â© Ø¯Ø§Ù†Ø§ Â· Ú©ØªØ§Ø¨Ø®Ø§Ù†Ù‡ Ø¯ÛŒØ¬ÛŒØªØ§Ù„</div></div></footer>
+<footer class="dana-footer"><div class="dana-footer-inner"><div><a class="dana-footer-brand" href="/">✦ دانا</a><p>کتاب، مطالعه و یادگیری؛ در یک تجربه یکپارچه.</p></div><div class="dana-footer-links"><a href="/books/">کتابخانه</a><a href="/articles/">مقالات</a><a href="/support/">پشتیبانی</a><a href="/">درباره دانا</a></div><div class="dana-footer-copy">© دانا · کتابخانه دیجیتال</div></div></footer>
 <div class="toast-stack" aria-live="polite"></div>
-<button class="top" id="top" aria-label="Ø¨Ø§Ø²Ú¯Ø´Øª Ø¨Ù‡ Ø¨Ø§Ù„Ø§">â†‘</button>
+<button class="top" id="top" aria-label="بازگشت به بالا">↑</button>
 <script src="{% static 'js/app.js' %}"></script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('{% url 'service_worker' %}').catch(()=>{}));}</script>
 </body>

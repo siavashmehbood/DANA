@@ -38,7 +38,7 @@ def protected_book_pdf(request, pk):
 
 
 def pwa_manifest(request):
-    return JsonResponse({'name': 'Ø¯Ø§Ù†Ø§ | Ú©ØªØ§Ø¨Ø®Ø§Ù†Ù‡ Ù‡ÙˆØ´Ù…Ù†Ø¯', 'short_name': 'Ø¯Ø§Ù†Ø§', 'lang': 'fa', 'dir': 'rtl', 'start_url': '/', 'scope': '/', 'display': 'standalone', 'background_color': '#0b1020', 'theme_color': '#0b1020', 'icons': [{'src': '/static/img/icon.svg', 'sizes': 'any', 'type': 'image/svg+xml', 'purpose': 'any maskable'}]})
+    return JsonResponse({'name': 'دانا | کتابخانه هوشمند', 'short_name': 'دانا', 'lang': 'fa', 'dir': 'rtl', 'start_url': '/', 'scope': '/', 'display': 'standalone', 'background_color': '#0b1020', 'theme_color': '#0b1020', 'icons': [{'src': '/static/img/icon.svg', 'sizes': 'any', 'type': 'image/svg+xml', 'purpose': 'any maskable'}]})
 
 
 def service_worker(request):
