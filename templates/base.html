@@ -12,23 +12,25 @@
 <meta property="og:description" content="کتاب‌های دیجیتال و صوتی را کشف، خرید و مطالعه کن.">
 <link rel="canonical" href="{{ request.build_absolute_uri }}">
 <link rel="manifest" href="{% url 'pwa_manifest' %}">
-<title>{% block title %}DANA | کتابخانه هوشمند{% endblock %}</title>
+<title>{% block title %}دانا | کتابخانه دیجیتال{% endblock %}</title>
 <link rel="stylesheet" href="{% static 'css/app.css' %}?v=panel-final-3">
-<link rel="stylesheet" href="{% static 'css/theme-final.css' %}?v=4">
+<link rel="stylesheet" href="{% static 'css/theme-final.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/ui-overhaul.css' %}?v=1">
 </head>
 <body class="page-enter">
 <a class="skip-link" href="#main-content">پرش به محتوای اصلی</a>
 <header><nav class="main-nav">
 <a class="brand" href="/">دانا</a>
-<div class="header-search"><form action="/books/" method="get"><input name="q" placeholder="جستجوی کتاب، نویسنده یا موضوع..."><button type="submit">⌕</button></form></div>
+<div class="header-search"><form action="/books/" method="get"><input name="q" placeholder="جستجوی کتاب، نویسنده یا موضوع..." aria-label="جستجوی کتاب"><button type="submit" aria-label="جستجو">⌕</button></form></div>
 <div class="header-links">
-<a href="/dashboard/">داشبورد من</a><a href="/books/">کتابخانه</a><a href="/articles/">مقالات</a>
-{% if user.is_authenticated %}<a href="/reader/vocabulary/">لغات من</a><a href="/gamification/leaderboard/">رتبه‌بندی</a><a href="/notifications/">اعلان‌ها</a><a href="/support/">پشتیبانی</a><a href="/shop/wallet/">کیف پول</a><a href="/shop/cart/" class="header-cart">سبد خرید</a><a href="/profile/">پروفایل</a>{% if user.is_staff %}<a class="admin-link" href="/admin/">⚙ مدیریت</a>{% endif %}{% endif %}
+<a href="/">خانه</a><a href="/books/">کتابخانه</a><a href="/articles/">مقالات</a>
+{% if user.is_authenticated %}<a href="/dashboard/">داشبورد</a><a href="/gamification/leaderboard/">رتبه‌بندی</a><a href="/notifications/">اعلان‌ها</a><a href="/support/">پشتیبانی</a><a href="/shop/wallet/">کیف پول</a><a href="/shop/cart/" class="header-cart">سبد خرید</a><a href="/profile/">پروفایل</a>{% if user.is_staff %}<a class="admin-link" href="/admin/">⚙ مدیریت</a>{% endif %}{% endif %}
 </div>
 <div class="header-auth">{% if user.is_authenticated %}<a class="auth-action" href="/logout/">خروج</a>{% else %}<a class="auth-action" href="/login/">ورود / ثبت‌نام</a>{% endif %}</div>
 </nav></header>
 {% for m in messages %}<div class="msg">{{ m }}</div>{% endfor %}
 <main id="main-content">{% block content %}{% endblock %}</main>
+<footer class="dana-footer"><div class="dana-footer-inner"><div><a class="dana-footer-brand" href="/">✦ دانا</a><p>کتاب، مطالعه و یادگیری؛ در یک تجربه یکپارچه.</p></div><div class="dana-footer-links"><a href="/books/">کتابخانه</a><a href="/articles/">مقالات</a><a href="/support/">پشتیبانی</a><a href="/">درباره دانا</a></div><div class="dana-footer-copy">© دانا · کتابخانه دیجیتال</div></div></footer>
 <div class="toast-stack" aria-live="polite"></div>
 <button class="top" id="top" aria-label="بازگشت به بالا">↑</button>
 <script src="{% static 'js/app.js' %}"></script>
