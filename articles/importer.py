@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import re
+import time
 from datetime import datetime, timezone
 
 import requests
@@ -16,11 +17,29 @@ S2_URL = 'https://api.semanticscholar.org/graph/v1/paper/search'
 ARXIV_URL = 'https://export.arxiv.org/api/query'
 
 
-def _get(url, *, params=None, headers=None, timeout=25):
-    response = requests.get(url, params=params, headers=headers, timeout=timeout)
-    response.raise_for_status()
-    return response
-
+def _get(url, *, params=None, headers=None, timeout=25, retries=3):
+    last_error = None
+    for attempt in range(retries):
+        try:
+            response = requests.get(url, params=params, headers=headers, timeout=timeout)
+            if response.status_code == 429:
+                retry_after = response.headers.get("Retry-After")
+                try:
+                    delay = min(float(retry_after), 30.0) if retry_after else min(2 ** attempt, 30.0)
+                except (TypeError, ValueError):
+                    delay = min(2 ** attempt, 30.0)
+                time.sleep(delay)
+                last_error = requests.HTTPError("429 rate limited", response=response)
+                continue
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt < retries - 1:
+                time.sleep(min(2 ** attempt, 8))
+    if last_error:
+        raise last_error
+    raise RuntimeError("request failed")
 
 def _norm(value):
     return re.sub(r'\s+', ' ', (value or '').strip().lower())
