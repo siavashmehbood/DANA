@@ -97,22 +97,42 @@ def checkout(request):
         total = subtotal - discount + tax
         with transaction.atomic():
             user = User.objects.select_for_update().get(pk=request.user.pk)
+            locked_items = list(
+                CartItem.objects.select_for_update()
+                .filter(user=user)
+                .select_related('book')
+            )
+            items = [
+                item for item in locked_items
+                if not Entitlement.objects.filter(user=user, book=item.book).exists()
+            ]
+            if not items:
+                return redirect('cart')
+            subtotal = sum((item.book.price for item in items), Decimal(0))
+            discount = Decimal(0)
+            if coupon:
+                locked_coupon = Coupon.objects.select_for_update().get(pk=coupon.pk)
+                if (
+                    not locked_coupon.active
+                    or locked_coupon.used >= locked_coupon.capacity
+                    or (locked_coupon.expires_at and locked_coupon.expires_at <= timezone.now())
+                    or subtotal < locked_coupon.min_order
+                ):
+                    messages.error(request, 'کد تخفیف دیگر قابل استفاده نیست.')
+                    return redirect('checkout')
+                discount = min(
+                    subtotal * locked_coupon.percent / 100
+                    if locked_coupon.percent else locked_coupon.amount,
+                    subtotal,
+                )
+            tax = ((subtotal - discount) * Decimal('0.10')).quantize(Decimal('1'))
+            total = subtotal - discount + tax
             if user.wallet_balance < total:
                 messages.error(request, 'موجودی کیف پول کافی نیست.')
                 return redirect('checkout')
             if coupon:
-                locked_coupon = Coupon.objects.select_for_update().get(pk=coupon.pk)
-                if not locked_coupon.active or locked_coupon.used >= locked_coupon.capacity or (locked_coupon.expires_at and locked_coupon.expires_at <= timezone.now()):
-                    messages.error(request, 'کد تخفیف دیگر قابل استفاده نیست.')
-                    return redirect('checkout')
                 locked_coupon.used = F('used') + 1
                 locked_coupon.save(update_fields=['used'])
-                discount = min(subtotal * locked_coupon.percent / 100 if locked_coupon.percent else locked_coupon.amount, subtotal)
-                tax = ((subtotal - discount) * Decimal('0.10')).quantize(Decimal('1'))
-                total = subtotal - discount + tax
-                if user.wallet_balance < total:
-                    messages.error(request, 'موجودی کیف پول کافی نیست.')
-                    return redirect('checkout')
             user.wallet_balance -= total
             user.save(update_fields=['wallet_balance'])
             order = Order.objects.create(user=user, subtotal=subtotal, discount=discount, tax=tax, total=total, status='paid', tracking_code=_tracking_code())
