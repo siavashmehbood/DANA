@@ -5,6 +5,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import FileResponse, JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -69,28 +70,7 @@ def detail(request, slug):
     article = get_object_or_404(
         Article.objects.select_related('category'), slug=slug, published=True
     )
-    if not article.pdf and article.pdf_url:
-        try:
-            download_article_pdf(article)
-        except Exception:
-            logger.warning('Unable to download article PDF: %s', article.slug, exc_info=True)
-    if article.pdf and not article.full_text:
-        try:
-            extracted = extract_pdf_text(article)
-            if extracted:
-                article.full_text = extracted
-                article.save(update_fields=['full_text', 'updated_at'])
-        except Exception:
-            logger.warning('Unable to extract PDF text: %s', article.slug, exc_info=True)
-    if (
-        not article.title_fa
-        or (article.abstract and not article.abstract_fa)
-        or (article.full_text and not article.full_text_fa)
-    ):
-        try:
-            translate_article(article, full_text=True)
-        except Exception:
-            logger.warning('Article translation unavailable: %s', article.slug, exc_info=True)
+    # Keep detail pages fast: no network I/O during page rendering.
     mode = request.GET.get('lang', 'fa')
     if mode not in {'en', 'fa', 'both'}:
         mode = 'fa'
