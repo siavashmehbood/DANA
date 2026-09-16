@@ -1,58 +1,321 @@
-import * as pdfjsLib from '/static/vendor/pdfjs/pdf.mjs';
+﻿import * as pdfjsLib from '/static/vendor/pdfjs/pdf.mjs';
 import { TextLayer } from '/static/vendor/pdfjs/pdf.mjs';
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/static/vendor/pdfjs/pdf.worker.mjs';
-const shell=document.querySelector('.pdf-reader-shell');
-if(!shell) throw new Error('PDF reader root missing');
-const pdfUrl=shell.dataset.pdfUrl, progressUrl=shell.dataset.progressUrl;
-window.__DANA_LAST_POSITION=Number(shell.dataset.lastPosition||0);
-let readingSeconds=Number(shell.dataset.readingSeconds||0);
-const pagesEl=document.querySelector('#pdf-pages'), stage=document.querySelector('#pdf-stage');
-const pageLabel=document.querySelector('#page-label'), zoomLabel=document.querySelector('#zoom-label');
-const statusEl=document.querySelector('#pdf-status'), menu=document.querySelector('#selection-menu');
-let pdf=null, scale=1, currentPage=1, pageHeights=[], textCache=[], annotations=[];
-try{annotations=JSON.parse(shell.dataset.annotations||'[]')}catch{annotations=[]}
-const csrf=()=>decodeURIComponent((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)||[])[1]||'');
-function status(t){statusEl.textContent=t}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function clamp(n,a,b){return Math.max(a,Math.min(b,n))}
-async function load(){
-  status('در حال بارگذاری PDF...'); pdf=await pdfjsLib.getDocument(pdfUrl).promise;
-  pageLabel.textContent=`1 / ${pdf.numPages}`; pagesEl.innerHTML='';
-  for(let n=1;n<=pdf.numPages;n++) await renderPage(n);
-  await buildOutline(); renderAnnotations(); restorePosition(); status('آماده');
+
+const shell = document.querySelector('.pdf-reader-shell');
+if (!shell) throw new Error('PDF reader root missing');
+const $ = (selector) => document.querySelector(selector);
+const pdfUrl = shell.dataset.pdfUrl;
+const progressUrl = shell.dataset.progressUrl;
+const bookmarkUrl = shell.dataset.bookmarkUrl;
+const annotationUrl = shell.dataset.annotationUrl;
+const stage = $('#pdf-stage');
+const pagesEl = $('#pdf-pages');
+const pageLabel = $('#page-label');
+const zoomLabel = $('#zoom-label');
+const statusEl = $('#pdf-status');
+const menu = $('#selection-menu');
+let pdf = null;
+let scale = 1;
+let currentPage = 1;
+let twoPage = localStorage.getItem('dana.pdf.twoPage') === '1';
+let pageHeights = [];
+let textCache = [];
+let annotations = [];
+let bookmarks = [];
+let readingSeconds = Number(shell.dataset.readingSeconds || 0);
+let saving = false;
+
+try { annotations = JSON.parse(shell.dataset.annotations || '[]'); } catch { annotations = []; }
+try { bookmarks = JSON.parse(shell.dataset.bookmarks || '[]').map(Number).filter(Number.isFinite); } catch { bookmarks = []; }
+
+const csrf = () => decodeURIComponent((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '');
+const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const status = (text) => { statusEl.textContent = text; };
+const post = async (url, data) => {
+  const body = new URLSearchParams(data);
+  const response = await fetch(url, {method: 'POST', headers: {'X-CSRFToken': csrf(), 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'}, body});
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+};
+
+async function load() {
+  status('در حال بارگذاری PDF…');
+  pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+  pageLabel.textContent = `1 / ${pdf.numPages}`;
+  pagesEl.innerHTML = '';
+  pageHeights = [];
+  textCache = [];
+  for (let page = 1; page <= pdf.numPages; page += 1) await renderPage(page);
+  applyLayout();
+  await buildOutline();
+  renderAnnotations();
+  renderBookmarks();
+  restorePosition();
+  status('آماده مطالعه');
 }
-async function renderPage(num){
-  const page=await pdf.getPage(num), viewport=page.getViewport({scale});
-  pageHeights[num]=viewport.height;
-  const wrap=document.createElement('section'); wrap.className='pdf-page'; wrap.dataset.page=num; wrap.id=`pdf-page-${num}`;
-  wrap.style.width=`${viewport.width}px`; wrap.style.height=`${viewport.height}px`;
-  const canvas=document.createElement('canvas'); canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height); canvas.className='pdf-canvas';
-  wrap.appendChild(canvas); const textLayer=document.createElement('div'); textLayer.className='textLayer'; wrap.appendChild(textLayer); pagesEl.appendChild(wrap);
-  const ctx=canvas.getContext('2d'); await page.render({canvasContext:ctx,viewport}).promise;
-  const content=await page.getTextContent(); textCache[num]=content.items.map(x=>x.str).join(' ');
-  try{const layer=new TextLayer({textContentSource:content,container:textLayer,viewport}); await layer.render()}catch(e){console.warn('text layer',e)}
-  wrap.addEventListener('click',()=>{currentPage=num;pageLabel.textContent=`${num} / ${pdf.numPages}`});
+
+async function renderPage(num) {
+  const page = await pdf.getPage(num);
+  const viewport = page.getViewport({scale});
+  pageHeights[num] = viewport.height;
+  const wrap = document.createElement('section');
+  wrap.className = 'pdf-page';
+  wrap.dataset.page = num;
+  wrap.id = `pdf-page-${num}`;
+  wrap.style.width = `${viewport.width}px`;
+  wrap.style.height = `${viewport.height}px`;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  canvas.className = 'pdf-canvas';
+  const textLayer = document.createElement('div');
+  textLayer.className = 'textLayer';
+  wrap.append(canvas, textLayer);
+  pagesEl.appendChild(wrap);
+  await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+  const content = await page.getTextContent();
+  textCache[num] = content.items.map(item => item.str).join(' ');
+  try {
+    const layer = new TextLayer({textContentSource: content, container: textLayer, viewport});
+    await layer.render();
+  } catch (error) { console.warn('Text layer unavailable', error); }
+  wrap.addEventListener('click', () => setCurrentPage(num, false));
 }
-async function rebuild(){const keep=stage.scrollTop; pagesEl.innerHTML=''; pageHeights=[]; await load(); stage.scrollTop=keep}
-async function gotoPage(n){n=clamp(Number(n)||1,1,pdf.numPages); const el=document.querySelector(`#pdf-page-${n}`); if(el){stage.scrollTo({top:el.offsetTop-24,behavior:'smooth'});currentPage=n;pageLabel.textContent=`${n} / ${pdf.numPages}`}}
-function renderAnnotations(){
-  document.querySelectorAll('.pdf-annotation-mark').forEach(x=>x.remove());
-  annotations.forEach(a=>{(a.rects||[]).forEach(r=>{const page=document.querySelector(`#pdf-page-${r.page}`);if(!page)return;const m=document.createElement('span');m.className=`pdf-annotation-mark ${a.color||'amber'}`;m.style.left=`${r.x*100}%`;m.style.top=`${r.y*100}%`;m.style.width=`${r.w*100}%`;m.style.height=`${r.h*100}%`;m.title=a.note||a.selected_text;m.dataset.id=a.id;m.onclick=e=>{e.stopPropagation();showAnnotation(a)};page.appendChild(m)})}); renderAnnotationPanel()}
-function renderAnnotationPanel(){const box=document.querySelector('#annotation-panel-list');if(!annotations.length){box.innerHTML='<p class="muted">هنوز Annotationای ثبت نشده است.</p>';return}box.innerHTML=annotations.map(a=>`<article class="pdf-note-card"><div><span class="badge ${a.color||'amber'}">${a.kind==='note'?'یادداشت':'هایلایت'}</span><span class="muted">صفحه ${a.page||1}</span></div><blockquote>${esc((a.selected_text||'').slice(0,280))}</blockquote>${a.note?`<p>${esc(a.note)}</p>`:''}<button data-jump="${a.page||1}">رفتن به متن</button><button class="danger" data-delete="${a.id}">حذف</button></article>`).join('');box.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>gotoPage(b.dataset.jump));box.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>deleteAnnotation(b.dataset.delete))}
-function showAnnotation(a){document.querySelector('[data-panel="annotations"]').click();gotoPage(a.page||1)}
-async function deleteAnnotation(id){if(!confirm('این Annotation حذف شود؟'))return;const r=await fetch(`/articles/annotation/${id}/delete/`,{method:'POST',headers:{'X-CSRFToken':csrf()}});if(r.ok){annotations=annotations.filter(a=>String(a.id)!==String(id));renderAnnotations()}}
-async function saveSelection(kind,color){const sel=window.getSelection();const text=sel?.toString().trim();if(!text)return;const rects=[];for(const rr of sel.getRangeAt(0).getClientRects()){const el=document.elementFromPoint(rr.left+1,rr.top+1)?.closest('.pdf-page');if(!el)continue;const pr=el.getBoundingClientRect();rects.push({page:Number(el.dataset.page),x:(rr.left-pr.left)/pr.width,y:(rr.top-pr.top)/pr.height,w:rr.width/pr.width,h:rr.height/pr.height})}if(!rects.length)return;let note='';if(kind==='note')note=prompt('یادداشت این بخش را وارد کنید:','')||'';const first=rects[0];const body=new URLSearchParams({selected_text:text,kind,color:color||'amber',note,page:first.page,rects:JSON.stringify(rects)});const r=await fetch(window.location.pathname.replace(/pdf\/$/,'annotate/'),{method:'POST',headers:{'X-CSRFToken':csrf()},body});const d=await r.json();if(d.ok){annotations.unshift({...d,page:first.page,color:color||'amber',rects,note});renderAnnotations();sel.removeAllRanges();menu.classList.remove('open');status('Annotation ذخیره شد')}}
-async function buildOutline(){const outline=await pdf.getOutline();const box=document.querySelector('#pdf-outline');if(!outline?.length){box.innerHTML='<p class="muted">این PDF فهرست داخلی ندارد.</p>';return}box.innerHTML='';const walk=(items,depth=0)=>{items.forEach(i=>{const b=document.createElement('button');b.className='outline-item';b.style.paddingInlineStart=`${12+depth*14}px`;b.textContent=i.title;b.onclick=async()=>{if(i.dest){const dest=typeof i.dest==='string'?await pdf.getDestination(i.dest):i.dest;const ref=dest?.[0];if(ref){const p=await pdf.getPageIndex(ref);gotoPage(p+1)}}};box.appendChild(b);if(i.items)walk(i.items,depth+1)})};walk(outline)}
-async function searchPdf(){const q=document.querySelector('#pdf-search').value.trim().toLowerCase();const box=document.querySelector('#search-results');if(!q){box.innerHTML='';return}const hits=[];for(let i=1;i<=pdf.numPages;i++){if((textCache[i]||'').toLowerCase().includes(q))hits.push(i)}box.innerHTML=hits.length?`<p>${hits.length} صفحه پیدا شد</p>`+hits.map(p=>`<button class="search-hit" data-page="${p}">صفحه ${p}</button>`).join(''):'<p class="muted">نتیجه‌ای پیدا نشد.</p>';box.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>gotoPage(b.dataset.page))}
-function saveProgress(){if(!pdf)return;const max=Math.max(1,stage.scrollHeight-stage.clientHeight);const progress=Math.round(stage.scrollTop/max*100);readingSeconds+=15; const body=new URLSearchParams({progress:String(clamp(progress,0,100)),position:String(Math.round(stage.scrollTop)),seconds:String(readingSeconds)});fetch(progressUrl,{method:'POST',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body,keepalive:true}).catch(()=>{})}
-function restorePosition(){const saved=Number(window.__DANA_LAST_POSITION||0);if(saved>0)stage.scrollTop=saved}
-function setup(){
-  document.querySelectorAll('[data-action]').forEach(b=>b.onclick=async()=>{const a=b.dataset.action;if(a==='prev')gotoPage(currentPage-1);if(a==='next')gotoPage(currentPage+1);if(a==='zoom-in'){scale=clamp(scale+.15,.5,2.5);await rebuild();zoomLabel.textContent=`${Math.round(scale*100)}%`};if(a==='zoom-out'){scale=clamp(scale-.15,.5,2.5);await rebuild();zoomLabel.textContent=`${Math.round(scale*100)}%`};if(a==='fit'){const first=await pdf.getPage(1);scale=(stage.clientWidth-60)/first.getViewport({scale:1}).width;await rebuild();zoomLabel.textContent=`${Math.round(scale*100)}%`};if(a==='search'){document.querySelector('#pdf-search').focus()};if(a==='fullscreen'){document.querySelector('.pdf-reader-shell').requestFullscreen?.()}});
-  document.querySelectorAll('.pdf-sidebar-tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.pdf-sidebar-tabs button,.pdf-panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelector(`#panel-${b.dataset.panel}`).classList.add('active')});
-  document.querySelector('#pdf-search-btn').onclick=searchPdf;document.querySelector('#pdf-search').onkeydown=e=>{if(e.key==='Enter')searchPdf()};
-  stage.addEventListener('scroll',()=>{let best=1,dist=Infinity;document.querySelectorAll('.pdf-page').forEach(p=>{const d=Math.abs(p.offsetTop-stage.scrollTop-30);if(d<dist){dist=d;best=Number(p.dataset.page)}});currentPage=best;pageLabel.textContent=`${best} / ${pdf.numPages}`});
-  setInterval(saveProgress,15000);window.addEventListener('beforeunload',saveProgress);
-  document.addEventListener('mouseup',e=>{const text=window.getSelection()?.toString().trim();if(!text||!document.querySelector('.textLayer'))return;menu.style.left=`${e.pageX}px`;menu.style.top=`${e.pageY}px`;menu.classList.add('open')});
-  menu.querySelectorAll('button').forEach(b=>b.onclick=()=>saveSelection(b.dataset.kind,b.dataset.color));document.addEventListener('mousedown',e=>{if(!menu.contains(e.target))menu.classList.remove('open')});
+
+function applyLayout() {
+  pagesEl.classList.toggle('two-page', twoPage);
+  $('#toggle-two-page').classList.toggle('active', twoPage);
+  localStorage.setItem('dana.pdf.twoPage', twoPage ? '1' : '0');
 }
-setup();load().catch(e=>{console.error(e);pagesEl.innerHTML='<div class="pdf-error">بارگذاری PDF انجام نشد. فایل یا دسترسی آن را بررسی کنید.</div>';status('خطا در PDF')});
+
+function setCurrentPage(page, scroll = true) {
+  currentPage = clamp(Number(page) || 1, 1, pdf?.numPages || 1);
+  pageLabel.textContent = `${currentPage} / ${pdf.numPages}`;
+  $('#bookmark-page').classList.toggle('active', bookmarks.includes(currentPage));
+  if (scroll) $('#pdf-page-' + currentPage)?.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+async function gotoPage(page) { setCurrentPage(page, true); }
+
+function detectPage() {
+  const pages = [...document.querySelectorAll('.pdf-page')];
+  if (!pages.length) return;
+  let best = currentPage;
+  let distance = Infinity;
+  const target = stage.scrollTop + stage.clientHeight * 0.35;
+  for (const page of pages) {
+    const d = Math.abs(page.offsetTop - target);
+    if (d < distance) { distance = d; best = Number(page.dataset.page); }
+  }
+  if (best !== currentPage) setCurrentPage(best, false);
+}
+
+function renderAnnotations() {
+  document.querySelectorAll('.pdf-annotation-mark').forEach(node => node.remove());
+  for (const annotation of annotations) {
+    for (const rect of annotation.rects || []) {
+      const page = document.querySelector(`#pdf-page-${rect.page}`);
+      if (!page) continue;
+      const mark = document.createElement('button');
+      mark.type = 'button';
+      mark.className = `pdf-annotation-mark ${annotation.color || 'amber'}`;
+      mark.style.left = `${rect.x * 100}%`;
+      mark.style.top = `${rect.y * 100}%`;
+      mark.style.width = `${rect.w * 100}%`;
+      mark.style.height = `${rect.h * 100}%`;
+      mark.title = annotation.note || annotation.selected_text || 'Annotation';
+      mark.addEventListener('click', event => { event.stopPropagation(); showAnnotation(annotation); });
+      page.appendChild(mark);
+    }
+  }
+  renderAnnotationPanel();
+}
+
+function renderAnnotationPanel() {
+  const box = $('#annotation-panel-list');
+  if (!annotations.length) { box.innerHTML = '<p class="muted">هنوز یادداشتی ثبت نشده است.</p>'; return; }
+  box.innerHTML = annotations.map(annotation => `
+    <article class="pdf-note-card" data-id="${annotation.id}">
+      <div class="pdf-note-meta"><span class="badge ${esc(annotation.color || 'amber')}">${annotation.kind === 'note' ? 'یادداشت' : 'هایلایت'}</span><button data-action="jump">صفحه ${annotation.page || 1}</button></div>
+      <blockquote>${esc((annotation.selected_text || '').slice(0, 400))}</blockquote>
+      <textarea data-field="note" placeholder="یادداشت پژوهشی…">${esc(annotation.note || '')}</textarea>
+      <div class="pdf-note-actions"><button data-action="save">ذخیره</button><button data-action="delete" class="danger">حذف</button></div>
+    </article>`).join('');
+  box.querySelectorAll('.pdf-note-card').forEach(card => {
+    const id = Number(card.dataset.id);
+    const annotation = annotations.find(item => item.id === id);
+    card.querySelector('[data-action="jump"]').onclick = () => showAnnotation(annotation);
+    card.querySelector('[data-action="save"]').onclick = () => updateAnnotation(annotation, card.querySelector('[data-field="note"]').value);
+    card.querySelector('[data-action="delete"]').onclick = () => deleteAnnotation(annotation);
+  });
+}
+
+function renderBookmarks() {
+  const box = $('#bookmark-panel-list');
+  if (!bookmarks.length) { box.innerHTML = '<p class="muted">نشانکی ثبت نشده است.</p>'; return; }
+  box.innerHTML = bookmarks.map(page => `<button class="pdf-bookmark-item" data-page="${page}">🔖 صفحه ${page}</button>`).join('');
+  box.querySelectorAll('[data-page]').forEach(button => button.onclick = () => gotoPage(Number(button.dataset.page)));
+}
+
+function showAnnotation(annotation) { if (!annotation) return; setCurrentPage(annotation.page || 1, true); openTab('annotations'); }
+
+async function updateAnnotation(annotation, note) {
+  try {
+    const data = await post(`/articles/annotation/${annotation.id}/update/`, {note});
+    Object.assign(annotation, data);
+    renderAnnotations();
+    status('یادداشت ذخیره شد');
+  } catch { status('ذخیره یادداشت ناموفق بود'); }
+}
+
+async function deleteAnnotation(annotation) {
+  if (!confirm('این یادداشت حذف شود؟')) return;
+  try {
+    await post(`/articles/annotation/${annotation.id}/delete/`, {});
+    annotations = annotations.filter(item => item.id !== annotation.id);
+    renderAnnotations();
+    status('یادداشت حذف شد');
+  } catch { status('حذف ناموفق بود'); }
+}
+
+async function toggleBookmark() {
+  try {
+    const data = await post(bookmarkUrl, {page: currentPage});
+    bookmarks = data.bookmarks || [];
+    renderBookmarks();
+    setCurrentPage(currentPage, false);
+    status(data.active ? 'نشانک اضافه شد' : 'نشانک حذف شد');
+  } catch { status('ذخیره نشانک ناموفق بود'); }
+}
+
+async function saveAnnotation(color = 'amber', note = '') {
+  const selection = window.getSelection();
+  const selectedText = selection?.toString().trim();
+  if (!selectedText || !selection.rangeCount) return hideSelectionMenu();
+  const range = selection.getRangeAt(0);
+  const pageEl = range.commonAncestorContainer.nodeType === 1 ? range.commonAncestorContainer.closest?.('.pdf-page') : range.commonAncestorContainer.parentElement?.closest('.pdf-page');
+  if (!pageEl) return hideSelectionMenu();
+  const page = Number(pageEl.dataset.page);
+  const pageText = textCache[page] || '';
+  const index = pageText.indexOf(selectedText.slice(0, 120));
+  const prefix = index > 0 ? pageText.slice(Math.max(0, index - 300), index) : '';
+  const suffix = index >= 0 ? pageText.slice(index + selectedText.length, index + selectedText.length + 300) : '';
+  const pageRect = pageEl.getBoundingClientRect();
+  const rects = [];
+  for (const rect of range.getClientRects()) {
+    if (rect.width <= 0 || rect.height <= 0) continue;
+    rects.push({page, x: clamp((rect.left - pageRect.left) / pageRect.width, 0, 1), y: clamp((rect.top - pageRect.top) / pageRect.height, 0, 1), w: clamp(rect.width / pageRect.width, 0, 1), h: clamp(rect.height / pageRect.height, 0, 1)});
+  }
+  try {
+    const data = await post(annotationUrl, {selected_text: selectedText, kind: note ? 'note' : 'highlight', note, color, page, rects: JSON.stringify(rects), prefix, suffix});
+    annotations.unshift({...data, color, page, rects, note, selected_text: selectedText});
+    renderAnnotations();
+    openTab('annotations');
+    status(note ? 'یادداشت ذخیره شد' : 'هایلایت ذخیره شد');
+  } catch { status('ثبت Annotation ناموفق بود'); }
+  hideSelectionMenu();
+  selection.removeAllRanges();
+}
+
+function showSelectionMenu(event) {
+  const selected = window.getSelection()?.toString().trim();
+  if (!selected) return hideSelectionMenu();
+  menu.hidden = false;
+  menu.style.left = `${Math.min(event.clientX, window.innerWidth - menu.offsetWidth - 12)}px`;
+  menu.style.top = `${Math.max(8, event.clientY - 48)}px`;
+}
+function hideSelectionMenu() { menu.hidden = true; }
+
+async function searchPdf() {
+  const query = $('#pdf-search-input').value.trim().toLowerCase();
+  if (!query) return;
+  const page = textCache.findIndex((text, index) => index > 0 && text.toLowerCase().includes(query));
+  if (page > 0) { await gotoPage(page); status(`نتیجه در صفحه ${page}`); } else status('نتیجه‌ای پیدا نشد');
+}
+
+async function buildOutline() {
+  const box = $('#pdf-outline');
+  box.innerHTML = '';
+  const outline = await pdf.getOutline();
+  if (!outline?.length) { box.innerHTML = '<p class="muted">فهرست داخلی PDF وجود ندارد.</p>'; return; }
+  const render = (items, parent) => items.forEach(item => {
+    const button = document.createElement('button');
+    button.className = 'pdf-outline-item'; button.textContent = item.title;
+    button.onclick = async () => { if (item.dest) { const target = await pdf.getDestination(item.dest); const ref = target?.[0]; if (ref) { const page = await pdf.getPageIndex(ref); gotoPage(page + 1); } } };
+    parent.appendChild(button);
+    if (item.items?.length) render(item.items, parent);
+  });
+  render(outline, box);
+}
+
+function restorePosition() {
+  const position = Number(shell.dataset.lastPosition || 0);
+  if (position > 0) stage.scrollTop = position;
+}
+
+async function saveProgress() {
+  if (!pdf || saving) return;
+  saving = true;
+  readingSeconds += 15;
+  const progress = Math.round((currentPage / pdf.numPages) * 100);
+  try { await post(progressUrl, {progress, position: Math.round(stage.scrollTop), seconds: readingSeconds}); } catch { /* reader remains usable offline */ }
+  saving = false;
+}
+
+function openTab(name) {
+  document.querySelectorAll('.pdf-sidebar-tabs button').forEach(button => button.classList.toggle('active', button.dataset.tab === name));
+  document.querySelectorAll('.pdf-sidebar-panel').forEach(panel => panel.classList.toggle('active', panel.id === `tab-${name}`));
+}
+
+function zoom(delta) {
+  const old = scale;
+  scale = clamp(Math.round((scale + delta) * 20) / 20, 0.5, 2.5);
+  if (scale === old) return;
+  const position = stage.scrollTop;
+  status('در حال تغییر اندازه…');
+  load().then(() => { stage.scrollTop = position; status('آماده مطالعه'); });
+  zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+}
+
+function fitPage() {
+  const first = $('#pdf-page-1');
+  if (!first) return;
+  const width = stage.clientWidth - 48;
+  const base = first.getBoundingClientRect().width / scale;
+  if (base > 0) { scale = clamp(width / base, 0.5, 2.5); zoomLabel.textContent = `${Math.round(scale * 100)}%`; load().then(() => status('آماده مطالعه')); }
+}
+
+$('#prev-page').onclick = () => gotoPage(currentPage - 1);
+$('#next-page').onclick = () => gotoPage(currentPage + 1);
+$('#zoom-out').onclick = () => zoom(-0.1);
+$('#zoom-in').onclick = () => zoom(0.1);
+$('#fit-page').onclick = fitPage;
+$('#toggle-two-page').onclick = () => { twoPage = !twoPage; applyLayout(); };
+$('#bookmark-page').onclick = toggleBookmark;
+$('#open-search').onclick = () => { const box = $('#pdf-search'); box.classList.toggle('open'); if (box.classList.contains('open')) $('#pdf-search-input').focus(); };
+$('#pdf-search-btn').onclick = searchPdf;
+$('#pdf-search-input').addEventListener('keydown', event => { if (event.key === 'Enter') searchPdf(); });
+$('#btn-fullscreen').onclick = () => document.documentElement.requestFullscreen?.();
+
+document.querySelectorAll('.pdf-sidebar-tabs button').forEach(button => button.onclick = () => openTab(button.dataset.tab));
+menu.querySelectorAll('[data-color]').forEach(button => button.onclick = () => saveAnnotation(button.dataset.color));
+$('#selection-note').onclick = () => { const note = prompt('یادداشت پژوهشی را وارد کنید:'); if (note !== null) saveAnnotation('amber', note); };
+document.addEventListener('mouseup', event => setTimeout(() => showSelectionMenu(event), 0));
+document.addEventListener('mousedown', event => { if (!menu.contains(event.target)) hideSelectionMenu(); });
+stage.addEventListener('scroll', detectPage, {passive: true});
+window.addEventListener('beforeunload', saveProgress);
+setInterval(saveProgress, 15000);
+document.addEventListener('keydown', event => {
+  if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+  if (event.key === 'ArrowRight') gotoPage(currentPage - 1);
+  if (event.key === 'ArrowLeft') gotoPage(currentPage + 1);
+  if (event.key === '+') zoom(0.1);
+  if (event.key === '-') zoom(-0.1);
+  if (event.key.toLowerCase() === 'b') toggleBookmark();
+  if (event.key === 'f') document.documentElement.requestFullscreen?.();
+});
+
+applyLayout();
+load().catch(error => { console.error(error); status('بارگذاری PDF ناموفق بود'); });

@@ -27,12 +27,14 @@ class ArticleLibraryItem(models.Model):
     progress = models.PositiveSmallIntegerField(default=0)
     last_position = models.PositiveIntegerField(default=0)
     reading_seconds = models.PositiveIntegerField(default=0)
+    bookmarks = models.JSONField(default=list, blank=True)
     last_read_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['user', 'article'], name='unique_article_library_item')]
         ordering = ['-updated_at']
+        indexes = [models.Index(fields=['user', 'status']), models.Index(fields=['user', 'favorite'])]
 
 
 class ArticleAnnotation(models.Model):
@@ -52,6 +54,7 @@ class ArticleAnnotation(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [models.Index(fields=['user', 'article']), models.Index(fields=['user', 'page'])]
 
 
 class Article(models.Model):

@@ -1,26 +1,36 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static %}
-{% block title %}خواندن PDF | {{ article.title_fa|default:article.title }} | DANA{% endblock %}
+{% block title %}مطالعه PDF | {{ article.title_fa|default:article.title }} | دانا{% endblock %}
 {% block content %}
-<div class="pdf-reader-shell" data-pdf-url="{{ pdf_url }}" data-progress-url="{% url 'article_reading_progress' article.slug %}" data-annotations='{{ annotations_json|escapejs }}' data-last-position='{{ last_position }}' data-reading-seconds='{{ reading_seconds }}'>
-<header class="pdf-reader-topbar">
-  <div class="pdf-reader-title"><a class="btn secondary small" href="{% url 'article_detail' article.slug %}">← مقاله</a><div><strong>{{ article.title_fa|default:article.title }}</strong><span>{{ article.authors }}</span></div></div>
-  <div class="pdf-toolbar">
-    <button class="icon-btn" data-action="prev" title="صفحه قبل">‹</button><span id="page-label">1 / —</span><button class="icon-btn" data-action="next" title="صفحه بعد">›</button>
-    <button class="icon-btn" data-action="zoom-out">−</button><button class="zoom-label" id="zoom-label">100%</button><button class="icon-btn" data-action="zoom-in">+</button>
-    <button class="icon-btn" data-action="fit" title="تناسب عرض">↔</button><button class="icon-btn" data-action="search" title="جستجو">⌕</button><button class="icon-btn" data-action="fullscreen" title="تمام صفحه">⛶</button>
+<div hidden>{% csrf_token %}</div>\n<div class="pdf-reader-shell" data-pdf-url="{{ pdf_url }}" data-progress-url="{% url 'article_reading_progress' article.slug %}" data-bookmark-url="{% url 'article_bookmark_toggle' article.slug %}" data-annotation-url="{% url 'article_annotation_create' article.slug %}" data-annotations='{{ annotations_json|escapejs }}' data-bookmarks='{{ bookmarks_json|escapejs }}' data-last-position="{{ last_position }}" data-reading-seconds="{{ reading_seconds }}">
+  <header class="pdf-reader-topbar">
+    <a class="pdf-reader-back" href="{% url 'article_detail' article.slug %}">← بازگشت</a>
+    <div class="pdf-reader-title"><strong>{{ article.title_fa|default:article.title }}</strong><span>{{ article.authors|default:"مقاله پژوهشی" }}</span></div>
+    <div class="pdf-reader-actions"><button type="button" class="reader-icon-btn" id="btn-fullscreen" title="تمام صفحه">⛶</button></div>
+  </header>
+  <div class="pdf-reader-toolbar">
+    <div class="toolbar-group"><button id="prev-page" type="button">‹</button><span id="page-label">1 / —</span><button id="next-page" type="button">›</button></div>
+    <div class="toolbar-group"><button id="zoom-out" type="button">−</button><span id="zoom-label">100%</span><button id="zoom-in" type="button">+</button><button id="fit-page" type="button">تناسب</button></div>
+    <div class="toolbar-group"><button id="toggle-two-page" type="button">دوصفحه</button><button id="bookmark-page" type="button">🔖</button><button id="open-search" type="button">جستجو</button></div>
+    <div class="pdf-search" id="pdf-search"><input id="pdf-search-input" type="search" placeholder="جستجو در PDF…"><button id="pdf-search-btn" type="button">↵</button></div>
+    <span id="pdf-status" class="pdf-status">در حال آماده‌سازی…</span>
   </div>
-</header>
-<div class="pdf-reader-body">
-  <aside class="pdf-sidebar" id="pdf-sidebar">
-    <div class="pdf-sidebar-tabs"><button class="active" data-panel="outline">فهرست</button><button data-panel="annotations">یادداشت‌ها</button></div>
-    <div class="pdf-panel active" id="panel-outline"><div class="pdf-search-box"><input id="pdf-search" placeholder="جستجو در PDF..."><button id="pdf-search-btn">جستجو</button></div><div id="search-results"></div><div id="pdf-outline"><p class="muted">در حال آماده‌سازی فهرست...</p></div></div>
-    <div class="pdf-panel" id="panel-annotations"><div id="annotation-panel-list"><p class="muted">هنوز Annotationای ثبت نشده است.</p></div></div>
-  </aside>
-  <main class="pdf-stage" id="pdf-stage"><div id="pdf-pages" class="pdf-pages"><div class="pdf-loading">در حال بارگذاری PDF...</div></div></main>
+  <div class="pdf-reader-body">
+    <aside class="pdf-sidebar">
+      <div class="pdf-sidebar-tabs">
+        <button class="active" data-tab="outline">فهرست</button><button data-tab="annotations">یادداشت‌ها</button><button data-tab="bookmarks">نشانک‌ها</button>
+      </div>
+      <section class="pdf-sidebar-panel active" id="tab-outline"><div id="pdf-outline"></div></section>
+      <section class="pdf-sidebar-panel" id="tab-annotations"><div id="annotation-panel-list"></div></section>
+      <section class="pdf-sidebar-panel" id="tab-bookmarks"><div id="bookmark-panel-list"></div></section>
+    </aside>
+    <main class="pdf-stage" id="pdf-stage" tabindex="0">
+      <div id="pdf-pages" class="pdf-pages"></div>
+    </main>
+  </div>
+  <div class="pdf-selection-menu" id="selection-menu" hidden>
+    <button data-color="amber">زرد</button><button data-color="green">سبز</button><button data-color="blue">آبی</button><button data-color="red">قرمز</button><button data-color="purple">بنفش</button><button id="selection-note">یادداشت</button>
+  </div>
 </div>
-<div class="pdf-selection-menu" id="selection-menu"><button data-kind="highlight" data-color="amber">هایلایت</button><button data-kind="note">یادداشت</button><button data-kind="highlight" data-color="green">سبز</button><button data-kind="highlight" data-color="blue">آبی</button></div>
-<div class="pdf-status" id="pdf-status">آماده</div>
-</div>
-<script type="module" src="{% static 'js/pdf-reader.js' %}"></script>
 {% endblock %}
+{% block extra_js %}<script type="module" src="{% static 'js/pdf-reader.js' %}?v=6"></script>{% endblock %}

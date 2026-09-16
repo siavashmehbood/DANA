@@ -58,3 +58,36 @@ class ArticleFlowTests(TestCase):
         item=ArticleAnnotation.objects.get(user=user,article=self.article)
         self.assertEqual(item.color,'blue')
         self.assertEqual(item.rects[0]['page'],3)
+    def test_annotation_update_is_owner_scoped(self):
+        user=User.objects.create_user(username='noteowner',password='secret')
+        self.client.force_login(user)
+        self.client.post(reverse('article_annotation_create',args=[self.article.slug]), {'selected_text':'quote','kind':'note'})
+        annotation=ArticleAnnotation.objects.get(user=user,article=self.article)
+        response=self.client.post(reverse('article_annotation_update',args=[annotation.pk]), {'note':'Research note','color':'green'})
+        self.assertEqual(response.status_code,200)
+        annotation.refresh_from_db()
+        self.assertEqual(annotation.note,'Research note')
+        self.assertEqual(annotation.color,'green')
+
+    def test_bookmark_toggle_persists(self):
+        user=User.objects.create_user(username='bookmarkuser',password='secret')
+        self.client.force_login(user)
+        response=self.client.post(reverse('article_bookmark_toggle',args=[self.article.slug]), {'page':7})
+        self.assertEqual(response.status_code,200)
+        item=ArticleLibraryItem.objects.get(user=user,article=self.article)
+        self.assertEqual(item.bookmarks,[7])
+        response=self.client.post(reverse('article_bookmark_toggle',args=[self.article.slug]), {'page':7})
+        self.assertEqual(response.status_code,200)
+        item.refresh_from_db()
+        self.assertEqual(item.bookmarks,[])
+
+    def test_annotation_rects_are_sanitized(self):
+        user=User.objects.create_user(username='rectuser',password='secret')
+        self.client.force_login(user)
+        payload='[{"page":3,"x":-2,"y":2,"w":0.4,"h":0.02},{"page":"bad"},{"x":0,"y":0,"w":0,"h":0}]'
+        response=self.client.post(reverse('article_annotation_create',args=[self.article.slug]), {'selected_text':'safe','rects':payload})
+        self.assertEqual(response.status_code,200)
+        annotation=ArticleAnnotation.objects.get(user=user,article=self.article)
+        self.assertEqual(len(annotation.rects),1)
+        self.assertEqual(annotation.rects[0]['x'],0)
+        self.assertEqual(annotation.rects[0]['y'],1)

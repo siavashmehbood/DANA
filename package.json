@@ -4,7 +4,7 @@
   "description": "دانا یک پلتفرم فارسی و راست‌به‌چپ برای کشف، خرید و مطالعه کتاب‌های دیجیتال است. پروژه با Django و قالب‌های server-rendered ساخته شده و appهای حساب کاربری، کتاب، فروش، مطالعه، گیمیفیکیشن، مقاله، اعلان، پشتیبانی، تحلیل و API را در بر می‌گیرد.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "check:pdf": "node --input-type=module --check < static/js/pdf-reader.js"
   },
   "repository": {
     "type": "git",

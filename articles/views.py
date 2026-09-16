@@ -1,3 +1,6 @@
+import json
+import logging
+
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import FileResponse, JsonResponse, HttpResponse
@@ -7,6 +10,9 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 
 from .models import Article, ArticleCategory, ArticleLibraryItem, ArticleAnnotation
+logger = logging.getLogger(__name__)
+
+
 from .translation import (
     download_article_pdf,
     extract_pdf_text,
@@ -67,8 +73,7 @@ def detail(request, slug):
         try:
             download_article_pdf(article)
         except Exception:
-            # A missing or protected PDF should not break article reading.
-            pass
+            logger.warning('Unable to download article PDF: %s', article.slug, exc_info=True)
     if article.pdf and not article.full_text:
         try:
             extracted = extract_pdf_text(article)
@@ -76,7 +81,7 @@ def detail(request, slug):
                 article.full_text = extracted
                 article.save(update_fields=['full_text', 'updated_at'])
         except Exception:
-            pass
+            logger.warning('Unable to extract PDF text: %s', article.slug, exc_info=True)
     if (
         not article.title_fa
         or (article.abstract and not article.abstract_fa)
@@ -85,8 +90,7 @@ def detail(request, slug):
         try:
             translate_article(article, full_text=True)
         except Exception:
-            # The article remains usable if the external translator is unavailable.
-            pass
+            logger.warning('Article translation unavailable: %s', article.slug, exc_info=True)
     mode = request.GET.get('lang', 'fa')
     if mode not in {'en', 'fa', 'both'}:
         mode = 'fa'
@@ -111,15 +115,24 @@ def detail(request, slug):
 def pdf_reader(request, slug):
     article = get_object_or_404(Article, slug=slug, published=True)
     if not article.pdf and article.pdf_url:
-        try: download_article_pdf(article)
-        except Exception: pass
+        try:
+            download_article_pdf(article)
+        except Exception:
+            logger.warning('Unable to download article PDF for reader: %s', article.slug, exc_info=True)
     if not article.pdf:
         return redirect('article_detail', slug=article.slug)
     item = ArticleLibraryItem.objects.filter(user=request.user, article=article).first()
-    annotations = list(ArticleAnnotation.objects.filter(user=request.user, article=article).values('id','kind','selected_text','note','color','page','rects','created_at'))
-    for a in annotations: a['created_at'] = a['created_at'].isoformat()
-    import json
-    return render(request, 'articles/pdf_reader.html', {'article': article, 'pdf_url': reverse('article_download', args=[article.slug]), 'annotations_json': json.dumps(annotations, ensure_ascii=False), 'last_position': item.last_position if item else 0, 'reading_seconds': item.reading_seconds if item else 0})
+    annotations = list(ArticleAnnotation.objects.filter(user=request.user, article=article).values('id', 'kind', 'selected_text', 'note', 'color', 'page', 'rects', 'text_prefix', 'text_suffix', 'created_at'))
+    for annotation in annotations:
+        annotation['created_at'] = annotation['created_at'].isoformat()
+    return render(request, 'articles/pdf_reader.html', {
+        'article': article,
+        'pdf_url': reverse('article_download', args=[article.slug]),
+        'annotations_json': json.dumps(annotations, ensure_ascii=False),
+        'last_position': item.last_position if item else 0,
+        'reading_seconds': item.reading_seconds if item else 0,
+        'bookmarks_json': json.dumps((item.bookmarks if item else []), ensure_ascii=False),
+    })
 
 
 @login_required
@@ -232,19 +245,73 @@ def annotation_create(request, slug):
     except (TypeError, ValueError):
         page = 0
     try:
-        rects = __import__('json').loads(request.POST.get('rects', '[]')) if request.POST.get('rects') else []
-        if not isinstance(rects, list): rects = []
-    except Exception:
+        rects = json.loads(request.POST.get('rects', '[]')) if request.POST.get('rects') else []
+    except (TypeError, ValueError, json.JSONDecodeError):
         rects = []
+    valid_colors = {'amber', 'green', 'blue', 'red', 'purple'}
+    color = request.POST.get('color', 'amber').strip().lower()
+    if color not in valid_colors:
+        color = 'amber'
+    clean_rects = []
+    if isinstance(rects, list):
+        for rect in rects[:100]:
+            if not isinstance(rect, dict):
+                continue
+            try:
+                clean = {
+                    'page': max(1, int(rect.get('page', page or 1))),
+                    'x': min(1, max(0, float(rect.get('x', 0)))),
+                    'y': min(1, max(0, float(rect.get('y', 0)))),
+                    'w': min(1, max(0, float(rect.get('w', 0)))),
+                    'h': min(1, max(0, float(rect.get('h', 0)))),
+                }
+            except (TypeError, ValueError):
+                continue
+            if clean['w'] > 0 and clean['h'] > 0:
+                clean_rects.append(clean)
     item = ArticleAnnotation.objects.create(
         user=request.user, article=article, kind=kind,
         selected_text=selected, note=request.POST.get('note', '').strip()[:5000],
-        color=request.POST.get('color', 'amber')[:20],
-        text_prefix=request.POST.get('prefix', '').strip()[:300],
-        rects=rects,
-        text_suffix=request.POST.get('suffix', '').strip()[:300], page=page,
+        color=color, text_prefix=request.POST.get('prefix', '').strip()[:300],
+        rects=clean_rects, text_suffix=request.POST.get('suffix', '').strip()[:300], page=page,
     )
     return JsonResponse({'ok': True, 'id': item.id, 'kind': item.kind, 'selected_text': item.selected_text, 'note': item.note})
+
+
+@login_required
+@require_POST
+def annotation_update(request, pk):
+    item = get_object_or_404(ArticleAnnotation, pk=pk, user=request.user)
+    note = request.POST.get('note', '').strip()[:5000]
+    color = request.POST.get('color', item.color).strip().lower()
+    if color not in {'amber', 'green', 'blue', 'red', 'purple'}:
+        color = item.color
+    item.note = note
+    item.color = color
+    item.save(update_fields=['note', 'color', 'updated_at'])
+    return JsonResponse({'ok': True, 'id': item.id, 'note': item.note, 'color': item.color})
+
+
+@login_required
+@require_POST
+def bookmark_toggle(request, slug):
+    article = get_object_or_404(Article, slug=slug, published=True)
+    try:
+        page = max(1, int(request.POST.get('page', 1)))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'invalid_page'}, status=400)
+    item, _ = ArticleLibraryItem.objects.get_or_create(user=request.user, article=article)
+    bookmarks = sorted({int(x) for x in item.bookmarks if str(x).isdigit()})
+    if page in bookmarks:
+        bookmarks.remove(page)
+        active = False
+    else:
+        bookmarks.append(page)
+        bookmarks.sort()
+        active = True
+    item.bookmarks = bookmarks[:500]
+    item.save(update_fields=['bookmarks', 'updated_at'])
+    return JsonResponse({'ok': True, 'page': page, 'active': active, 'bookmarks': item.bookmarks})
 
 
 @require_POST

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import article_download, listing, detail, translate_selection, library_action, annotation_create, research_library, annotation_delete, reading_progress, citation_export, pdf_reader
+from .views import article_download, listing, detail, translate_selection, library_action, annotation_create, research_library, annotation_delete, annotation_update, reading_progress, bookmark_toggle, citation_export, pdf_reader
 
 urlpatterns = [
     path('', listing, name='article_list'),
@@ -9,7 +9,9 @@ urlpatterns = [
     path('<slug:slug>/library/', library_action, name='article_library_action'),
     path('<slug:slug>/annotate/', annotation_create, name='article_annotation_create'),
     path('annotation/<int:pk>/delete/', annotation_delete, name='article_annotation_delete'),
+    path('annotation/<int:pk>/update/', annotation_update, name='article_annotation_update'),
     path('<slug:slug>/progress/', reading_progress, name='article_reading_progress'),
+    path('<slug:slug>/bookmark/', bookmark_toggle, name='article_bookmark_toggle'),
     path('<slug:slug>/citation/', citation_export, name='article_citation_export'),
     path('<slug:slug>/download/', article_download, name='article_download'),
     path('<slug:slug>/', detail, name='article_detail'),
