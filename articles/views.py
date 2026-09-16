@@ -1,9 +1,10 @@
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import FileResponse, JsonResponse
+from django.http import FileResponse, JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 
 from .models import Article, ArticleCategory, ArticleLibraryItem, ArticleAnnotation
 from .translation import (
@@ -107,6 +108,80 @@ def detail(request, slug):
 
 
 @login_required
+def research_library(request):
+    items = ArticleLibraryItem.objects.filter(user=request.user).select_related('article', 'article__category')
+    status = request.GET.get('status', '').strip()
+    favorite = request.GET.get('favorite') == '1'
+    q = request.GET.get('q', '').strip()
+    if status in dict(ArticleLibraryItem.STATUS_CHOICES):
+        items = items.filter(status=status)
+    if favorite:
+        items = items.filter(favorite=True)
+    if q:
+        items = items.filter(Q(article__title__icontains=q) | Q(article__title_fa__icontains=q) | Q(article__authors__icontains=q) | Q(article__journal__icontains=q))
+    annotations = ArticleAnnotation.objects.filter(user=request.user).select_related('article')
+    stats = {
+        'total': ArticleLibraryItem.objects.filter(user=request.user).count(),
+        'reading': ArticleLibraryItem.objects.filter(user=request.user, status='reading').count(),
+        'read': ArticleLibraryItem.objects.filter(user=request.user, status='read').count(),
+        'favorites': ArticleLibraryItem.objects.filter(user=request.user, favorite=True).count(),
+    }
+    return render(request, 'articles/library.html', {'items': items[:100], 'annotations': annotations[:40], 'stats': stats, 'status': status, 'favorite': favorite, 'query': q})
+
+
+@login_required
+@require_POST
+def annotation_delete(request, pk):
+    item = get_object_or_404(ArticleAnnotation, pk=pk, user=request.user)
+    item.delete()
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@require_POST
+def reading_progress(request, slug):
+    article = get_object_or_404(Article, slug=slug, published=True)
+    item, _ = ArticleLibraryItem.objects.get_or_create(user=request.user, article=article)
+    try:
+        item.progress = max(0, min(100, int(request.POST.get('progress', 0))))
+        item.last_position = max(0, int(request.POST.get('position', 0)))
+        item.reading_seconds = min(31536000, max(0, int(request.POST.get('seconds', item.reading_seconds))))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False}, status=400)
+    item.last_read_at = timezone.now()
+    if item.progress >= 95:
+        item.status = 'read'
+    elif item.progress > 0 and item.status == 'unread':
+        item.status = 'reading'
+    item.save(update_fields=['progress','last_position','reading_seconds','last_read_at','status','updated_at'])
+    return JsonResponse({'ok': True, 'progress': item.progress})
+
+
+def citation_export(request, slug):
+    article = get_object_or_404(Article, slug=slug, published=True)
+    fmt = request.GET.get('format', 'bibtex').lower()
+    title = article.title or ''
+    authors = article.authors or 'Unknown'
+    year = article.year or ''
+    key = ''.join(c for c in (title.split()[0] if title.split() else 'article') if c.isalnum()) + str(year)
+    if fmt == 'bibtex':
+        body = '@article{%s,\n  title={%s},\n  author={%s},\n  year={%s},\n  journal={%s},\n  doi={%s}\n}' % (key, title, authors, year, article.journal, article.doi)
+        content_type, filename = 'application/x-bibtex; charset=utf-8', f'{article.slug}.bib'
+    elif fmt == 'ris':
+        body = 'TY  - JOUR\nTI  - %s\nAU  - %s\nPY  - %s\nJO  - %s\nDO  - %s\nER  -' % (title, authors, year, article.journal, article.doi)
+        content_type, filename = 'application/x-research-info-systems; charset=utf-8', f'{article.slug}.ris'
+    elif fmt == 'ieee':
+        body = '%s, "%s," %s, %s%s.' % (authors, title, article.journal, year, (', doi: '+article.doi) if article.doi else '')
+        content_type, filename = 'text/plain; charset=utf-8', f'{article.slug}-ieee.txt'
+    else:
+        body = '%s. (%s). %s. %s.%s' % (authors, year, title, article.journal, (' https://doi.org/'+article.doi) if article.doi else '')
+        content_type, filename = 'text/plain; charset=utf-8', f'{article.slug}-apa.txt'
+    response = HttpResponse(body, content_type=content_type)
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
 @require_POST
 def library_action(request, slug):
     article = get_object_or_404(Article, slug=slug, published=True)
@@ -143,7 +218,10 @@ def annotation_create(request, slug):
         page = 0
     item = ArticleAnnotation.objects.create(
         user=request.user, article=article, kind=kind,
-        selected_text=selected, note=request.POST.get('note', '').strip()[:5000], page=page,
+        selected_text=selected, note=request.POST.get('note', '').strip()[:5000],
+        color=request.POST.get('color', 'amber')[:20],
+        text_prefix=request.POST.get('prefix', '').strip()[:300],
+        text_suffix=request.POST.get('suffix', '').strip()[:300], page=page,
     )
     return JsonResponse({'ok': True, 'id': item.id, 'kind': item.kind, 'selected_text': item.selected_text, 'note': item.note})
 

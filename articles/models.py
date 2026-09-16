@@ -26,6 +26,8 @@ class ArticleLibraryItem(models.Model):
     favorite = models.BooleanField(default=False)
     progress = models.PositiveSmallIntegerField(default=0)
     last_position = models.PositiveIntegerField(default=0)
+    reading_seconds = models.PositiveIntegerField(default=0)
+    last_read_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -40,6 +42,9 @@ class ArticleAnnotation(models.Model):
     kind = models.CharField(max_length=10, choices=KIND_CHOICES, default='highlight')
     selected_text = models.TextField()
     note = models.TextField(blank=True)
+    color = models.CharField(max_length=20, default='amber')
+    text_prefix = models.TextField(blank=True)
+    text_suffix = models.TextField(blank=True)
     page = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
