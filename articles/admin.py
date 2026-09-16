@@ -1,4 +1,5 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from django.utils import timezone
 
 from .models import Article, ArticleCategory
@@ -6,7 +7,7 @@ from .translation import extract_pdf_text
 
 
 @admin.register(ArticleCategory)
-class ArticleCategoryAdmin(admin.ModelAdmin):
+class ArticleCategoryAdmin(ModelAdmin):
     list_display = ('name', 'is_active')
     search_fields = ('name',)
     prepopulated_fields = {'slug': ('name',)}
@@ -29,7 +30,7 @@ def extract_full_text(modeladmin, request, queryset):
 
 
 @admin.register(Article)
-class ArticleAdmin(admin.ModelAdmin):
+class ArticleAdmin(ModelAdmin):
     list_display = (
         'title', 'year', 'category', 'published', 'featured',
         'translation_status', 'text_status', 'translated_at',

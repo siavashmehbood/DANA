@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/siavashmehbood/DANA#readme",
   "dependencies": {
-    "pdfjs-dist": "^6.3.289"
+    "pdfjs-dist": "^6.3.289",
+    "vazirmatn": "^33.0.3"
   }
 }

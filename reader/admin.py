@@ -1,11 +1,12 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 
 from gamification.services import add_points, study_points_for_score
 from .models import ReadingProgress, Bookmark, Note, ProblemReport, Review
 
 
 @admin.register(Review)
-class ReviewAdmin(admin.ModelAdmin):
+class ReviewAdmin(ModelAdmin):
     list_display = ('book', 'user', 'rating', 'admin_score', 'approved', 'created_at')
     list_filter = ('approved', 'admin_score', 'rating')
     search_fields = ('book__name', 'user__username', 'text')

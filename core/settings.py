@@ -11,7 +11,7 @@ DEBUG=env_bool('DEBUG',True)
 SECRET_KEY=os.getenv('SECRET_KEY','django-insecure-change-this')
 ALLOWED_HOSTS=env_list('ALLOWED_HOSTS','127.0.0.1,localhost')
 CSRF_TRUSTED_ORIGINS=env_list('CSRF_TRUSTED_ORIGINS')
-INSTALLED_APPS=['django.contrib.admin','django.contrib.auth','django.contrib.contenttypes','django.contrib.sessions','django.contrib.messages','django.contrib.staticfiles','accounts','books','shop','reader','gamification','analytics','notifications','support','api','articles']
+INSTALLED_APPS=['unfold','django.contrib.admin','django.contrib.auth','django.contrib.contenttypes','django.contrib.sessions','django.contrib.messages','django.contrib.staticfiles','accounts','books','shop','reader','gamification','analytics','notifications','support','api','articles']
 MIDDLEWARE=['django.middleware.security.SecurityMiddleware','whitenoise.middleware.WhiteNoiseMiddleware','django.contrib.sessions.middleware.SessionMiddleware','django.middleware.common.CommonMiddleware','django.middleware.csrf.CsrfViewMiddleware','django.contrib.auth.middleware.AuthenticationMiddleware','django.contrib.messages.middleware.MessageMiddleware','django.middleware.clickjacking.XFrameOptionsMiddleware']
 ROOT_URLCONF='core.urls'
 TEMPLATES=[{'BACKEND':'django.template.backends.django.DjangoTemplates','DIRS':[BASE_DIR/'templates'],'APP_DIRS':True,'OPTIONS':{'context_processors':['django.template.context_processors.request','django.contrib.auth.context_processors.auth','django.contrib.messages.context_processors.messages']}}]
@@ -31,3 +31,7 @@ AUTH_PASSWORD_VALIDATORS=[{'NAME':'django.contrib.auth.password_validation.UserA
 EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'; EMAIL_HOST=os.getenv('EMAIL_HOST',''); EMAIL_PORT=int(os.getenv('EMAIL_PORT','587')); EMAIL_HOST_USER=os.getenv('EMAIL_HOST_USER',''); EMAIL_HOST_PASSWORD=os.getenv('EMAIL_HOST_PASSWORD',''); EMAIL_USE_TLS=env_bool('EMAIL_USE_TLS',True); DEFAULT_FROM_EMAIL=os.getenv('DEFAULT_FROM_EMAIL','noreply@example.com')
 if not DEBUG and SECRET_KEY=='django-insecure-change-this': raise RuntimeError('SECRET_KEY must be configured when DEBUG=0')
 if not DEBUG and not ALLOWED_HOSTS: raise RuntimeError('ALLOWED_HOSTS must be configured when DEBUG=0')
+
+
+from django.templatetags.static import static
+UNFOLD={'SITE_TITLE':'دانا | مدیریت','SITE_HEADER':'دانا','SITE_SYMBOL':'menu_book','SHOW_HISTORY':True,'SHOW_LANGUAGES':False,'STYLES':[lambda request: static('css/admin-dana.css')],'SIDEBAR':{'show_search':True,'show_all_applications':True}}
