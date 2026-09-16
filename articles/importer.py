@@ -23,14 +23,9 @@ def _get(url, *, params=None, headers=None, timeout=25, retries=3):
         try:
             response = requests.get(url, params=params, headers=headers, timeout=timeout)
             if response.status_code == 429:
-                retry_after = response.headers.get("Retry-After")
-                try:
-                    delay = min(float(retry_after), 30.0) if retry_after else min(2 ** attempt, 30.0)
-                except (TypeError, ValueError):
-                    delay = min(2 ** attempt, 30.0)
-                time.sleep(delay)
+                # Do not stall an entire discovery cycle when one provider is rate limited.
                 last_error = requests.HTTPError("429 rate limited", response=response)
-                continue
+                break
             response.raise_for_status()
             return response
         except requests.RequestException as exc:
@@ -40,6 +35,7 @@ def _get(url, *, params=None, headers=None, timeout=25, retries=3):
     if last_error:
         raise last_error
     raise RuntimeError("request failed")
+
 
 def _norm(value):
     return re.sub(r'\s+', ' ', (value or '').strip().lower())
@@ -73,7 +69,8 @@ def _best_pdf(locations):
 
 
 def _slug(title, identity):
-    base = slugify(title, allow_unicode=True)[:450] or 'article'
+    # URL patterns are intentionally ASCII-only, so never persist Unicode slugs.
+    base = slugify(title, allow_unicode=False)[:450] or 'article'
     return f'{base}-{hashlib.sha1(identity.encode()).hexdigest()[:10]}'
 
 
@@ -89,6 +86,7 @@ def _score(item):
         age = max(datetime.now(timezone.utc).year - int(year), 0)
         score += max(0, 20 - age * 2)
     return round(score, 2)
+
 
 def _openalex(query, limit):
     data = _get(OPENALEX_URL, params={'search': query, 'per-page': min(limit, 200), 'filter': 'type:article'}).json()
@@ -148,6 +146,7 @@ def _semantic(query, limit):
             'pdf_url': oa.get('url') or '', 'citation_count': work.get('citationCount') or 0,
         })
     return results
+
 
 def discover_articles(query, limit=20, providers=None):
     providers = providers or ['openalex', 'semantic_scholar', 'crossref']
