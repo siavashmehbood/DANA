@@ -65,3 +65,11 @@ Migrationها موجود و همگام هستند. مدل‌های فروش بر
 Baseline مستند شد و بررسی‌های Django و تست‌های موجود اجرا شدند. endpoint ثبت event اکنون JSON نامعتبر، payload غیرآبجکتی و metadata غیرآبجکتی را با پاسخ 400 رد می‌کند و برای آن سه تست regression اضافه شده است. checkout اکنون cart و entitlement را داخل transaction دوباره بررسی می‌کند و اعتبار coupon را پس از lock و پیش از مصرف مجدداً می‌سنجد؛ همچنین coupon در checkout ناموفق به‌دلیل موجودی ناکافی مصرف نمی‌شود.
 
 پس از تغییرات، `python3 manage.py check`، `python3 manage.py makemigrations --check` و `python3 manage.py test` موفق بودند و مجموع تست‌ها از 5 به 8 رسید.
+
+## ممیزی مرحله دوم
+
+در ممیزی دوم، مسیرهای public و private با Django test client بررسی شدند. پیش از migration، اجرای واقعی Home روی دیتابیس توسعه به‌دلیل اعمال‌نشدن migrationها با خطای `no such table: articles_article` متوقف می‌شد؛ migrationهای موجود اعمال شدند و پس از آن smoke test همه مسیرهای اصلی با موفقیت انجام شد. صفحه Home، ورود، کتاب‌ها و مقالات برای مهمان و dashboard، profile، cart، wallet، vocabulary، notifications، support و leaderboard برای کاربر واردشده پاسخ صحیح دادند.
+
+دو مشکل کدی نیز اصلاح شد: مسیر profile بدون `login_required` بود و مسیر ورود OTP در صورت داشتن referral به مدل `Referral` ارجاع می‌داد اما import آن وجود نداشت. برای هر دو مورد تست regression اضافه شد. بررسی مرورگر Home و Books نیز با HTTP موفق انجام شد و console مرورگر بدون خطا بود. برای اجرای sandbox، hostname موقت در متغیر محیطی `ALLOWED_HOSTS` قرار گرفت؛ این مقدار نباید به تنظیمات production hardcode شود.
+
+در مرحله نهایی تست مشخص شد منطق ثبت `terms_accepted_at` و referral در OTP بیش از حد به شرط `created` وابسته بود؛ این منطق شفاف‌سازی شد و fixture تست نیز با session cookie واقعی همگام شد. نتیجه نهایی: 10 تست موفق.

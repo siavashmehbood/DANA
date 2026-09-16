@@ -7,7 +7,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from articles.models import Article
-from shop.models import CartItem, Entitlement
+from shop.models import CartItem, Entitlement, Referral
 from .models import User, OTPCode, Device, UserSession
 
 
@@ -82,9 +82,10 @@ def otp(request):
             if not user.is_active:
                 messages.error(request, 'این حساب غیرفعال شده است.')
                 return redirect('login')
-            if created and not user.terms_accepted_at:
+            if not user.terms_accepted_at:
                 user.terms_accepted_at = timezone.now()
                 user.save(update_fields=['terms_accepted_at'])
+            if created:
                 referral_code = request.session.pop('referral_code', '')
                 inviter = User.objects.filter(referral_code=referral_code).exclude(pk=user.pk).first()
                 if inviter:
