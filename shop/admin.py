@@ -1,8 +1,5 @@
-from decimal import Decimal
-from django import forms
-from django.contrib import admin, messages
-from django.db import transaction
-from .models import Coupon, Order, OrderItem, Entitlement, WalletTransaction, Referral, CartItem
+from django.contrib import admin
+from .models import Coupon, Order, OrderItem, Entitlement, WalletTransaction, Referral, CartItem, CheckoutRequest, Payment
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
@@ -20,9 +17,22 @@ class CouponAdmin(admin.ModelAdmin):
 
 @admin.register(WalletTransaction)
 class WalletTransactionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'amount', 'type', 'reason', 'order', 'created_at')
+    list_display = ('user', 'amount', 'type', 'balance_before', 'balance_after', 'reference', 'created_at')
     list_filter = ('type', 'created_at')
-    search_fields = ('user__username', 'user__phone', 'reason')
+    search_fields = ('user__username', 'user__phone', 'reason', 'reference')
+    readonly_fields = ('created_at', 'balance_before', 'balance_after', 'reference')
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'order', 'provider', 'amount', 'status', 'created_at')
+    list_filter = ('provider', 'status', 'created_at')
+    search_fields = ('authority', 'idempotency_key', 'user__username', 'user__phone')
+    readonly_fields = ('created_at', 'updated_at', 'idempotency_key')
+
+@admin.register(CheckoutRequest)
+class CheckoutRequestAdmin(admin.ModelAdmin):
+    list_display = ('user', 'idempotency_key', 'order', 'created_at')
+    search_fields = ('user__username', 'user__phone', 'idempotency_key')
     readonly_fields = ('created_at',)
 
 @admin.register(Entitlement)

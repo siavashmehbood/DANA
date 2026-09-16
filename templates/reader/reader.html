@@ -2,47 +2,18 @@
 {% block title %}{{ book.name }} | مطالعه | دانا{% endblock %}
 {% block content %}
 <div class="reader-shell">
-  <div class="readerbar">
-    <div><b>{{ book.name }}</b><small>{{ book.author.name }}</small></div>
-    <div class="reader-actions">
-      <button type="button" data-reader-mode>◐ حالت مطالعه</button>
-      <button type="button" data-bookmark>🔖 نشانک</button>
-      <button type="button" data-note>📝 یادداشت</button>
-      <span class="reader-progress"><span data-progress-label>{{ saved.progress|default:0|floatformat:0 }}</span>%</span>
-    </div>
-  </div>
+  <div class="readerbar"><div><b>{{ book.name }}</b><small>{{ book.author.name }}</small></div><div class="reader-actions"><button type="button" data-reader-mode>◐ حالت مطالعه</button><button type="button" data-bookmark>🔖 نشانک</button><button type="button" data-note>📝 یادداشت</button><span class="reader-progress"><span data-progress-label>{{ saved.progress|default:0|floatformat:0 }}</span>%</span></div></div>
   {% if accessible %}
-    {% if book.pdf %}
-      <iframe id="pdf-reader" src="{{ book.pdf.url }}#page={{ saved.current_page|default:1 }}" title="DANA PDF Reader"></iframe>
-    {% else %}
-      <div class="reader-empty"><h2>محتوای کتاب آماده است</h2><p>برای این کتاب هنوز PDF بارگذاری نشده است.</p></div>
-    {% endif %}
-  {% else %}
-    <div class="reader-empty"><h2>دسترسی محدود</h2><p>برای مطالعه این کتاب ابتدا آن را تهیه کنید.</p><a class="btn" href="/books/{{ book.slug }}/">مشاهده کتاب</a></div>
-  {% endif %}
+    {% if book.pdf %}<iframe id="pdf-reader" src="{% url 'protected_book_pdf' book.pk %}#page={{ saved.current_page|default:1 }}" title="DANA PDF Reader"></iframe>{% else %}<div class="reader-empty"><h2>محتوای کتاب آماده است</h2><p>برای این کتاب هنوز PDF بارگذاری نشده است.</p></div>{% endif %}
+  {% else %}<div class="reader-empty"><h2>دسترسی محدود</h2><p>برای مطالعه این کتاب ابتدا آن را تهیه کنید.</p><a class="btn" href="/books/{{ book.slug }}/">مشاهده کتاب</a></div>{% endif %}
 </div>
-{% if accessible %}
-<div class="reader-tools">
-  <section class="panel"><h3>نشانک‌ها</h3><div id="bookmark-list">{% for item in bookmarks %}<div class="tool-item">صفحه {{ item.page }}{% if item.title %} — {{ item.title }}{% endif %}</div>{% empty %}<div class="muted">هنوز نشانکی ثبت نشده.</div>{% endfor %}</div></section>
-  <section class="panel"><h3>یادداشت‌ها</h3><div id="note-list">{% for item in notes %}<div class="tool-item">صفحه {{ item.page }} — {{ item.text }}</div>{% empty %}<div class="muted">هنوز یادداشتی ثبت نشده.</div>{% endfor %}</div></section>
-</div>
+{% if accessible %}<div class="reader-tools"><section class="panel"><h3>نشانک‌ها</h3><div id="bookmark-list">{% for item in bookmarks %}<div class="tool-item">صفحه {{ item.page }}{% if item.title %} — {{ item.title }}{% endif %}</div>{% empty %}<div class="muted">هنوز نشانکی ثبت نشده.</div>{% endfor %}</div></section><section class="panel"><h3>یادداشت‌ها</h3><div id="note-list">{% for item in notes %}<div class="tool-item">صفحه {{ item.page }} — {{ item.text }}</div>{% empty %}<div class="muted">هنوز یادداشتی ثبت نشده.</div>{% endfor %}</div></section></div>
 <script>
-const readerUrl = '/reader/{{ book.pk }}/progress/';
-const csrftoken = '{{ csrf_token }}';
-const savedPage = {{ saved.current_page|default:0 }};
-let lastSaved = 0;
-let startedAt = Date.now();
-function saveProgress(page=savedPage, seconds=0, audioSeconds=0){
-  const value = Math.max(0, Math.min(100, Number('{{ saved.progress|default:0 }}')));
-  const body = new URLSearchParams({progress:value,page:page,seconds:seconds,audio_seconds:audioSeconds});
-  fetch(readerUrl,{method:'POST',headers:{'X-CSRFToken':csrftoken,'Content-Type':'application/x-www-form-urlencoded'},body});
-  lastSaved = Date.now();
-}
-setInterval(()=>saveProgress(savedPage, Math.floor((Date.now()-startedAt)/1000)), 30000);
-window.addEventListener('beforeunload',()=>saveProgress(savedPage, Math.floor((Date.now()-startedAt)/1000)));
+const readerUrl='/reader/{{ book.pk }}/progress/'; const csrftoken='{{ csrf_token }}'; const savedPage={{ saved.current_page|default:0 }}; const startedAt=Date.now();
+function saveProgress(page=savedPage,seconds=0,audioSeconds=0){const value=Math.max(0,Math.min(100,Number('{{ saved.progress|default:0 }}')));fetch(readerUrl,{method:'POST',headers:{'X-CSRFToken':csrftoken,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({progress:value,page,seconds,audio_seconds:audioSeconds})});}
+setInterval(()=>saveProgress(savedPage,Math.floor((Date.now()-startedAt)/1000)),30000); window.addEventListener('beforeunload',()=>saveProgress(savedPage,Math.floor((Date.now()-startedAt)/1000)));
 document.querySelector('[data-reader-mode]')?.addEventListener('click',()=>document.body.classList.toggle('reader-focus'));
-document.querySelector('[data-bookmark]')?.addEventListener('click',()=>{const page=prompt('شماره صفحه را وارد کنید',String(savedPage||1));if(page) fetch('/reader/{{ book.pk }}/bookmark/',{method:'POST',headers:{'X-CSRFToken':csrftoken,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({page,title:'نشانک من'})}).then(()=>location.reload())});
+document.querySelector('[data-bookmark]')?.addEventListener('click',()=>{const page=prompt('شماره صفحه را وارد کنید',String(savedPage||1));if(page)fetch('/reader/{{ book.pk }}/bookmark/',{method:'POST',headers:{'X-CSRFToken':csrftoken,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({page,title:'نشانک من'})}).then(()=>location.reload())});
 document.querySelector('[data-note]')?.addEventListener('click',()=>{const page=prompt('شماره صفحه را وارد کنید',String(savedPage||1));if(!page)return;const text=prompt('متن یادداشت را بنویسید');if(text)fetch('/reader/{{ book.pk }}/note/',{method:'POST',headers:{'X-CSRFToken':csrftoken,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({page,text})}).then(()=>location.reload())});
-</script>
-{% endif %}
+</script>{% endif %}
 {% endblock %}

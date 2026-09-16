@@ -1,13 +1,30 @@
+from datetime import timedelta
 from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models import Avg, Count, Sum
 from django.shortcuts import render
-from django.db.models import Sum
-from shop.models import Order
+from django.utils import timezone
 from accounts.models import User
+from reader.models import ReadingProgress
+from shop.models import CartItem, Order
 from analytics.models import Event
 
 @staff_member_required
 def dashboard(request):
-    paid=Order.objects.filter(status__in=['paid','gift'])
-    sales=paid.aggregate(v=Sum('total'))['v'] or 0
-    users=User.objects.count()
-    return render(request,'analytics/dashboard.html',{'sales':sales,'orders':paid.count(),'users':users,'events':Event.objects.count()})
+    now = timezone.now()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    paid = Order.objects.filter(status__in=['paid', 'gift'])
+    today_paid = paid.filter(created_at__gte=today)
+    sales = paid.aggregate(v=Sum('total'))['v'] or 0
+    today_sales = today_paid.aggregate(v=Sum('total'))['v'] or 0
+    users = User.objects.count()
+    paying_users = paid.values('user_id').distinct().count()
+    active_readers = ReadingProgress.objects.filter(updated_at__gte=now - timedelta(days=30)).values('user_id').distinct().count()
+    new_users = User.objects.filter(date_joined__gte=now - timedelta(days=30)).count()
+    aov = paid.aggregate(v=Avg('total'))['v'] or 0
+    arpu = (sales / users) if users else 0
+    ltv = (sales / paying_users) if paying_users else 0
+    conversion = (paying_users * 100 / users) if users else 0
+    cart_users = CartItem.objects.values('user_id').distinct().count()
+    return render(request, 'analytics/dashboard.html', {'sales': sales, 'today_sales': today_sales, 'orders': paid.count(), 'users': users,
+        'events': Event.objects.count(), 'paying_users': paying_users, 'active_readers': active_readers, 'new_users': new_users,
+        'aov': round(aov, 0), 'arpu': round(arpu, 0), 'ltv': round(ltv, 0), 'conversion': round(conversion, 2), 'cart_users': cart_users})

@@ -1,1 +1,6 @@
-{% extends 'base.html' %}{% block content %}<section class="section"><h1>داشبورد دانا</h1><div class="stats"><div>فروش<br><b>{{sales}}</b></div><div>سفارش<br><b>{{orders}}</b></div><div>کاربر<br><b>{{users}}</b></div><div>Event<br><b>{{events}}</b></div></div><a class="btn" href="/admin/">مدیریت کامل</a></section>{% endblock %}
+{% extends 'base.html' %}
+{% block content %}<section class="section"><h1>داشبورد دانا</h1><div class="stats">
+<div>فروش کل<br><b>{{sales}}</b></div><div>فروش امروز<br><b>{{today_sales}}</b></div><div>سفارش موفق<br><b>{{orders}}</b></div><div>کاربر<br><b>{{users}}</b></div>
+<div>کاربر خریدار<br><b>{{paying_users}}</b></div><div>نرخ تبدیل<br><b>{{conversion}}%</b></div><div>ARPU<br><b>{{arpu}}</b></div><div>LTV<br><b>{{ltv}}</b></div>
+<div>AOV<br><b>{{aov}}</b></div><div>خوانندگان فعال ۳۰ روز<br><b>{{active_readers}}</b></div><div>کاربر جدید ۳۰ روز<br><b>{{new_users}}</b></div><div>سبدهای فعال<br><b>{{cart_users}}</b></div>
+</div><p class="muted">رویدادهای ثبت‌شده: {{events}}</p><a class="btn" href="/admin/">مدیریت کامل</a></section>{% endblock %}
