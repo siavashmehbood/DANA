@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.text import slugify
+from accounts.models import User
 
 
 class ArticleCategory(models.Model):
@@ -15,6 +16,36 @@ class ArticleCategory(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ArticleLibraryItem(models.Model):
+    STATUS_CHOICES = [('unread', 'خوانده‌نشده'), ('reading', 'در حال مطالعه'), ('read', 'خوانده‌شده')]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='article_library')
+    article = models.ForeignKey('Article', on_delete=models.CASCADE, related_name='library_items')
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='unread')
+    favorite = models.BooleanField(default=False)
+    progress = models.PositiveSmallIntegerField(default=0)
+    last_position = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'article'], name='unique_article_library_item')]
+        ordering = ['-updated_at']
+
+
+class ArticleAnnotation(models.Model):
+    KIND_CHOICES = [('highlight', 'هایلایت'), ('note', 'یادداشت')]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='article_annotations')
+    article = models.ForeignKey('Article', on_delete=models.CASCADE, related_name='annotations')
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES, default='highlight')
+    selected_text = models.TextField()
+    note = models.TextField(blank=True)
+    page = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
 
 
 class Article(models.Model):

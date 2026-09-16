@@ -3,8 +3,9 @@ from django.db.models import Q
 from django.http import FileResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
 
-from .models import Article, ArticleCategory
+from .models import Article, ArticleCategory, ArticleLibraryItem, ArticleAnnotation
 from .translation import (
     download_article_pdf,
     extract_pdf_text,
@@ -17,7 +18,10 @@ def listing(request):
     query = request.GET.get('q', '').strip()
     category = request.GET.get('category', '').strip()
     sort = request.GET.get('sort', 'newest').strip()
+    saved_only = request.GET.get('saved') == '1' and request.user.is_authenticated
     articles = Article.objects.filter(published=True).select_related('category')
+    if saved_only:
+        articles = articles.filter(library_items__user=request.user)
     if query:
         articles = articles.filter(
             Q(title__icontains=query) | Q(title_fa__icontains=query) |
@@ -43,7 +47,7 @@ def listing(request):
         'articles': page_obj.object_list, 'page_obj': page_obj,
         'categories': ArticleCategory.objects.filter(is_active=True),
         'query': query, 'selected_category': category,
-        'selected_sort': sort, 'article_count': paginator.count,
+        'selected_sort': sort, 'article_count': paginator.count, 'saved_only': saved_only,
     })
 
 
@@ -90,10 +94,58 @@ def detail(request, slug):
     if article.category_id:
         related = related.filter(category_id=article.category_id)
     related = related.order_by('-featured', '-year', '-created_at')[:4]
+    library_item = None
+    annotations = []
+    if request.user.is_authenticated:
+        library_item = ArticleLibraryItem.objects.filter(user=request.user, article=article).first()
+        annotations = ArticleAnnotation.objects.filter(user=request.user, article=article)
     return render(request, 'articles/detail.html', {
         'article': article, 'related_articles': related,
         'language_mode': mode, 'reader_search': search,
+        'library_item': library_item, 'annotations': annotations,
     })
+
+
+@login_required
+@require_POST
+def library_action(request, slug):
+    article = get_object_or_404(Article, slug=slug, published=True)
+    item, _ = ArticleLibraryItem.objects.get_or_create(user=request.user, article=article)
+    action = request.POST.get('action', 'toggle')
+    if action == 'status':
+        item.status = request.POST.get('status', item.status)
+        if item.status not in dict(ArticleLibraryItem.STATUS_CHOICES):
+            return JsonResponse({'ok': False, 'error': 'وضعیت نامعتبر است.'}, status=400)
+    elif action == 'favorite':
+        item.favorite = not item.favorite
+    elif action == 'progress':
+        try:
+            item.progress = max(0, min(100, int(request.POST.get('progress', item.progress))))
+        except (TypeError, ValueError):
+            return JsonResponse({'ok': False, 'error': 'درصد پیشرفت نامعتبر است.'}, status=400)
+    item.save()
+    return JsonResponse({'ok': True, 'status': item.status, 'favorite': item.favorite, 'progress': item.progress})
+
+
+@login_required
+@require_POST
+def annotation_create(request, slug):
+    article = get_object_or_404(Article, slug=slug, published=True)
+    selected = request.POST.get('selected_text', '').strip()[:12000]
+    if not selected:
+        return JsonResponse({'ok': False, 'error': 'متنی انتخاب نشده است.'}, status=400)
+    kind = request.POST.get('kind', 'highlight')
+    if kind not in {'highlight', 'note'}:
+        kind = 'highlight'
+    try:
+        page = max(0, int(request.POST.get('page', 0)))
+    except (TypeError, ValueError):
+        page = 0
+    item = ArticleAnnotation.objects.create(
+        user=request.user, article=article, kind=kind,
+        selected_text=selected, note=request.POST.get('note', '').strip()[:5000], page=page,
+    )
+    return JsonResponse({'ok': True, 'id': item.id, 'kind': item.kind, 'selected_text': item.selected_text, 'note': item.note})
 
 
 @require_POST
