@@ -181,6 +181,12 @@ def import_discovered(query, limit=20, category=None, providers=None):
     created = updated = 0
     discovered = discover_articles(query, limit, providers)
     for item in discovered:
+        # Never publish a metadata-only record as a readable article.
+        # A record is importable only when we have text/abstract or a PDF source.
+        has_content = any((item.get(field) or '').strip() for field in ('abstract', 'full_text', 'full_text_fa', 'pdf_url'))
+        if not has_content:
+            logger.info('Skipping metadata-only article: %s', item.get('title', ''))
+            continue
         identity = item.get('doi') or item.get('external_id') or item['title']
         defaults = {
             'title': item['title'], 'slug': _slug(item['title'], identity),
