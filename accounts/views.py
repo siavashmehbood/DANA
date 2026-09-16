@@ -9,6 +9,7 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from articles.models import Article
 from shop.models import CartItem, Entitlement, Referral
+from reader.models import ReadingProgress
 from .models import User, OTPCode, Device, UserSession
 
 def _phone(value):
@@ -67,7 +68,9 @@ def otp(request):
 @login_required
 def dashboard(request):
     user=request.user
-    return render(request,'dashboard.html',{'books_count':Entitlement.objects.filter(user=user).count(),'article_count':Article.objects.filter(published=True).count(),'vocabulary_count':user.saved_words.count(),'cart_count':CartItem.objects.filter(user=user).count(),'latest_articles':Article.objects.filter(published=True).order_by('-created_at')[:5]})
+    owned=Entitlement.objects.filter(user=user).select_related('book__author').order_by('-granted_at')
+    progress=ReadingProgress.objects.filter(user=user).select_related('book').order_by('-updated_at')
+    return render(request,'dashboard.html',{'books_count':owned.count(),'article_count':Article.objects.filter(published=True).count(),'vocabulary_count':user.saved_words.count(),'cart_count':CartItem.objects.filter(user=user).count(),'latest_articles':Article.objects.filter(published=True).order_by('-created_at')[:5],'owned_books':owned[:8],'reading_progress':progress[:4]})
 
 @login_required
 def profile(request):
@@ -97,3 +100,12 @@ def deactivate(request):
 def logout_view(request):
     if request.user.is_authenticated: UserSession.objects.filter(session_key=request.session.session_key).delete()
     auth.logout(request); return redirect('/')
+
+
+@login_required
+def library(request):
+    user=request.user
+    owned=list(Entitlement.objects.filter(user=user).select_related('book__author','book__category').order_by('-granted_at'))
+    pmap={p.book_id:p for p in ReadingProgress.objects.filter(user=user)}
+    rows=[{'book':item.book,'progress':pmap.get(item.book_id)} for item in owned]
+    return render(request,'library.html',{'library_rows':rows})

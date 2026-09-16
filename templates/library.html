@@ -1,0 +1,12 @@
+﻿{% extends 'base.html' %}
+{% block title %}کتابخانه من | دانا{% endblock %}
+{% block content %}
+<section class="section personal-library">
+  <div class="library-hero"><div><span class="shelf-label">DANA MY LIBRARY</span><h1>کتابخانه من</h1><p>خریدهایت اینجا می‌مانند؛ از آخرین نقطه مطالعه ادامه بده.</p></div><a class="btn" href="{% url 'books' %}">پیدا کردن کتاب جدید</a></div>
+  <div class="library-tabs"><span class="active">همه کتاب‌ها</span><span>در حال مطالعه</span><span>تکمیل‌شده</span></div>
+  <div class="grid library-owned-grid">
+  {% for row in library_rows %}<article class="library-owned card"><a href="{% url 'book_detail' row.book.slug %}" class="library-cover">{% if row.book.cover %}<img src="{{ row.book.cover.url }}" alt="{{ row.book.name }}">{% else %}<span>دانا</span>{% endif %}</a><div class="library-owned-body"><span class="muted">{{ row.book.category.name|default:'کتاب' }}</span><h3>{{ row.book.name }}</h3><p>{{ row.book.author.name }}</p>{% if row.progress %}<div class="progress-meta"><span>پیشرفت مطالعه</span><b>{{ row.progress.progress|floatformat:0 }}٪</b></div><div class="progress-track"><i style="width:{{ row.progress.progress }}%"></i></div><a class="btn small" href="{% url 'reader' row.book.id %}">ادامه مطالعه</a>{% else %}<a class="btn small" href="{% url 'reader' row.book.id %}">شروع مطالعه</a>{% endif %}</div></article>
+  {% empty %}<div class="empty panel"><h2>کتابخانه‌ات هنوز خالی است</h2><p>اولین کتابت را انتخاب کن و اینجا نگهش دار.</p><a class="btn" href="{% url 'books' %}">رفتن به کتابخانه دانا</a></div>{% endfor %}
+  </div>
+</section>
+{% endblock %}
