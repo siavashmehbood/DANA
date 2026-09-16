@@ -112,6 +112,7 @@ def dashboard(request):
     })
 
 
+@login_required
 def profile(request):
     if request.method == 'POST':
         request.user.first_name = request.POST.get('first_name', '').strip()
