@@ -45,6 +45,7 @@ class ArticleAnnotation(models.Model):
     color = models.CharField(max_length=20, default='amber')
     text_prefix = models.TextField(blank=True)
     text_suffix = models.TextField(blank=True)
+    rects = models.JSONField(default=list, blank=True)
     page = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

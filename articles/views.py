@@ -1,7 +1,7 @@
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import FileResponse, JsonResponse, HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -105,6 +105,21 @@ def detail(request, slug):
         'language_mode': mode, 'reader_search': search,
         'library_item': library_item, 'annotations': annotations,
     })
+
+
+@login_required
+def pdf_reader(request, slug):
+    article = get_object_or_404(Article, slug=slug, published=True)
+    if not article.pdf and article.pdf_url:
+        try: download_article_pdf(article)
+        except Exception: pass
+    if not article.pdf:
+        return redirect('article_detail', slug=article.slug)
+    item = ArticleLibraryItem.objects.filter(user=request.user, article=article).first()
+    annotations = list(ArticleAnnotation.objects.filter(user=request.user, article=article).values('id','kind','selected_text','note','color','page','rects','created_at'))
+    for a in annotations: a['created_at'] = a['created_at'].isoformat()
+    import json
+    return render(request, 'articles/pdf_reader.html', {'article': article, 'pdf_url': reverse('article_download', args=[article.slug]), 'annotations_json': json.dumps(annotations, ensure_ascii=False), 'last_position': item.last_position if item else 0, 'reading_seconds': item.reading_seconds if item else 0})
 
 
 @login_required
@@ -216,11 +231,17 @@ def annotation_create(request, slug):
         page = max(0, int(request.POST.get('page', 0)))
     except (TypeError, ValueError):
         page = 0
+    try:
+        rects = __import__('json').loads(request.POST.get('rects', '[]')) if request.POST.get('rects') else []
+        if not isinstance(rects, list): rects = []
+    except Exception:
+        rects = []
     item = ArticleAnnotation.objects.create(
         user=request.user, article=article, kind=kind,
         selected_text=selected, note=request.POST.get('note', '').strip()[:5000],
         color=request.POST.get('color', 'amber')[:20],
         text_prefix=request.POST.get('prefix', '').strip()[:300],
+        rects=rects,
         text_suffix=request.POST.get('suffix', '').strip()[:300], page=page,
     )
     return JsonResponse({'ok': True, 'id': item.id, 'kind': item.kind, 'selected_text': item.selected_text, 'note': item.note})

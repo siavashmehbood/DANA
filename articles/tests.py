@@ -42,3 +42,19 @@ class ArticleFlowTests(TestCase):
         response=self.client.post(reverse('article_annotation_delete',args=[annotation.pk]))
         self.assertEqual(response.status_code,200)
         self.assertFalse(ArticleAnnotation.objects.filter(pk=annotation.pk).exists())
+
+    def test_pdf_reader_requires_pdf_and_redirects_cleanly(self):
+        user=User.objects.create_user(username='pdfuser',password='secret')
+        self.client.force_login(user)
+        response=self.client.get(reverse('article_pdf_reader',args=[self.article.slug]))
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,reverse('article_detail',args=[self.article.slug]))
+
+    def test_pdf_annotation_persists_rects_and_color(self):
+        user=User.objects.create_user(username='pdfannotator',password='secret')
+        self.client.force_login(user)
+        response=self.client.post(reverse('article_annotation_create',args=[self.article.slug]), {'selected_text':'PDF evidence','kind':'highlight','color':'blue','page':3,'rects':'[{"page":3,"x":0.1,"y":0.2,"w":0.3,"h":0.04}]'})
+        self.assertEqual(response.status_code,200)
+        item=ArticleAnnotation.objects.get(user=user,article=self.article)
+        self.assertEqual(item.color,'blue')
+        self.assertEqual(item.rects[0]['page'],3)
