@@ -1,16 +1,68 @@
-#content-main{width:100%}
-/* Sidebar: override Django Admin defaults explicitly. */
-html body #nav-sidebar,html body #nav-sidebar .module,html body #nav-sidebar table{background:#11111b!important;color:#f5f3ff!important;border:0!important;box-shadow:none!important}
-html body #nav-sidebar{width:280px!important;min-height:calc(100vh - 72px);padding:18px 13px!important;border-left:1px solid #302d48!important;direction:rtl!important}
-html body #nav-sidebar caption,html body #nav-sidebar th{display:block!important;width:100%!important;background:#211d3b!important;color:#d5ccff!important;border:0!important;border-bottom:1px solid #302d48!important;border-radius:10px!important;padding:12px 10px!important;text-align:right!important;font-weight:800!important}
+/* DANA admin UX layer: RTL, readable tables/forms, compact navigation and responsive dashboard. */
+html,body{direction:rtl}
+html body #nav-sidebar{direction:rtl;width:276px!important;min-height:calc(100vh - 72px);padding:16px 12px!important;border-left:1px solid var(--hairline-color,#302d48)!important}
+html body #nav-sidebar caption,html body #nav-sidebar th{display:block!important;width:100%!important;border:0!important;border-radius:10px!important;padding:11px 10px!important;text-align:right!important;font-weight:800!important}
 html body #nav-sidebar td{display:block!important;width:100%!important;padding:0!important;border:0!important;background:transparent!important}
-html body #nav-sidebar a{display:block!important;margin:4px 0!important;padding:10px 12px!important;border-radius:9px!important;background:transparent!important;color:#d5d8e5!important;font-size:12px!important;text-decoration:none!important;transition:.2s!important}
-html body #nav-sidebar a:hover,html body #nav-sidebar a:focus{background:#2b2351!important;color:#fff!important;transform:translateX(-3px)}
-html body #nav-sidebar .addlink{background:#32275e!important;color:#e0d8ff!important;border:1px solid #51458b!important;font-weight:700!important}
-html body #nav-sidebar .addlink:hover{background:#6959ef!important;color:#fff!important}
-/* Main admin dashboard layout. */
-.dana-dashboard-head{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:24px}.dana-dashboard-head h1{font-size:31px;margin:5px 0;color:#fff}.dana-dashboard-head p{color:#9da3b5;margin:0}.dana-site-btn{background:linear-gradient(135deg,#6959ef,#a66dff);color:#fff!important;padding:11px 17px;border-radius:11px;text-decoration:none;box-shadow:0 8px 20px #7967ff33}
-.dana-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-bottom:24px}.dana-kpi,.dana-mini{background:#15151f!important;border:1px solid #302d48!important;border-radius:16px!important;padding:19px!important;color:#f5f3ff;box-shadow:0 12px 30px #0006!important}.dana-kpi{display:flex;align-items:center;gap:13px}.dana-kpi>span{font-size:25px}.dana-kpi small,.dana-mini span{display:block;color:#a1a6b7}.dana-kpi b,.dana-mini strong{display:block;color:#fff;font-size:17px;margin-top:5px}.dana-mini-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:0 0 28px}
-.dana-admin-section-title{margin:26px 0 14px}.dana-admin-section-title h2{margin:0;color:#fff}.dana-admin-section-title p{color:#9da3b5}.dana-app-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:0!important}.dana-app-card{display:block!important;min-width:0;background:#15151f!important;border:1px solid #302d48!important;border-radius:18px!important;padding:19px!important;box-shadow:0 12px 30px #0006!important;color:#f5f3ff}.dana-app-head{display:flex;align-items:center;gap:10px;border-bottom:1px solid #302d48;padding-bottom:13px;margin-bottom:5px}.dana-app-head h2{margin:0;color:#fff;font-size:17px}.dana-app-icon{width:34px;height:34px;border-radius:10px;background:#2b2351;color:#c9bfff;display:grid;place-items:center}.dana-model-list{display:flex;flex-direction:column}.dana-model-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 2px;border-bottom:1px solid #29273a}.dana-model-row:last-child{border-bottom:0}.dana-model-row>a:first-child{color:#dfe1eb;text-decoration:none;font-weight:600;font-size:13px}.dana-model-row>div{display:flex;align-items:center;gap:7px;white-space:nowrap}.dana-add,.dana-open{display:inline-flex!important;align-items:center;justify-content:center;min-height:34px;padding:0 9px;border-radius:8px;text-decoration:none;font-size:11px;font-weight:700}.dana-add{background:#2b2351;color:#c9bfff!important}.dana-open{background:linear-gradient(135deg,#6959ef,#a66dff);color:#fff!important;box-shadow:0 6px 15px #7967ff33}.dana-add:hover,.dana-open:hover{transform:translateY(-2px)}
-button,.button,input[type=submit],input[type=button],.submit-row input,.object-tools a{font-family:inherit!important;border-radius:10px!important;padding:9px 15px!important;font-weight:700!important;background:linear-gradient(135deg,#6959ef,#a66dff)!important;color:#fff!important;border:0!important;box-shadow:0 8px 20px #7967ff33!important;transition:.2s!important}button:hover,.button:hover,input[type=submit]:hover,.object-tools a:hover{transform:translateY(-2px);box-shadow:0 13px 27px #8c76ff66!important}input,textarea,select{background:#10101a!important;border:1px solid #3a3655!important;color:#f5f3ff!important;border-radius:10px!important;padding:10px!important}
-@media(max-width:950px){html body #nav-sidebar{display:none!important}.dana-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dana-mini-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dana-app-grid{grid-template-columns:1fr!important}}@media(max-width:600px){#content{padding:16px!important}.dana-kpi-grid,.dana-mini-grid{grid-template-columns:1fr}.dana-dashboard-head{align-items:flex-start;flex-direction:column}.dana-model-row{align-items:flex-start;flex-direction:column}.dana-model-row>div{width:100%}.dana-add,.dana-open{flex:1}}
+html body #nav-sidebar a{display:block!important;margin:3px 0!important;padding:10px 11px!important;border-radius:9px!important;font-size:12px!important;text-decoration:none!important}
+html body #nav-sidebar a:hover,html body #nav-sidebar a:focus{transform:translateX(-2px)}
+html body #nav-sidebar .addlink{font-weight:800!important}
+
+#content-main{width:100%}
+#content-main .module{border-radius:14px;overflow:hidden}
+#content-main table{width:100%}
+#content-main th,#content-main td{vertical-align:middle}
+#content-main th a{font-weight:800}
+.object-tools a,.submit-row input,.button,button,input[type=submit],input[type=button]{border-radius:9px!important;font-family:inherit!important;font-weight:700!important}
+input,textarea,select{font-family:inherit!important;border-radius:9px!important}
+.selector select{border-radius:9px!important}
+
+.dana-dashboard-head{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:24px}
+.dana-dashboard-head h1{font-size:30px;margin:5px 0}
+.dana-dashboard-head p{margin:0;opacity:.72}
+.eyebrow{font-size:11px;letter-spacing:1.5px;opacity:.55}
+.dana-site-btn{padding:10px 16px;border-radius:11px;text-decoration:none;font-weight:700}
+
+.dana-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:22px}
+.dana-kpi,.dana-mini{border:1px solid rgba(128,128,128,.16);border-radius:15px;padding:17px;background:var(--color-base-50,#fff)}
+.dana-kpi{display:flex;align-items:center;gap:13px}
+.dana-kpi>span{font-size:25px}
+.dana-kpi small,.dana-mini span{display:block;opacity:.66}
+.dana-kpi b,.dana-mini strong{display:block;font-size:18px;margin-top:4px}
+
+.dana-admin-section-title{display:flex;justify-content:space-between;align-items:end;gap:15px;margin:25px 0 13px}
+.dana-admin-section-title h2{margin:0 0 4px;font-size:19px}
+.dana-admin-section-title p{margin:0;opacity:.62}
+.dana-admin-section-title>a{font-weight:700;text-decoration:none}
+
+.dana-quick-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.dana-quick-card{display:flex;flex-direction:column;gap:5px;padding:15px;border:1px solid rgba(128,128,128,.16);border-radius:13px;text-decoration:none;background:var(--color-base-50,#fff);transition:.18s}
+.dana-quick-card:hover{transform:translateY(-2px)}
+.dana-quick-card>span{font-size:21px}.dana-quick-card strong{font-size:13px}.dana-quick-card small{opacity:.55}
+
+.dana-attention-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.dana-attention-card{display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;padding:14px;border-radius:13px;border:1px solid rgba(128,128,128,.16);text-decoration:none}
+.dana-attention-card strong{font-size:24px;grid-row:span 2}.dana-attention-card span{font-weight:700}.dana-attention-card small{opacity:.55}.dana-attention-card.warning{border-color:#b98b3044}.dana-attention-card.danger{border-color:#c94a4a55}.dana-attention-card.info{border-color:#4d8bc455}
+
+.dana-mini-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:22px 0 28px}
+.dana-mini{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 15px}
+.dana-mini strong{font-size:17px}
+
+.dana-recent{margin-bottom:28px}
+.dana-table-wrap{overflow:auto;border:1px solid rgba(128,128,128,.16);border-radius:14px}
+.dana-table{width:100%;border-collapse:collapse;min-width:720px;background:var(--color-base-50,#fff)}
+.dana-table th,.dana-table td{padding:12px 14px;text-align:right;border-bottom:1px solid rgba(128,128,128,.10);white-space:nowrap}
+.dana-table th{font-size:12px;opacity:.65}.dana-table td{font-size:13px}.dana-table tr:last-child td{border-bottom:0}
+.dana-table a{text-decoration:none;font-weight:700}.dana-empty{text-align:center!important;padding:25px!important;opacity:.55}
+.dana-status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(128,128,128,.12)}
+.status-paid,.status-successful,.status-gift{background:#2e9b6130}.status-pending{background:#c79a2f30}.status-failed,.status-cancelled{background:#c94a4a30}
+
+.dana-app-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.dana-app-card{border:1px solid rgba(128,128,128,.16);border-radius:15px;overflow:hidden;background:var(--color-base-50,#fff)}
+.dana-app-head{display:flex;align-items:center;gap:10px;padding:15px 17px;border-bottom:1px solid rgba(128,128,128,.12)}
+.dana-app-head h2{margin:0;font-size:17px}.dana-app-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:rgba(180,140,60,.13)}
+.dana-model-list{display:flex;flex-direction:column}.dana-model-row{display:flex;justify-content:space-between;gap:10px;padding:11px 15px;border-bottom:1px solid rgba(128,128,128,.09)}
+.dana-model-row:last-child{border-bottom:0}.dana-model-row>a:first-child{text-decoration:none;font-weight:650}.dana-model-row>div{display:flex;gap:8px;white-space:nowrap}
+.dana-add,.dana-open{font-size:11px;text-decoration:none}.dana-add{opacity:.7}.dana-open{font-weight:700}.dana-muted{padding:12px;opacity:.5}
+
+@media(max-width:1100px){.dana-quick-grid{grid-template-columns:repeat(3,1fr)}.dana-attention-grid{grid-template-columns:repeat(2,1fr)}.dana-kpi-grid{grid-template-columns:repeat(2,1fr)}.dana-mini-grid{grid-template-columns:repeat(2,1fr)}.dana-app-grid{grid-template-columns:1fr}}
+@media(max-width:700px){html body #nav-sidebar{display:none!important}.dana-dashboard-head{align-items:flex-start;flex-direction:column}.dana-quick-grid,.dana-attention-grid,.dana-kpi-grid,.dana-mini-grid{grid-template-columns:1fr}.dana-model-row{align-items:flex-start;flex-direction:column}.dana-model-row>div{width:100%}.dana-add,.dana-open{flex:1;text-align:center}.dana-admin-section-title{align-items:flex-start;flex-direction:column}}
