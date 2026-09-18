@@ -1,0 +1,53 @@
+/* DANA Unified UI — final site layer */
+:root{--dana-bg:#090a10;--dana-panel:#11131c;--dana-panel-2:#171925;--dana-line:#292d3b;--dana-text:#f2f1f6;--dana-muted:#9296a7;--dana-accent:#9a7cff;--dana-accent-2:#b19cff;--dana-radius:18px}
+html{background:var(--dana-bg)}
+body{background:radial-gradient(circle at 50% -10%,#19152b 0,#0c0d14 38%,var(--dana-bg) 72%);color:var(--dana-text)}
+.site-header{background:rgba(9,10,16,.9)!important;border-bottom:1px solid var(--dana-line)!important;backdrop-filter:blur(18px)}
+.main-nav{max-width:1320px!important;min-height:68px!important}
+.brand,.dana-footer-brand{color:#fff!important}
+.header-links a,.header-more summary,.auth-action{color:#bfc1cd!important}
+.header-links a:hover,.header-more summary:hover,.auth-action:hover{color:#fff!important}
+.btn{border:1px solid var(--dana-line)!important;border-radius:11px!important;background:#171925!important;color:#e9e7f1!important;box-shadow:none!important;transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.btn:hover{transform:translateY(-1px);border-color:#514b70!important;background:#211e31!important}
+.btn.primary{background:linear-gradient(135deg,#8d70f5,#a184ff)!important;border-color:transparent!important;color:#fff!important}
+.card,.detail-card,.section{border-color:var(--dana-line)!important}
+.article-detail{background:linear-gradient(180deg,#12141e,#0e1017)!important;border:1px solid var(--dana-line)!important;border-radius:24px!important;box-shadow:0 24px 70px #0008!important}
+.article-detail .article-hero-content h1{color:#fff!important;line-height:1.25!important}
+.article-overview{border-top:1px solid var(--dana-line)!important}
+.article-quick-tools{background:#11131c!important;border-color:var(--dana-line)!important;border-radius:16px!important}
+.article-annotations{border:1px solid var(--dana-line)!important;background:#10121a!important;border-radius:20px!important;padding:24px!important}
+.annotation-item{background:#151722!important;border-color:var(--dana-line)!important;border-radius:14px!important}
+.dana-footer{background:#08090e!important;border-top:1px solid var(--dana-line)!important}
+/* Reader: one visual language, stable desktop/mobile frame */
+#article-reader{width:min(1240px,96vw)!important;margin:38px auto 0!important}
+#article-reader>.reader-shell{padding:14px!important;background:#0d0f16!important;border:1px solid #2b2f3d!important;border-radius:22px!important;box-shadow:0 24px 70px #0008!important}
+#article-reader .reader-toolbar{position:sticky!important;top:74px!important;height:54px!important;margin:0 0 12px!important;padding:0 10px!important;border:1px solid #2b2f3d!important;border-radius:13px!important;background:#151722f2!important}
+#article-reader .article-reader[data-paged-reader]{height:min(780px,calc(100vh - 205px))!important;min-height:600px!important;gap:18px!important;padding:10px!important;background:#090b11!important;border-radius:16px!important}
+#article-reader .reader-column{flex:0 0 calc(100% - 36px)!important;width:calc(100% - 36px)!important;min-width:calc(100% - 36px)!important;height:100%!important;margin:0 18px!important;padding:0!important;border-radius:12px!important;overflow:hidden!important;box-sizing:border-box!important}
+#article-reader .reader-column.original-reader{background:#f8f5ee!important;color:#29282c!important;border:1px solid #d5cfc2!important;box-shadow:0 16px 45px #0007!important}
+#article-reader .reader-column.original-reader:before{top:20px!important;left:38px!important;right:38px!important;height:28px!important;padding:0 0 8px!important;background:transparent!important;border-bottom:1px solid #ded8cb!important;color:#a09787!important}
+#article-reader .original-reader .original-reader-head{margin-top:42px!important;padding:22px 48px 18px!important;border-bottom:1px solid #ddd7ca!important}
+#article-reader .original-reader .original-reader-head h3{color:#222126!important;font-size:26px!important}
+#article-reader .original-reader .reader-source-meta{padding:10px 48px!important;background:#f0ece3!important;border-bottom:1px solid #ddd7ca!important}
+#article-reader .original-reader .reader-original-abstract{margin:22px 48px!important;padding:16px 18px!important;background:#eee9df!important;border-right:3px solid #8d7441!important}
+#article-reader .original-reader .article-text{height:calc(100% - 205px)!important;max-width:900px!important;margin:0 auto!important;padding:0 56px 50px!important;overflow-x:auto!important;overflow-y:hidden!important;direction:ltr!important;column-count:1!important;column-width:auto!important;font-family:Georgia,'Times New Roman',serif!important;font-size:17px!important;line-height:1.95!important;color:#29282c!important;text-align:left!important;white-space:normal!important}
+#article-reader .original-reader .article-text p{margin:0 0 1.1em!important;break-inside:auto!important}
+#article-reader .original-reader .article-text>*{direction:ltr!important}
+#article-reader .reader-column.persian{background:#151620!important}
+#article-reader .reader-column.persian .article-text{height:calc(100% - 70px)!important;max-width:850px!important;margin:0 auto!important;padding:0 56px 48px!important;direction:rtl!important;font-size:18px!important;line-height:2.35!important;white-space:normal!important}
+#article-reader .reader-column.persian .article-text>*{direction:rtl!important}
+#article-reader .reader-source-footer{bottom:24px!important}
+@media(max-width:800px){#article-reader{width:100%!important;margin-top:20px!important}#article-reader>.reader-shell{padding:8px!important;border-radius:18px!important}#article-reader .reader-toolbar{top:62px!important;height:50px!important}#article-reader .article-reader[data-paged-reader]{height:calc(100vh - 150px)!important;min-height:520px!important;padding:6px!important;gap:10px!important}#article-reader .reader-column{flex-basis:calc(100% - 12px)!important;width:calc(100% - 12px)!important;min-width:calc(100% - 12px)!important;margin:0 6px!important}#article-reader .original-reader .original-reader-head{padding:18px 28px 14px!important}#article-reader .original-reader .reader-source-meta{padding:9px 28px!important}#article-reader .original-reader .reader-original-abstract{margin:16px 28px!important}#article-reader .original-reader .article-text{height:calc(100% - 175px)!important;padding:0 30px 42px!important;font-size:15.5px!important;line-height:1.9!important}#article-reader .reader-column.persian .article-text{padding:0 30px 42px!important;font-size:16px!important;line-height:2.2!important}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
+/* Paginated text: real CSS columns so every page starts at a clean line */
+#article-reader .original-reader .article-text{column-count:auto!important;column-width:calc(100% - 112px)!important;column-gap:0!important;column-fill:auto!important;overflow-x:auto!important;overflow-y:hidden!important}
+#article-reader .original-reader .article-text p{break-inside:avoid!important}
+#article-reader .reader-column.persian .article-text{column-count:auto!important;column-width:calc(100% - 112px)!important;column-gap:0!important;column-fill:auto!important;overflow-x:auto!important;overflow-y:hidden!important}
+@media(max-width:800px){#article-reader .original-reader .article-text,#article-reader .reader-column.persian .article-text{column-width:calc(100% - 60px)!important}}
+
+/* DANA reader final override */
+.article-detail .reader-shell .article-reader{padding-top:0!important;}
+.article-detail .reader-shell .reader-column{padding-top:48px!important;}
+.article-detail .reader-shell .article-text{column-width:calc(100% - 1px)!important;column-gap:100px!important;column-fill:auto!important;}
+.article-detail .reader-shell .original-reader-head{padding-top:34px!important;}
+@media(max-width:700px){.article-detail .reader-shell .reader-column{padding-top:32px!important}.article-detail .reader-shell .original-reader-head{padding-top:26px!important}}

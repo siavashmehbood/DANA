@@ -110,7 +110,7 @@ def _openalex(query, limit):
 
 def _crossref(query, limit):
     data = _get(CROSSREF_URL, params={'query.bibliographic': query, 'rows': min(limit, 100),
-                                      'select': 'DOI,title,author,published,container-title,URL,abstract'}).json()
+                                      'select': 'DOI,title,author,published,container-title,URL,abstract,link'}).json()
     results = []
     for work in data.get('message', {}).get('items', []):
         title = ((work.get('title') or [''])[0]).strip()
@@ -118,12 +118,17 @@ def _crossref(query, limit):
             continue
         published = work.get('published-print') or work.get('published-online') or work.get('published') or {}
         parts = published.get('date-parts') or [[]]
+        pdf_url = ''
+        for link in work.get('link') or []:
+            if (link.get('content-type') or '').lower() == 'application/pdf' and link.get('URL'):
+                pdf_url = link['URL']
+                break
         results.append({
             'provider': 'crossref', 'external_id': work.get('DOI', ''), 'title': title,
             'authors': _authors(work.get('author')), 'abstract': re.sub('<[^>]+>', ' ', work.get('abstract', '') or ''),
             'year': (parts[0] or [None])[0],
             'journal': ((work.get('container-title') or [''])[0]), 'doi': work.get('DOI', ''),
-            'source_url': work.get('URL', ''), 'pdf_url': '', 'citation_count': 0,
+            'source_url': work.get('URL', ''), 'pdf_url': pdf_url, 'citation_count': 0,
         })
     return results
 

@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from django.template.defaultfilters import linebreaks
 
 from .models import Article, ArticleCategory, ArticleLibraryItem, ArticleAnnotation
 logger = logging.getLogger(__name__)
@@ -81,6 +82,8 @@ def detail(request, slug):
     if mode not in {'en', 'fa', 'both'}:
         mode = 'fa'
     search = request.GET.get('find', '').strip()
+    article.reader_full_text = linebreaks(article.full_text or '')
+    article.reader_full_text_fa = linebreaks(article.full_text_fa or '')
     related = Article.objects.filter(published=True).exclude(pk=article.pk)
     if article.category_id:
         related = related.filter(category_id=article.category_id)

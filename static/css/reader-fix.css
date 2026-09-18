@@ -1,0 +1,9 @@
+/* DANA reader layout fix */
+.article-detail .reader-shell .article-reader{padding-top:0!important;}
+.article-detail .reader-shell .reader-column{padding-top:48px!important;}
+.article-detail .reader-shell .original-reader-head{padding-top:34px!important;}
+@media(max-width:700px){
+.article-detail .reader-shell .reader-column{padding-top:32px!important;}
+.article-detail .reader-shell .original-reader-head{padding-top:26px!important;}
+}
+/* cache-bust marker */

@@ -87,18 +87,68 @@ def download_article_pdf(article, max_bytes=20 * 1024 * 1024):
 
 
 def extract_pdf_text(article):
+    """Extract readable article text while preserving PDF paragraph and column order."""
     if not article.pdf:
         return ''
     with article.pdf.open('rb') as handle:
         data = handle.read()
     doc = pymupdf.open(stream=data, filetype='pdf')
-    parts = []
-    for index, page in enumerate(doc, 1):
-        text = page.get_text('text').strip()
-        if text:
-            parts.append(f'--- Page {index} ---\n{text}')
+    pages = []
+
+    def clean_block(raw):
+        lines = [re.sub(r'\s+', ' ', line).strip() for line in raw.splitlines()]
+        lines = [line for line in lines if line]
+        if not lines:
+            return ''
+        text = ' '.join(lines)
+        return re.sub(r'(?<=\w)- (?=\w)', '-', text).strip()
+
+    def merge_column(items):
+        merged = []
+        for text in items:
+            if not merged:
+                merged.append(text)
+                continue
+            prev = merged[-1]
+            # Only join blocks when they are clearly continuation text.
+            if prev.endswith('-') and text and text[0].isalnum():
+                merged[-1] = prev[:-1] + text
+            elif (not re.search(r'[.!?:;]$', prev) and text and text[0].islower()):
+                merged[-1] = prev + ' ' + text
+            else:
+                merged.append(text)
+        return merged
+
+    for page in doc:
+        blocks = []
+        for block in page.get_text('blocks'):
+            x0, y0, x1, y1, raw = block[:5]
+            text = clean_block(raw)
+            if not text or (len(text) <= 4 and text.isdigit()):
+                continue
+            if y1 < 80 or y0 > page.rect.height - 35:
+                continue
+            blocks.append((x0, y0, x1, y1, text))
+        if not blocks:
+            continue
+
+        mid = page.rect.width / 2
+        body = [b for b in blocks if b[1] >= page.rect.height * 0.35]
+        left = [b for b in body if b[0] < mid]
+        right = [b for b in body if b[0] >= mid]
+        two_col = bool(left and right)
+
+        if two_col:
+            top = sorted([b for b in blocks if b[1] < page.rect.height * 0.35], key=lambda b: (b[1], b[0]))
+            left_parts = merge_column([b[4] for b in sorted(left, key=lambda b: (b[1], b[0]))])
+            right_parts = merge_column([b[4] for b in sorted(right, key=lambda b: (b[1], b[0]))])
+            page_parts = [b[4] for b in top] + left_parts + right_parts
+        else:
+            page_parts = merge_column([b[4] for b in sorted(blocks, key=lambda b: (b[1], b[0]))])
+
+        pages.append('\n\n'.join(page_parts))
     doc.close()
-    return '\n\n'.join(parts)
+    return '\n\n'.join(pages)
 
 
 def _chunks(text, limit=450):
@@ -139,8 +189,12 @@ def rough_translate(text):
 
 def translate_text(text, delay=0.1, retries=1):
     result = []
+    service_exhausted = False
     for chunk in _chunks(text):
         translated_chunk = ''
+        if service_exhausted:
+            result.append(rough_translate(chunk))
+            continue
         for attempt in range(retries):
             try:
                 response = requests.get(
@@ -149,6 +203,9 @@ def translate_text(text, delay=0.1, retries=1):
                     timeout=8,
                     headers={'User-Agent': 'DANA/1.0'},
                 )
+                if response.status_code == 429:
+                    service_exhausted = True
+                    break
                 response.raise_for_status()
                 translated_chunk = response.json().get('responseData', {}).get(
                     'translatedText', ''

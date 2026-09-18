@@ -17,6 +17,15 @@ def _process_article(article_id):
         article = Article.objects.get(pk=article_id)
         if not article.published:
             return
+        if not article.pdf_url:
+            try:
+                resolved = resolve_pdf_url(article)
+                if resolved:
+                    article.pdf_url = resolved
+                    article.access = 'open'
+                    article.save(update_fields=['pdf_url', 'access', 'updated_at'])
+            except Exception as exc:
+                logger.info('PDF source discovery failed for article %s: %s', article_id, exc)
         if not article.pdf and article.pdf_url:
             try:
                 download_article_pdf(article)
