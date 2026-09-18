@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}پرداخت بانکی | دانا{% endblock %}
+{% block content %}
+<section class="section checkout-page">
+  <div class="cart-head"><div><span class="shelf-label">درگاه پرداخت</span><h1>پرداخت بانکی</h1><p>پس از ادامه، برای تکمیل پرداخت به درگاه بانکی منتقل می‌شوی.</p></div></div>
+  <div class="checkout-layout">
+    <form class="panel checkout-form" method="post">
+      {% csrf_token %}
+      {% if not gateway_enabled %}<p class="muted">درگاه هنوز در محیط فعلی پیکربندی نشده است.</p>{% endif %}
+      <button class="btn checkout-pay" type="submit" {% if not gateway_enabled %}disabled{% endif %}>ادامه به درگاه ←</button>
+    </form>
+    <aside class="panel cart-summary"><h2>خلاصه پرداخت</h2><div class="row"><span>مبلغ کالاها</span><b>{{ subtotal }} تومان</b></div><div class="row"><span>تخفیف</span><b>{{ discount }} تومان</b></div><div class="row"><span>مالیات ۱۰٪</span><b>{{ tax }} تومان</b></div><div class="cart-total"><span>مبلغ نهایی</span><strong>{{ total }} تومان</strong></div></aside>
+  </div>
+</section>
+{% endblock %}

@@ -1,9 +1,12 @@
 from decimal import Decimal
-from django.test import TestCase
+from unittest.mock import Mock, patch
+
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from accounts.models import User
 from books.models import Author, Book
 from .models import CartItem, CheckoutRequest, Coupon, Entitlement, Order, Payment, Referral, WalletTransaction
+
 
 class ShopFlowTests(TestCase):
     def setUp(self):
@@ -40,3 +43,39 @@ class ShopFlowTests(TestCase):
     def test_referral_reward_is_only_granted_once(self):
         inviter=User.objects.create_user(username='inviter',password='pass12345'); Referral.objects.create(inviter=inviter,invitee=self.user); self.user.wallet_balance=Decimal('200000'); self.user.save(update_fields=['wallet_balance']); self._checkout('ref-key')
         inviter.refresh_from_db(); self.user.refresh_from_db(); self.assertEqual(inviter.wallet_balance,Decimal('50000')); self.assertEqual(self.user.wallet_balance,Decimal('140000')); self.assertEqual(WalletTransaction.objects.filter(type='reward').count(),2)
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.payment.requests.post')
+    def test_bank_payment_request_creates_pending_payment(self, post):
+        response_data=Mock(); response_data.raise_for_status.return_value=None; response_data.json.return_value={'data':{'code':100,'authority':'A123'}}
+        post.return_value=response_data
+        CartItem.objects.create(user=self.user,book=self.book)
+        response=self.client.post(reverse('bank_checkout'))
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response['Location'],'https://payment.zarinpal.com/pg/StartPay/A123')
+        payment=Payment.objects.get(order__user=self.user,provider='zarinpal')
+        self.assertEqual(payment.status,'pending'); self.assertEqual(payment.authority,'A123')
+        self.assertEqual(Order.objects.get(pk=payment.order_id).status,'pending')
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.payment.requests.post')
+    def test_bank_callback_verifies_and_grants_entitlement(self, post):
+        request_response=Mock(); request_response.raise_for_status.return_value=None; request_response.json.return_value={'data':{'code':100,'authority':'A456'}}
+        verify_response=Mock(); verify_response.raise_for_status.return_value=None; verify_response.json.return_value={'data':{'code':100,'ref_id':'999'}}
+        post.side_effect=[request_response,verify_response]
+        CartItem.objects.create(user=self.user,book=self.book)
+        start=self.client.post(reverse('bank_checkout'))
+        self.assertEqual(start.status_code,302)
+        callback=self.client.get(reverse('payment_callback'),{'Authority':'A456','Status':'OK'})
+        self.assertEqual(callback.status_code,200)
+        order=Order.objects.get(user=self.user); payment=Payment.objects.get(order=order)
+        self.assertEqual(order.status,'paid'); self.assertEqual(payment.status,'successful'); self.assertTrue(Entitlement.objects.filter(user=self.user,book=self.book).exists())
+        self.assertFalse(CartItem.objects.filter(user=self.user,book=self.book).exists())
+
+    @override_settings(ZARINPAL_MERCHANT_ID='')
+    def test_bank_payment_is_blocked_without_merchant_configuration(self):
+        CartItem.objects.create(user=self.user,book=self.book)
+        response=self.client.post(reverse('bank_checkout'))
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,reverse('checkout'))
+        self.assertFalse(Payment.objects.filter(provider='zarinpal').exists())
