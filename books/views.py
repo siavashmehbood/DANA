@@ -1,5 +1,6 @@
 from django.shortcuts import render,get_object_or_404
 from django.db.models import Q, Avg, Count
+from django.core.paginator import Paginator
 from django.http import FileResponse, HttpResponseForbidden
 from django.urls import reverse
 from django.utils import timezone
@@ -27,8 +28,8 @@ def listing(request):
     elif sort=='price_high': books=books.order_by('-price')
     else: books=books.order_by('-created_at')
     total_count=books.count()
-    books=books[:120]
-    return render(request,'books/list.html',{'books':books,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':Category.objects.all()})
+    page_obj=Paginator(books,24).get_page(request.GET.get('page'))
+    return render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':Category.objects.all()})
 
 def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
