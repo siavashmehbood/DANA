@@ -10,16 +10,20 @@ def _published_books():
     return Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now()))
 
 def listing(request):
-    q=request.GET.get('q','').strip()[:200]; cat=request.GET.get('cat','').strip(); sort=request.GET.get('sort','new')
+    q=request.GET.get('q','').strip()[:200]; cat=request.GET.get('cat','').strip(); sort=request.GET.get('sort','new'); kind=request.GET.get('kind','all'); price=request.GET.get('price','all')
     books=_published_books().select_related('author','category')
     if q:
         normalized=q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ')
         books=books.filter(Q(name__icontains=normalized)|Q(author__name__icontains=normalized)|Q(summary__icontains=normalized)|Q(description__icontains=normalized))
     if cat: books=books.filter(category__slug=cat)
+    if kind=='audio': books=books.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct()
+    elif kind=='text': books=books.filter(Q(pdf__gt='')|Q(chapters__text__gt='')).distinct()
+    if price=='free': books=books.filter(price=0)
+    elif price=='paid': books=books.filter(price__gt=0)
     if sort=='price_low': books=books.order_by('price')
     elif sort=='price_high': books=books.order_by('-price')
     else: books=books.order_by('-created_at')
-    return render(request,'books/list.html',{'books':books,'q':q,'cat':cat,'sort':sort,'categories':Category.objects.all()})
+    return render(request,'books/list.html',{'books':books,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':Category.objects.all()})
 
 def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
