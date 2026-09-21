@@ -84,3 +84,12 @@ class PersianSearchTests(TestCase):
         self.client.get(reverse('books'),{'q':'نتیجه'})
         event=Event.objects.filter(name='search').latest('created_at')
         self.assertEqual(event.value,1)
+
+
+    def test_relaxed_search_keeps_price_filter(self):
+        author=Author.objects.create(name='Filter Author')
+        Book.objects.create(name='کتاب رایگان',slug='free-relaxed',author=author,status='published',price=0)
+        Book.objects.create(name='کتاب پولی',slug='paid-relaxed',author=author,status='published',price=100)
+        response=self.client.get(reverse('books'),{'q':'کتاب ناموجود','price':'free'})
+        self.assertContains(response,'کتاب رایگان')
+        self.assertNotContains(response,'کتاب پولی')
