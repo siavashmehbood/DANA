@@ -19,6 +19,7 @@ def _has_access(user, book):
 @login_required
 def reader(request, pk):
     book = get_object_or_404(Book, pk=pk)
+    if not book.is_published: return HttpResponseForbidden('کتاب هنوز منتشر نشده است.')
     owned = _has_access(request.user, book) and book.visibility != 'public'
     accessible = _has_access(request.user, book)
     saved = ReadingProgress.objects.filter(user=request.user, book=book).first()
@@ -31,7 +32,7 @@ def reader(request, pk):
 @require_POST
 def progress(request, pk):
     book = get_object_or_404(Book, pk=pk)
-    if not _has_access(request.user, book): return HttpResponseForbidden('Access denied')
+    if not book.is_published or not _has_access(request.user, book): return HttpResponseForbidden('Access denied')
     try:
         value=max(0,min(100,float(request.POST.get('progress',0)))); page=max(0,int(request.POST.get('page',0)))
         seconds=max(0,int(request.POST.get('seconds',0))); audio_seconds=max(0,int(request.POST.get('audio_seconds',0)))
@@ -54,7 +55,7 @@ def progress(request, pk):
 @login_required
 def bookmark(request, pk):
     book=get_object_or_404(Book,pk=pk)
-    if not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
+    if not book.is_published or not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
     if request.method=='POST':
         try: page=max(0,int(request.POST.get('page',0)))
         except (TypeError,ValueError): return JsonResponse({'error':'Invalid page'},status=400)
