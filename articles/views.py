@@ -66,7 +66,9 @@ def listing(request):
 
 
 def article_download(request, slug):
-    article = get_object_or_404(Article, slug=slug, published=True)
+    article = get_object_or_404(Article.objects.select_related('source'), slug=slug, published=True)
+    if article.source_id and not article.source.allow_full_republish:
+        return JsonResponse({'error': 'دریافت فایل کامل طبق سیاست منبع مجاز نیست.'}, status=403)
     if not article.pdf:
         return JsonResponse({'error': 'فایل PDF برای این مقاله موجود نیست.'}, status=404)
     return FileResponse(article.pdf.open('rb'), as_attachment=True, filename=f'{article.slug}.pdf')
