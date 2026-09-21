@@ -93,3 +93,11 @@ class PersianSearchTests(TestCase):
         response=self.client.get(reverse('books'),{'q':'کتاب ناموجود','price':'free'})
         self.assertContains(response,'کتاب رایگان')
         self.assertNotContains(response,'کتاب پولی')
+
+
+    def test_relaxed_search_marks_response_for_user(self):
+        author=Author.objects.create(name='UX Author')
+        Book.objects.create(name='نمونه جستجو',slug='relaxed-ux',author=author,status='published')
+        response=self.client.get(reverse('books'),{'q':'نمونه ناشناخته'})
+        self.assertTrue(response.context['used_relaxed_search'])
+        self.assertContains(response,'نزدیک‌ترین نتایج مرتبط')
