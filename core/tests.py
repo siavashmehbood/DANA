@@ -23,6 +23,11 @@ class ProtectedMediaTests(TestCase):
         self.client.login(username='reader',password='pass12345')
         self.assertEqual(self.client.get(self.url).status_code,403)
 
+    def test_expired_entitlement_cannot_open_pdf(self):
+        Entitlement.objects.create(user=self.user,book=self.book,expires_at=timezone.now()-timedelta(seconds=1))
+        self.client.login(username='reader',password='pass12345')
+        self.assertEqual(self.client.get(self.url).status_code,403)
+
     def test_pdf_is_available_to_entitled_user(self):
         Entitlement.objects.create(user=self.user,book=self.book)
         self.client.login(username='reader',password='pass12345')
