@@ -146,3 +146,10 @@ class ShopFlowTests(TestCase):
         self.assertTrue(sub.is_active)
         sub.status='cancelled'
         self.assertFalse(sub.is_active)
+
+
+    def test_future_subscription_is_not_shown_as_active(self):
+        plan=SubscriptionPlan.objects.create(name='Future',slug='future-plan',price=10,duration_days=30)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()+timedelta(days=1),expires_at=timezone.now()+timedelta(days=31))
+        response=self.client.get(reverse('subscriptions'))
+        self.assertNotContains(response,'اشتراک فعال: Future')
