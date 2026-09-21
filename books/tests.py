@@ -55,3 +55,11 @@ class CatalogPaginationTests(TestCase):
         self.assertEqual(response.context['total_count'],26)
         second=self.client.get(reverse('books')+'?page=2')
         self.assertEqual(len(second.context['books']),2)
+
+
+class PersianSearchTests(TestCase):
+    def test_search_normalizes_arabic_persian_letters_and_half_space(self):
+        author=Author.objects.create(name='کیان')
+        Book.objects.create(name='کتاب خوب',slug='persian-search',author=author,status='published')
+        response=self.client.get(reverse('books'),{'q':'كتاب\u200cخوب'})
+        self.assertContains(response,'کتاب خوب')
