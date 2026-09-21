@@ -54,7 +54,7 @@ class Entitlement(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['user', 'book'], name='unique_entitlement_user_book')]
-        indexes = [models.Index(fields=['user','expires_at'])]
+        indexes = [models.Index(fields=['user','expires_at'], name='shop_entitl_user_id_69e5c2_idx')]
 
 
 class WalletTransaction(models.Model):
