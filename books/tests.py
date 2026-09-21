@@ -63,3 +63,10 @@ class PersianSearchTests(TestCase):
         Book.objects.create(name='کتاب خوب',slug='persian-search',author=author,status='published')
         response=self.client.get(reverse('books'),{'q':'كتاب\u200cخوب'})
         self.assertContains(response,'کتاب خوب')
+
+
+    def test_search_relaxes_multiword_zero_result_query(self):
+        author=Author.objects.create(name='Search Author')
+        Book.objects.create(name='کتاب نمونه',slug='relaxed-search',author=author,status='published')
+        response=self.client.get(reverse('books'),{'q':'کتاب ناموجود'})
+        self.assertContains(response,'کتاب نمونه')
