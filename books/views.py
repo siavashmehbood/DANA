@@ -24,6 +24,7 @@ def listing(request):
     elif sort=='price_high': books=books.order_by('-price')
     else: books=books.order_by('-created_at')
     total_count=books.count()
+    books=books[:120]
     return render(request,'books/list.html',{'books':books,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':Category.objects.all()})
 
 def detail(request,slug):
