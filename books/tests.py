@@ -126,3 +126,10 @@ class CatalogRankingTests(TestCase):
         self.assertEqual(response.context['sort'],'new')
         self.assertEqual(response.context['kind'],'all')
         self.assertEqual(response.context['price'],'all')
+
+
+    def test_paginating_search_does_not_duplicate_search_event(self):
+        self.client.get(reverse('books'),{'q':'نمونه'})
+        before=Event.objects.filter(name='search').count()
+        self.client.get(reverse('books'),{'q':'نمونه','page':'2'})
+        self.assertEqual(Event.objects.filter(name='search').count(),before)
