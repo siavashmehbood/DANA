@@ -1,6 +1,7 @@
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.utils.html import escape
 from django.shortcuts import render, redirect, get_object_or_404
 from books.models import Book, Category
 from articles.models import Article, ArticleCategory
@@ -72,5 +73,5 @@ def sitemap_xml(request):
     urls=[base+'/',base+'/books/',base+'/articles/',base+'/shop/subscriptions/']
     urls += [base+'/books/'+slug+'/' for slug in Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now())).values_list('slug',flat=True)[:5000]]
     urls += [base+'/articles/'+slug+'/' for slug in Article.objects.filter(published=True).values_list('slug',flat=True)[:5000]]
-    body='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(f'<url><loc>{url}</loc></url>' for url in urls) + '</urlset>'
+    body='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(f'<url><loc>{escape(url)}</loc></url>' for url in urls) + '</urlset>'
     return HttpResponse(body, content_type='application/xml')
