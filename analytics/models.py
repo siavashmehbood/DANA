@@ -12,6 +12,6 @@ class Event(models.Model):
 
     class Meta:
         indexes=[
-            models.Index(fields=['name','created_at']),
-            models.Index(fields=['user','created_at']),
+            models.Index(fields=['name','created_at'], name='analytics_e_name_bf1d30_idx'),
+            models.Index(fields=['user','created_at'], name='analytics_e_user_id_83f61f_idx'),
         ]
