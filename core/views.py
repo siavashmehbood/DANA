@@ -15,6 +15,7 @@ def home(request):
     featured = base.order_by('-created_at')[:6]
     newest = base.order_by('-created_at')[:8]
     popular = base.order_by('-id')[:8]
+    recommendations = base.none()
     audio_books = base.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct().order_by('-created_at')[:8]
     categories = Category.objects.all()[:10]
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
@@ -23,9 +24,12 @@ def home(request):
     if request.user.is_authenticated:
         valid_books=Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True)
         continue_reading=ReadingProgress.objects.filter(user=request.user,book_id__in=valid_books,progress__gt=0,progress__lt=100).select_related('book__author').order_by('-updated_at')[:6]
+        owned_categories=Entitlement.objects.filter(user=request.user,book__category__isnull=False).values_list('book__category_id',flat=True)
+        owned_ids=Entitlement.objects.filter(user=request.user).values_list('book_id',flat=True)
+        recommendations=base.filter(category_id__in=owned_categories).exclude(id__in=owned_ids).distinct().order_by('-created_at')[:8]
     return render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
         'latest_articles': article_base.order_by('-created_at')[:8], 'featured_articles': article_base.filter(featured=True)[:4],
-        'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading, 'audio_books': audio_books})
+        'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading, 'audio_books': audio_books, 'recommendations': recommendations})
 
 
 def admin_logout(request):
