@@ -3,12 +3,16 @@ from django.db.models import Q
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.http import FileResponse, HttpResponseForbidden
 from django.urls import reverse
+from django.utils import timezone
 from shop.models import Entitlement
 from .models import Book,Category
 
+def _published_books():
+    return Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now()))
+
 def listing(request):
     q=request.GET.get('q','').strip(); cat=request.GET.get('cat','').strip(); sort=request.GET.get('sort','new')
-    books=Book.objects.filter(status__in=['published','scheduled']).select_related('author','category')
+    books=_published_books().select_related('author','category')
     if q: books=books.filter(Q(name__icontains=q)|Q(author__name__icontains=q)|Q(summary__icontains=q)|Q(description__icontains=q))
     if cat: books=books.filter(category__slug=cat)
     if sort=='price_low': books=books.order_by('price')
@@ -17,8 +21,8 @@ def listing(request):
     return render(request,'books/list.html',{'books':books,'q':q,'cat':cat,'sort':sort,'categories':Category.objects.all()})
 
 def detail(request,slug):
-    book=get_object_or_404(Book.objects.select_related('author','category','level').prefetch_related('chapters'),slug=slug)
-    related=Book.objects.filter(status__in=['published','scheduled']).filter(category=book.category).exclude(pk=book.pk)[:4] if book.category else Book.objects.none()
+    book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
+    related=_published_books().filter(category=book.category).exclude(pk=book.pk)[:4] if book.category else Book.objects.none()
     return render(request,'books/detail.html',{'book':book,'related':related})
 
 
