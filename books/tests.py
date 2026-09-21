@@ -4,6 +4,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from accounts.models import User
 from shop.models import Entitlement
 from .models import Author, Book, Chapter
+from reader.models import Review
 from analytics.models import Event
 
 class ProtectedMediaTests(TestCase):
@@ -101,3 +102,19 @@ class PersianSearchTests(TestCase):
         response=self.client.get(reverse('books'),{'q':'نمونه ناشناخته'})
         self.assertTrue(response.context['used_relaxed_search'])
         self.assertContains(response,'نزدیک‌ترین نتایج مرتبط')
+
+
+class CatalogRankingTests(TestCase):
+    def setUp(self):
+        self.user=User.objects.create_user(username='ranker',password='pass12345')
+        self.author=Author.objects.create(name='Rank Author')
+
+    def test_rating_sort_ignores_unapproved_reviews(self):
+        low=Book.objects.create(name='Low approved',slug='low-approved',author=self.author,status='published')
+        hidden=Book.objects.create(name='Hidden high',slug='hidden-high',author=self.author,status='published')
+        Review.objects.create(user=self.user,book=low,rating=2,text='ok',approved=True)
+        other=User.objects.create_user(username='ranker2',password='pass12345')
+        Review.objects.create(user=other,book=hidden,rating=5,text='hidden',approved=False)
+        response=self.client.get(reverse('books'),{'sort':'rating'})
+        names=[b.name for b in response.context['books']]
+        self.assertLess(names.index('Low approved'),names.index('Hidden high'))
