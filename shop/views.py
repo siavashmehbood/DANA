@@ -192,3 +192,9 @@ def order_detail(request, tracking_code):
 def wallet(request):
     transactions = WalletTransaction.objects.filter(user=request.user).select_related('order').order_by('-created_at')[:50]
     return render(request, 'shop/wallet.html', {'transactions': transactions})
+
+
+@login_required
+def orders(request):
+    rows=Order.objects.filter(user=request.user).prefetch_related('items__book').order_by('-created_at')[:100]
+    return render(request,'shop/orders.html',{'orders':rows})
