@@ -1,6 +1,8 @@
 from io import BytesIO
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.utils import timezone
+from datetime import timedelta
 from django.urls import reverse
 from accounts.models import User
 from books.models import Author, Book
@@ -27,3 +29,19 @@ class ProtectedMediaTests(TestCase):
         response=self.client.get(self.url)
         self.assertEqual(response.status_code,200)
         self.assertEqual(response['Content-Type'],'application/pdf')
+
+
+class ScheduledPublicationTests(TestCase):
+    def setUp(self):
+        self.author = Author.objects.create(name='Schedule Author')
+        self.future = Book.objects.create(name='Future Book', slug='future-book', author=self.author, status='scheduled', publish_at=timezone.now()+timedelta(days=1))
+        self.live = Book.objects.create(name='Live Book', slug='live-book', author=self.author, status='scheduled', publish_at=timezone.now()-timedelta(minutes=1))
+
+    def test_future_scheduled_book_is_not_public(self):
+        self.assertNotContains(self.client.get(reverse('book_list')), 'Future Book')
+        self.assertEqual(self.client.get(reverse('book_detail', args=[self.future.slug])).status_code, 404)
+        self.assertNotContains(self.client.get(reverse('home')), 'Future Book')
+
+    def test_due_scheduled_book_is_public(self):
+        self.assertContains(self.client.get(reverse('book_list')), 'Live Book')
+        self.assertEqual(self.client.get(reverse('book_detail', args=[self.live.slug])).status_code, 200)
