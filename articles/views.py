@@ -84,6 +84,8 @@ def detail(request, slug):
     search = request.GET.get('find', '').strip()
     article.reader_full_text = linebreaks(article.full_text or '')
     article.reader_full_text_fa = linebreaks(article.full_text_fa or '')
+    if mode == 'fa' and not (article.full_text_fa or article.abstract_fa):
+        mode = 'en'
     related = Article.objects.filter(published=True).exclude(pk=article.pk)
     if article.category_id:
         related = related.filter(category_id=article.category_id)
