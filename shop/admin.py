@@ -97,3 +97,18 @@ class ReferralAdmin(ModelAdmin):
     list_filter = ('rewarded', 'created_at')
     search_fields = ('inviter__username', 'inviter__phone', 'invitee__username', 'invitee__phone')
     readonly_fields = ('created_at',)
+
+
+@admin.register(SubscriptionPlan)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display=('name','price','duration_days','active')
+    list_editable=('price','active')
+    search_fields=('name','slug')
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display=('user','plan','status','starts_at','expires_at')
+    list_filter=('status','plan')
+    search_fields=('user__username','user__email','plan__name')
+    autocomplete_fields=('user','plan')
+    readonly_fields=('created_at',)
