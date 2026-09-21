@@ -142,3 +142,8 @@ class CatalogRankingTests(TestCase):
         response=self.client.get(reverse('books'),{'q':'نمونه ناموجود','sort':'price_low'})
         names=[b.name for b in response.context['books']]
         self.assertEqual(names[:2],['نمونه ارزان','نمونه گران'])
+
+
+    def test_search_reports_when_query_was_normalized(self):
+        response=self.client.get(reverse('books'),{'q':'كتاب'})
+        self.assertTrue(response.context['query_was_normalized'])
