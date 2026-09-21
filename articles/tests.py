@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.urls import reverse
-from .models import Article, ArticleCategory, ArticleLibraryItem, ArticleAnnotation
+from .models import Article, ArticleCategory, ArticleLibraryItem, ArticleAnnotation, ArticleTranslationVersion
 from accounts.models import User
 
 class ArticleFlowTests(TestCase):
@@ -91,3 +91,38 @@ class ArticleFlowTests(TestCase):
         self.assertEqual(len(annotation.rects),1)
         self.assertEqual(annotation.rects[0]['x'],0)
         self.assertEqual(annotation.rects[0]['y'],1)
+
+
+class TranslationHistoryTests(TestCase):
+    def setUp(self):
+        self.article = Article.objects.create(
+            title='Original title', slug='translation-history',
+            abstract='Original abstract', full_text='Original body', published=True,
+        )
+
+    def test_translation_creates_version_without_overwriting_original(self):
+        from unittest.mock import patch
+        from .translation import translate_article
+        original = (self.article.title, self.article.abstract, self.article.full_text)
+        with patch('articles.translation.translate_text', side_effect=['عنوان فارسی', 'چکیده فارسی', 'متن فارسی']):
+            translate_article(self.article, full_text=True, force=True)
+        self.article.refresh_from_db()
+        self.assertEqual((self.article.title, self.article.abstract, self.article.full_text), original)
+        self.assertEqual(self.article.full_text_fa, 'متن فارسی')
+        self.assertEqual(self.article.translation_version, 1)
+        self.assertEqual(ArticleTranslationVersion.objects.filter(article=self.article).count(), 1)
+
+    def test_failed_translation_keeps_previous_valid_persian_content(self):
+        from unittest.mock import patch
+        from .translation import translate_article
+        self.article.title_fa = 'ترجمه سالم'
+        self.article.full_text_fa = 'متن سالم'
+        self.article.translation_version = 1
+        self.article.save()
+        with patch('articles.translation.translate_text', side_effect=RuntimeError('provider unavailable')):
+            translate_article(self.article, full_text=True, force=True)
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.title_fa, 'ترجمه سالم')
+        self.assertEqual(self.article.full_text_fa, 'متن سالم')
+        self.assertEqual(self.article.translation_status, 'failed')
+        self.assertIn('provider unavailable', self.article.translation_error)
