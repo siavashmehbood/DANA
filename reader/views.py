@@ -117,5 +117,5 @@ def review(request, pk):
     text=request.POST.get('text','').strip()[:4000]
     if rating not in range(1,6) or not text:
         return JsonResponse({'error':'امتیاز و متن نظر معتبر نیست.'},status=400)
-    Review.objects.update_or_create(user=request.user,book=book,defaults={'rating':rating,'text':text,'approved':False})
+    Review.objects.update_or_create(user=request.user,book=book,defaults={'rating':rating,'text':text,'approved':False,'admin_score':None,'admin_reply':''})
     return JsonResponse({'ok':True,'message':'نظر شما برای بررسی ثبت شد.'})
