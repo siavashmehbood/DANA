@@ -60,3 +60,17 @@ self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;event.respondWith(fetch(event.request).then(response=>{if(response.ok&&new URL(event.request.url).origin===location.origin){const copy=response.clone();caches.open(CACHE).then(c=>c.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request).then(r=>r||caches.match('/'))));});"""
     return HttpResponse(js, content_type='application/javascript')
+
+
+def robots_txt(request):
+    body = "User-agent: *\nDisallow: /admin/\nDisallow: /protected/\nDisallow: /reader/\nSitemap: " + request.build_absolute_uri('/sitemap.xml') + "\n"
+    return HttpResponse(body, content_type='text/plain')
+
+
+def sitemap_xml(request):
+    base=request.build_absolute_uri('/').rstrip('/')
+    urls=[base+'/',base+'/books/',base+'/articles/',base+'/shop/subscriptions/']
+    urls += [base+'/books/'+slug+'/' for slug in Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now())).values_list('slug',flat=True)[:5000]]
+    urls += [base+'/articles/'+slug+'/' for slug in Article.objects.filter(published=True).values_list('slug',flat=True)[:5000]]
+    body='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(f'<url><loc>{url}</loc></url>' for url in urls) + '</urlset>'
+    return HttpResponse(body, content_type='application/xml')
