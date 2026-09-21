@@ -104,3 +104,18 @@ def vocabulary(request):
 @require_POST
 def delete_word(request, pk):
     item=get_object_or_404(SavedWord,pk=pk,user=request.user); item.delete(); return redirect('reader_vocabulary')
+
+
+@login_required
+@require_POST
+def review(request, pk):
+    book=get_object_or_404(Book,pk=pk)
+    if not book.is_published or not _has_access(request.user,book):
+        return HttpResponseForbidden('برای ثبت نظر باید به کتاب دسترسی داشته باشید.')
+    try: rating=int(request.POST.get('rating',0))
+    except (TypeError,ValueError): rating=0
+    text=request.POST.get('text','').strip()[:4000]
+    if rating not in range(1,6) or not text:
+        return JsonResponse({'error':'امتیاز و متن نظر معتبر نیست.'},status=400)
+    Review.objects.update_or_create(user=request.user,book=book,defaults={'rating':rating,'text':text,'approved':False})
+    return JsonResponse({'ok':True,'message':'نظر شما برای بررسی ثبت شد.'})
