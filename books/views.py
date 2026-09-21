@@ -60,7 +60,8 @@ def listing(request):
             Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_zero_result',metadata={'query':q})
     if q and request.GET.get('page') in (None,'','1'):
         Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search',value=total_count,metadata={'query':q})
-    page_obj=Paginator(books,24).get_page(request.GET.get('page'))
+    paginator=Paginator(books,24)
+    page_obj=paginator.get_page(request.GET.get('page'))
     return render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':Category.objects.order_by('name'),'used_relaxed_search':used_relaxed_search,'query_was_normalized':bool(raw_q and raw_q != q)})
 
 def detail(request,slug):
