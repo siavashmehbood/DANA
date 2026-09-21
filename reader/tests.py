@@ -2,6 +2,7 @@ from django.test import TestCase
 from accounts.models import User
 from books.models import Author, Book, Chapter
 from gamification.models import PointLedger, UserStreak
+from shop.models import Entitlement
 from .models import ReadingProgress, Review
 from django.urls import reverse
 
