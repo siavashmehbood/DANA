@@ -1,12 +1,12 @@
 # DANA Project Status
 
 ## Audit date
-2026-09-16
+2026-09-21
 
 ## Current baseline
 - Repository: `https://github.com/siavashmehbood/dana.git`
-- Branch: `main`
-- Baseline commit before this work: `3c22165`
+- Branch: `dana-2.0` (PR #1)
+- Baseline commit before DANA 2.0 work: `e767706e3af73089e614aa08d745328804810afe`
 - Python: 3.14.3
 - Django: 5.2.17
 - Development database: SQLite
@@ -25,13 +25,16 @@
 - Expanded support ticket states and assignment/priority/category fields.
 - Added CI workflow for check, migration validation, tests and deployment security checks.
 - Added protected-reader tests, article tests and stronger shop/API tests.
+- Added article source provenance, translation version history, validation, rollback/retranslate workflow, original-language fallback and source-rights enforcement.
+- Enforced scheduled publication visibility, entitlement expiry, purchase provenance and payment callback state transitions.
+- Added chapter integrity constraints, point-ledger idempotency, notification read actions and stronger support validation.
 - Added PWA icon and cache version/update behavior.
 - Ran `collectstatic` successfully.
 
 ## Verification
 - `python manage.py check`: PASS
 - `python manage.py makemigrations --check`: PASS
-- `python manage.py test`: PASS — 19 tests
+- `python manage.py test`: continuously enforced by GitHub Actions on PR #1; latest completed green runs cover the expanded regression suite.
 - `python manage.py check --deploy` with production-like environment: PASS
 - HTTP smoke tests for home/books/articles/manifest/service-worker: PASS (HTTP 200)
 - `collectstatic --noinput`: PASS
