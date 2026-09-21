@@ -76,6 +76,10 @@ def cart(request):
             CartItem.objects.get_or_create(user=request.user, book=book)
         return redirect('cart')
     items = CartItem.objects.filter(user=request.user).select_related('book')
+    stale_ids=[i.pk for i in items if not i.book.is_published]
+    if stale_ids:
+        CartItem.objects.filter(pk__in=stale_ids).delete()
+        items = CartItem.objects.filter(user=request.user).select_related('book')
     owned_ids = list(Entitlement.objects.filter(user=request.user, book__in=[i.book for i in items]).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).values_list('book_id', flat=True))
     if owned_ids:
         CartItem.objects.filter(user=request.user, book_id__in=owned_ids).delete()
@@ -93,7 +97,7 @@ def remove_cart_item(request, pk):
 
 @login_required
 def checkout(request):
-    items = list(CartItem.objects.filter(user=request.user).select_related('book'))
+    items = [i for i in CartItem.objects.filter(user=request.user).select_related('book') if i.book.is_published]
     items = [i for i in items if not Entitlement.objects.filter(user=request.user, book=i.book).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).exists()]
     if not items:
         CartItem.objects.filter(user=request.user).delete()
