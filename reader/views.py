@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.db import models
 from books.models import Book
 from shop.models import Entitlement
-from .models import ReadingProgress, Bookmark, Note, SavedWord
+from .models import ReadingProgress, Bookmark, Note, SavedWord, Review
 from gamification.services import record_study_activity
 
 
