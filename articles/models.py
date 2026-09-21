@@ -32,6 +32,7 @@ class ArticleSource(models.Model):
 
     class Meta:
         ordering = ['name']
+        constraints = [models.UniqueConstraint(fields=['name'], name='unique_article_source_name')]
         verbose_name = 'منبع مقاله'
         verbose_name_plural = 'منابع مقالات'
 
