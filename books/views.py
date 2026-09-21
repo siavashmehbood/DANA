@@ -28,13 +28,17 @@ def detail(request,slug):
     return render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access})
 
 
-def secure_file(request, pk, kind):
+def secure_file(request, pk, kind, chapter_id=None):
     book = get_object_or_404(_published_books(), pk=pk)
     if not request.user.is_authenticated:
         return HttpResponseForbidden('ورود لازم است.')
     if book.visibility != 'public' and not Entitlement.objects.filter(user=request.user, book=book).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).exists():
         return HttpResponseForbidden('دسترسی به این فایل ندارید.')
-    field = {'pdf': book.pdf, 'audio': book.audio}.get(kind)
+    if kind == 'chapter_audio':
+        chapter = book.chapters.filter(pk=chapter_id).first()
+        field = chapter.audio if chapter else None
+    else:
+        field = {'pdf': book.pdf, 'audio': book.audio}.get(kind)
     if not field:
         return HttpResponseForbidden('فایل موجود نیست.')
     response = FileResponse(field.open('rb'), content_type='application/pdf' if kind == 'pdf' else 'audio/mpeg')
