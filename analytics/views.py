@@ -27,7 +27,7 @@ def dashboard(request):
     cart_users = CartItem.objects.values('user_id').distinct().count()
     searches = Event.objects.filter(name='search',created_at__gte=now-timedelta(days=30)).count()
     zero_searches = Event.objects.filter(name='search_zero_result',created_at__gte=now-timedelta(days=30)).count()
-    search_success_rate = round((max(searches-zero_searches,0)*100/searches),2) if searches else 0
+    search_success_rate = min(round((max(searches-zero_searches,0)*100/searches),2),100) if searches else 0
     top_zero_searches = list(Event.objects.filter(name='search_zero_result',created_at__gte=now-timedelta(days=30)).values('metadata__query').annotate(count=Count('id')).order_by('-count')[:10])
     return render(request, 'analytics/dashboard.html', {'sales': sales, 'today_sales': today_sales, 'orders': paid.count(), 'users': users,
         'events': Event.objects.count(), 'paying_users': paying_users, 'active_readers': active_readers, 'new_users': new_users,
