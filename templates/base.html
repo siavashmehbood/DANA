@@ -32,7 +32,7 @@
 <a href="/">خانه</a><a href="/books/">کشف کتاب</a><a href="/books/?kind=audio">کتاب صوتی</a><a href="/articles/">مجله دانا</a>
 {% if user.is_authenticated %}<a href="/dashboard/">داشبورد</a><a href="/library/">کتابخانه من</a><a href="/gamification/leaderboard/">رتبه‌بندی</a>{% endif %}
 </div>
-{% if user.is_authenticated %}<details class="header-more"><summary>بیشتر</summary><div class="header-more-menu"><a href="/notifications/">اعلان‌ها</a><a href="/support/">پشتیبانی</a><a href="/shop/wallet/">کیف پول</a><a href="/shop/cart/" class="header-cart">سبد خرید</a><a href="/profile/">پروفایل</a>{% if user.is_staff %}<a class="admin-link" href="/admin/">⚙ مدیریت</a>{% endif %}<a href="/logout/">خروج</a></div></details>{% endif %}
+{% if user.is_authenticated %}<details class="header-more"><summary>بیشتر</summary><div class="header-more-menu"><a href="/notifications/">اعلان‌ها</a><a href="/support/">پشتیبانی</a><a href="{% url 'orders' %}">سفارش‌ها</a><a href="/shop/wallet/">کیف پول</a><a href="/shop/cart/" class="header-cart">سبد خرید</a><a href="/profile/">پروفایل</a>{% if user.is_staff %}<a class="admin-link" href="/admin/">⚙ مدیریت</a>{% endif %}<a href="/logout/">خروج</a></div></details>{% endif %}
 <div class="header-auth">{% if user.is_authenticated %}<a class="auth-action" href="/profile/" aria-label="پروفایل کاربری">پروفایل</a>{% else %}<a class="auth-action" href="/login/">ورود / ثبت‌نام</a>{% endif %}</div>
 </nav></header>
 {% for m in messages %}<div class="msg">{{ m }}</div>{% endfor %}
