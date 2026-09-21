@@ -184,3 +184,12 @@ class ArticleFallbackTests(TestCase):
         article=Article.objects.create(title='Restricted PDF',slug='restricted-pdf',published=True,source=source,pdf=SimpleUploadedFile('restricted.pdf',b'%PDF-1.4'))
         response=self.client.get(reverse('article_download',args=[article.slug]))
         self.assertEqual(response.status_code,403)
+
+
+    def test_pdf_reader_respects_source_republish_policy(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        source=ArticleSource.objects.create(name='reader-restricted',source_type='manual',allow_full_republish=False)
+        article=Article.objects.create(title='Reader Restricted',slug='reader-restricted',published=True,source=source,pdf=SimpleUploadedFile('reader.pdf',b'%PDF-1.4'))
+        self.client.force_login(self.user)
+        response=self.client.get(reverse('article_pdf_reader',args=[article.slug]))
+        self.assertRedirects(response,reverse('article_detail',args=[article.slug]))
