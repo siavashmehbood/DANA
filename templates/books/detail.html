@@ -20,7 +20,7 @@
     <div class="audio-now"><b id="audio-title">{{ book.name }}</b><span id="audio-time">00:00 / 00:00</span></div>
     {% if has_access %}<audio id="book-audio" controls preload="metadata" {% if book.audio %}src="{% url 'book_secure_file' book.pk 'audio' %}"{% endif %}></audio>{% else %}<div class="empty">برای پخش نسخه صوتی ابتدا کتاب را تهیه کنید.</div>{% endif %}
     <div class="audio-chapters">
-      {% for chapter in book.chapters.all %}{% if chapter.audio %}<button type="button" class="audio-chapter" disabled data-audio="" data-title="{{ chapter.title }}"><span>{{ forloop.counter }}</span>{{ chapter.title }}</button>{% endif %}{% empty %}<div class="muted">هنوز فصل صوتی ثبت نشده است.</div>{% endfor %}
+      {% for chapter in book.chapters.all %}{% if chapter.audio %}<button type="button" class="audio-chapter" {% if not has_access %}disabled{% endif %} data-audio="{% if has_access %}{% url 'chapter_secure_audio' book.pk chapter.pk %}{% endif %}" data-title="{{ chapter.title }}"><span>{{ forloop.counter }}</span>{{ chapter.title }}</button>{% endif %}{% empty %}<div class="muted">هنوز فصل صوتی ثبت نشده است.</div>{% endfor %}
     </div>
   </div>
 </section>
