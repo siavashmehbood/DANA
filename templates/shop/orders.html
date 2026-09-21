@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}سفارش‌های من | دانا{% endblock %}
+{% block content %}
+<section class="section"><div class="cart-head"><div><span class="shelf-label">حساب من</span><h1>سفارش‌های من</h1><p>سوابق خرید و وضعیت پرداخت‌ها</p></div><a class="btn secondary" href="{% url 'library' %}">کتابخانه من</a></div>
+<div class="panel">{% for order in orders %}<article class="notification"><div class="row"><div><b>سفارش {{order.tracking_code}}</b><p class="muted">{{order.created_at}}</p></div><span class="badge">{{order.get_status_display}}</span></div><div class="row"><span>{{order.items.count}} کتاب</span><strong>{{order.total}} تومان</strong></div><a class="btn small" href="{% url 'order_detail' order.tracking_code %}">مشاهده جزئیات</a></article>{% empty %}<div class="empty"><h2>هنوز سفارشی نداری</h2><p>کتاب بعدی‌ات را از بخش کشف پیدا کن.</p><a class="btn" href="{% url 'books' %}">کشف کتاب‌ها</a></div>{% endfor %}</div></section>
+{% endblock %}
