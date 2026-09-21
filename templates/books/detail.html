@@ -18,9 +18,9 @@
   <div class="section-title"><div><span class="shelf-label">DANA AUDIO</span><h2>نسخه صوتی کتاب</h2><p>پخش مستقیم و انتخاب فصل‌ها</p></div></div>
   <div class="audio-player panel">
     <div class="audio-now"><b id="audio-title">{{ book.name }}</b><span id="audio-time">00:00 / 00:00</span></div>
-    <audio id="book-audio" controls preload="metadata" {% if book.audio %}src="{{ book.audio.url }}"{% endif %}></audio>
+    <audio id="book-audio" controls preload="metadata" {% if book.audio %}src="{% url 'book_secure_file' book.pk 'audio' %}"{% endif %}></audio>
     <div class="audio-chapters">
-      {% for chapter in book.chapters.all %}{% if chapter.audio %}<button type="button" class="audio-chapter" data-audio="{{ chapter.audio.url }}" data-title="{{ chapter.title }}"><span>{{ forloop.counter }}</span>{{ chapter.title }}</button>{% endif %}{% empty %}<div class="muted">هنوز فصل صوتی ثبت نشده است.</div>{% endfor %}
+      {% for chapter in book.chapters.all %}{% if chapter.audio %}<button type="button" class="audio-chapter" data-audio="" data-title="{{ chapter.title }}"><span>{{ forloop.counter }}</span>{{ chapter.title }}</button>{% endif %}{% empty %}<div class="muted">هنوز فصل صوتی ثبت نشده است.</div>{% endfor %}
     </div>
   </div>
 </section>
