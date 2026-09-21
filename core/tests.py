@@ -50,3 +50,18 @@ class ScheduledPublicationTests(TestCase):
     def test_due_scheduled_book_is_public(self):
         self.assertContains(self.client.get(reverse('books')), 'Live Book')
         self.assertEqual(self.client.get(reverse('book_detail', args=[self.live.slug])).status_code, 200)
+
+
+class SeoEndpointTests(TestCase):
+    def test_robots_blocks_private_surfaces_and_links_sitemap(self):
+        response=self.client.get('/robots.txt')
+        self.assertContains(response,'Disallow: /protected/')
+        self.assertContains(response,'sitemap.xml')
+
+    def test_sitemap_only_contains_published_books(self):
+        author=Author.objects.create(name='SEO Author')
+        Book.objects.create(name='Visible SEO',slug='visible-seo',author=author,status='published')
+        Book.objects.create(name='Draft SEO',slug='draft-seo',author=author,status='draft')
+        response=self.client.get('/sitemap.xml')
+        self.assertContains(response,'visible-seo')
+        self.assertNotContains(response,'draft-seo')
