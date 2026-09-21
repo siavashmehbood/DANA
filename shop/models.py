@@ -107,7 +107,7 @@ class SubscriptionPlan(models.Model):
     name = models.CharField(max_length=120)
     slug = models.SlugField(unique=True)
     price = models.DecimalField(max_digits=14, decimal_places=0, validators=[MinValueValidator(0)])
-    duration_days = models.PositiveIntegerField(default=30)
+    duration_days = models.PositiveIntegerField(default=30, validators=[MinValueValidator(1)])
     active = models.BooleanField(default=True)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
