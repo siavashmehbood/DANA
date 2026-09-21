@@ -106,3 +106,10 @@ class ShopFlowTests(TestCase):
         self.assertEqual(payment.status,'cancelled')
         self.assertFalse(Entitlement.objects.filter(user=self.user,book=self.book).exists())
         self.assertEqual(post.call_count,1)
+
+
+    def test_unpublished_book_cannot_be_purchased(self):
+        draft=Book.objects.create(name='Draft sale',slug='draft-sale',author=self.author,price=1000,status='draft')
+        response=self.client.post(reverse('cart'),{'book_id':draft.pk})
+        self.assertEqual(response.status_code,302)
+        self.assertFalse(CartItem.objects.filter(user=self.user,book=draft).exists())
