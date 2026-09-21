@@ -40,5 +40,4 @@ class StudyFlowTests(TestCase):
             {'progress': '20', 'page': '4', 'chapter_id': foreign_chapter.pk},
         )
         self.assertEqual(response.status_code, 400)
-        progress = ReadingProgress.objects.get(user=self.user, book=self.book)
-        self.assertIsNone(progress.current_chapter_id)
+        self.assertFalse(ReadingProgress.objects.filter(user=self.user, book=self.book).exists())
