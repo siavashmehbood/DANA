@@ -118,3 +118,11 @@ class CatalogRankingTests(TestCase):
         response=self.client.get(reverse('books'),{'sort':'rating'})
         names=[b.name for b in response.context['books']]
         self.assertLess(names.index('Low approved'),names.index('Hidden high'))
+
+
+    def test_invalid_catalog_filters_fall_back_safely(self):
+        response=self.client.get(reverse('books'),{'sort':'bad','kind':'bad','price':'bad'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.context['sort'],'new')
+        self.assertEqual(response.context['kind'],'all')
+        self.assertEqual(response.context['price'],'all')
