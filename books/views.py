@@ -5,6 +5,7 @@ from django.http import FileResponse, HttpResponseForbidden
 from django.urls import reverse
 from django.utils import timezone
 from shop.models import Entitlement
+from analytics.models import Event
 from .models import Book,Category
 
 def _published_books():
@@ -15,6 +16,7 @@ def listing(request):
     q=' '.join(q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split()); cat=request.GET.get('cat','').strip(); sort=request.GET.get('sort','new'); kind=request.GET.get('kind','all'); price=request.GET.get('price','all')
     books=_published_books().select_related('author','category')
     if q:
+        Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search',metadata={'query':q})
         variants={q,q.replace('ی','ي').replace('ک','ك')}
         search_q=Q()
         for term in variants:
@@ -30,6 +32,7 @@ def listing(request):
     else: books=books.order_by('-created_at','-id')
     total_count=books.count()
     if q and total_count == 0:
+        Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_zero_result',metadata={'query':q})
         tokens=[t for t in q.split() if len(t)>1]
         relaxed=Q()
         for token in tokens:
