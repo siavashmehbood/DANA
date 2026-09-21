@@ -71,9 +71,9 @@ class CheckoutRequestAdmin(ModelAdmin):
 
 @admin.register(Entitlement)
 class EntitlementAdmin(ModelAdmin):
-    list_display = ('user', 'book', 'order', 'granted_at', 'expires_at')
+    list_display = ('user', 'book', 'source', 'order', 'granted_at', 'expires_at')
     search_fields = ('user__username', 'user__phone', 'book__name')
-    list_filter = ('granted_at', 'expires_at')
+    list_filter = ('source', 'granted_at', 'expires_at')
     autocomplete_fields = ('user', 'book')
     readonly_fields = ('granted_at',)
 
