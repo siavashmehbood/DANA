@@ -15,7 +15,8 @@ def home(request):
     newest = base.order_by('-created_at')[:8]
     popular = base.order_by('-id')[:8]
     categories = Category.objects.all()[:10]
-    article_base = Article.objects.filter(published=True).select_related('category')
+    readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
+    article_base = Article.objects.filter(published=True).filter(readable).select_related('category')
     return render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
         'latest_articles': article_base.order_by('-created_at')[:8], 'featured_articles': article_base.filter(featured=True)[:4],
         'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count()})
