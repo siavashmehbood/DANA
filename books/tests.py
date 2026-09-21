@@ -76,3 +76,11 @@ class PersianSearchTests(TestCase):
     def test_zero_result_search_is_tracked(self):
         self.client.get(reverse('books'),{'q':'واژهکاملاًناموجود'})
         self.assertTrue(Event.objects.filter(name='search_zero_result').exists())
+
+
+    def test_search_event_records_result_count(self):
+        author=Author.objects.create(name='Count Author')
+        Book.objects.create(name='نتیجه شمار',slug='count-result',author=author,status='published')
+        self.client.get(reverse('books'),{'q':'نتیجه'})
+        event=Event.objects.filter(name='search').latest('created_at')
+        self.assertEqual(event.value,1)
