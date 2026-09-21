@@ -175,3 +175,11 @@ class ArticleFallbackTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.context['language_mode'],'en')
         self.assertContains(response,'Original body')
+
+
+    def test_pdf_download_respects_source_republish_policy(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        source=ArticleSource.objects.create(name='restricted-download',source_type='manual',allow_full_republish=False)
+        article=Article.objects.create(title='Restricted PDF',slug='restricted-pdf',published=True,source=source,pdf=SimpleUploadedFile('restricted.pdf',b'%PDF-1.4'))
+        response=self.client.get(reverse('article_download',args=[article.slug]))
+        self.assertEqual(response.status_code,403)
