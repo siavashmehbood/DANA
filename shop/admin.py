@@ -1,6 +1,6 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
-from .models import Coupon, Order, OrderItem, Entitlement, WalletTransaction, Referral, CartItem, CheckoutRequest, Payment
+from .models import Coupon, Order, OrderItem, Entitlement, WalletTransaction, Referral, CartItem, CheckoutRequest, Payment, SubscriptionPlan, Subscription
 
 
 class OrderItemInline(admin.TabularInline):
