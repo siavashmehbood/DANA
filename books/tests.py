@@ -37,3 +37,9 @@ class DiscoveryTests(TestCase):
         response=self.client.get(reverse('books'),{'price':'free'})
         self.assertContains(response,'Text')
         self.assertNotContains(response,'Audio')
+
+
+    def test_persian_search_matches_arabic_character_variant(self):
+        Book.objects.create(name='کتاب یک',slug='persian-search',author=self.author,status='published')
+        response=self.client.get(reverse('books'),{'q':'كتاب يك'})
+        self.assertContains(response,'کتاب یک')
