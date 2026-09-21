@@ -31,7 +31,7 @@ def listing(request):
     # Only show articles that have something the reader can actually open:
     # full text, translated text, an abstract, or a PDF source.
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
-    articles = Article.objects.filter(published=True).filter(readable).select_related('category')
+    articles = Article.objects.filter(published=True).filter(readable).select_related('category','source')
     if saved_only:
         articles = articles.filter(library_items__user=request.user)
     if query:
@@ -78,7 +78,7 @@ def article_download(request, slug):
 def detail(request, slug):
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
     article = get_object_or_404(
-        Article.objects.select_related('category').filter(readable), slug=slug, published=True
+        Article.objects.select_related('category','source').filter(readable), slug=slug, published=True
     )
     # Keep detail pages fast: no network I/O during page rendering.
     mode = request.GET.get('lang', 'fa')
