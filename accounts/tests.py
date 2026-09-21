@@ -6,7 +6,8 @@ from django.utils import timezone
 from django.conf import settings
 
 from .models import OTPCode, User
-from shop.models import Referral
+from shop.models import Referral, Entitlement
+from books.models import Author, Book
 
 
 class AccountFlowTests(TestCase):
@@ -33,3 +34,16 @@ class AccountFlowTests(TestCase):
         self.assertRedirects(response, reverse('home'))
         invitee = User.objects.get(phone='+989121234567')
         self.assertTrue(Referral.objects.filter(inviter=inviter, invitee=invitee).exists())
+
+
+    def test_library_excludes_expired_entitlements(self):
+        user = User.objects.create_user(username='library-user', password='pass12345')
+        author = Author.objects.create(name='Library Author')
+        active = Book.objects.create(name='Active Access', slug='active-access', author=author, status='published')
+        expired = Book.objects.create(name='Expired Access', slug='expired-access', author=author, status='published')
+        Entitlement.objects.create(user=user, book=active)
+        Entitlement.objects.create(user=user, book=expired, expires_at=timezone.now()-timedelta(minutes=1))
+        self.client.force_login(user)
+        response = self.client.get(reverse('library'))
+        self.assertContains(response, 'Active Access')
+        self.assertNotContains(response, 'Expired Access')
