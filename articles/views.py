@@ -24,7 +24,7 @@ from .translation import (
 
 
 def listing(request):
-    query = request.GET.get('q', '').strip()
+    query = request.GET.get('q', '').strip()[:200]
     category = request.GET.get('category', '').strip()
     sort = request.GET.get('sort', 'top').strip()
     saved_only = request.GET.get('saved') == '1' and request.user.is_authenticated
@@ -35,6 +35,7 @@ def listing(request):
     if saved_only:
         articles = articles.filter(library_items__user=request.user)
     if query:
+        query = query.replace('ي','ی').replace('ك','ک').replace('\u200c',' ')
         articles = articles.filter(
             Q(title__icontains=query) | Q(title_fa__icontains=query) |
             Q(authors__icontains=query) | Q(abstract__icontains=query) |
