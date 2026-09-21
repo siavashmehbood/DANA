@@ -57,3 +57,19 @@ class StudyFlowTests(TestCase):
         response=self.client.post(reverse('reader_bookmark',args=[self.book.pk]),{'page':'999999999','title':'far'})
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.json()['page'],1000000)
+
+
+    def test_review_requires_access_and_is_moderated(self):
+        private=Book.objects.create(name='Review private',slug='review-private',author=self.book.author,status='published',visibility='private')
+        url=reverse('reader_review',args=[private.pk])
+        self.assertEqual(self.client.post(url,{'rating':'5','text':'Great'}).status_code,403)
+        Entitlement.objects.create(user=self.user,book=private,source='admin')
+        response=self.client.post(url,{'rating':'5','text':'Great'})
+        self.assertEqual(response.status_code,200)
+        review=Review.objects.get(user=self.user,book=private)
+        self.assertEqual(review.rating,5)
+        self.assertFalse(review.approved)
+
+    def test_review_rejects_invalid_rating(self):
+        response=self.client.post(reverse('reader_review',args=[self.book.pk]),{'rating':'9','text':'Bad rating'})
+        self.assertEqual(response.status_code,400)
