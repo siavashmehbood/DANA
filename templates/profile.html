@@ -18,7 +18,7 @@
 <div>Level<br><b>{{user.level}}</b></div>
 <div>معرفی<br><b>{{user.referral_code}}</b></div>
 </div>
-<div class="profile-actions"><a class="btn secondary" href="{% url 'library' %}">کتابخانه من</a><a class="btn secondary" href="{% url 'reader_vocabulary' %}">واژگان ذخیره‌شده</a><a class="btn secondary" href="{% url 'notifications' %}">اعلان‌ها</a><a class="btn secondary" href="{% url 'orders' %}">سفارش‌های من</a><a class="btn secondary" href="{% url 'tickets' %}">پشتیبانی</a><a class="btn secondary" href="{% url 'leaderboard' %}">رتبه‌بندی</a></div><h2>دستگاه‌ها و نشست‌ها</h2>
+<div class="profile-actions"><a class="btn secondary" href="{% url 'library' %}">کتابخانه من</a><a class="btn secondary" href="{% url 'reader_vocabulary' %}">واژگان ذخیره‌شده</a><a class="btn secondary" href="{% url 'notifications' %}">اعلان‌ها</a><a class="btn secondary" href="{% url 'orders' %}">سفارش‌های من</a><a class="btn secondary" href="{% url 'subscriptions' %}">اشتراک دانا</a><a class="btn secondary" href="{% url 'tickets' %}">پشتیبانی</a><a class="btn secondary" href="{% url 'leaderboard' %}">رتبه‌بندی</a></div><h2>دستگاه‌ها و نشست‌ها</h2>
 {% for session in login_sessions %}
 <div class="panel" style="margin:8px 0;padding:12px">
 <b>{{ session.device.name|default:"دستگاه" }}</b><br>
