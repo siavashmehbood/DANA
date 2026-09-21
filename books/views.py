@@ -10,9 +10,11 @@ def _published_books():
     return Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now()))
 
 def listing(request):
-    q=request.GET.get('q','').strip(); cat=request.GET.get('cat','').strip(); sort=request.GET.get('sort','new')
+    q=request.GET.get('q','').strip()[:200]; cat=request.GET.get('cat','').strip(); sort=request.GET.get('sort','new')
     books=_published_books().select_related('author','category')
-    if q: books=books.filter(Q(name__icontains=q)|Q(author__name__icontains=q)|Q(summary__icontains=q)|Q(description__icontains=q))
+    if q:
+        normalized=q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ')
+        books=books.filter(Q(name__icontains=normalized)|Q(author__name__icontains=normalized)|Q(summary__icontains=normalized)|Q(description__icontains=normalized))
     if cat: books=books.filter(category__slug=cat)
     if sort=='price_low': books=books.order_by('price')
     elif sort=='price_high': books=books.order_by('-price')
