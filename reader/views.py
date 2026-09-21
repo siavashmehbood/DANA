@@ -37,13 +37,14 @@ def progress(request, pk):
         seconds=max(0,int(request.POST.get('seconds',0))); audio_seconds=max(0,int(request.POST.get('audio_seconds',0)))
         chapter_id=request.POST.get('chapter_id') or None
     except (TypeError,ValueError): return JsonResponse({'error':'Invalid progress data'},status=400)
-    saved,_=ReadingProgress.objects.get_or_create(user=request.user,book=book); saved.progress=value; saved.current_page=page; saved.seconds=seconds; saved.audio_seconds=audio_seconds
+    chapter = None
     if chapter_id:
         try:
             chapter = book.chapters.get(pk=chapter_id)
         except (ValueError, TypeError, book.chapters.model.DoesNotExist):
             return JsonResponse({'error':'Invalid chapter'},status=400)
-        saved.current_chapter = chapter
+    saved,_=ReadingProgress.objects.get_or_create(user=request.user,book=book); saved.progress=value; saved.current_page=page; saved.seconds=seconds; saved.audio_seconds=audio_seconds
+    if chapter is not None: saved.current_chapter = chapter
     saved.save()
     if seconds or audio_seconds:
         record_study_activity(request.user)
