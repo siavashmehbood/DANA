@@ -34,8 +34,8 @@ def progress(request, pk):
     book = get_object_or_404(Book, pk=pk)
     if not book.is_published or not _has_access(request.user, book): return HttpResponseForbidden('Access denied')
     try:
-        value=max(0,min(100,float(request.POST.get('progress',0)))); page=max(0,int(request.POST.get('page',0)))
-        seconds=max(0,int(request.POST.get('seconds',0))); audio_seconds=max(0,int(request.POST.get('audio_seconds',0)))
+        value=max(0,min(100,float(request.POST.get('progress',0)))); page=min(1000000,max(0,int(request.POST.get('page',0))))
+        seconds=min(31536000,max(0,int(request.POST.get('seconds',0)))); audio_seconds=min(31536000,max(0,int(request.POST.get('audio_seconds',0))))
         chapter_id=request.POST.get('chapter_id') or None
     except (TypeError,ValueError): return JsonResponse({'error':'Invalid progress data'},status=400)
     chapter = None
