@@ -53,7 +53,7 @@ def retranslate_articles(modeladmin, request, queryset):
 def rollback_translation(modeladmin, request, queryset):
     restored = 0
     for article in queryset:
-        version = article.translation_versions.filter(is_valid=True).order_by('-version')[1:2].first()
+        version = article.translation_versions.filter(is_valid=True, version__lt=article.translation_version).order_by('-version').first()
         if not version:
             continue
         with transaction.atomic():
