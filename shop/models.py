@@ -43,9 +43,11 @@ class OrderItem(models.Model):
 
 
 class Entitlement(models.Model):
+    SOURCES = [('purchase','خرید'),('subscription','اشتراک'),('promotion','هدیه/کمپین'),('admin','اعطای مدیر'),('gift','هدیه')]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='entitlements')
     book = models.ForeignKey(Book, on_delete=models.CASCADE)
     order = models.ForeignKey(Order, null=True, blank=True, on_delete=models.SET_NULL)
+    source = models.CharField(max_length=20, choices=SOURCES, default='purchase')
     granted_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(null=True, blank=True)
 
