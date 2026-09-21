@@ -40,7 +40,12 @@ def retranslate_articles(modeladmin, request, queryset):
     success = failed = 0
     for article in queryset:
         before = article.translation_version
-        translate_article(article, full_text=bool(article.full_text or article.pdf), force=True, provider='admin')
+        try:
+            translate_article(article, full_text=bool(article.full_text or article.pdf), force=True, provider='admin')
+        except Exception as exc:
+            article.translation_status = 'failed'
+            article.translation_error = str(exc)[:4000]
+            article.save(update_fields=['translation_status', 'translation_error', 'updated_at'])
         article.refresh_from_db()
         if article.translation_version > before:
             success += 1
