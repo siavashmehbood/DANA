@@ -16,3 +16,20 @@ def tickets(request):
         messages.success(request, 'درخواست پشتیبانی ثبت شد.')
         return redirect('tickets')
     return render(request,'support/tickets.html',{'tickets':Ticket.objects.filter(user=request.user).order_by('-updated_at')})
+
+
+@login_required
+@require_POST
+def reply_ticket(request, pk):
+    ticket = get_object_or_404(Ticket, pk=pk, user=request.user)
+    if ticket.status == 'closed':
+        messages.error(request, 'این درخواست بسته شده است.')
+        return redirect('tickets')
+    body = request.POST.get('body','').strip()[:10000]
+    if not body:
+        messages.error(request, 'متن پاسخ نمی‌تواند خالی باشد.')
+        return redirect('tickets')
+    TicketMessage.objects.create(ticket=ticket, user=request.user, body=body)
+    ticket.status = 'waiting'
+    ticket.save(update_fields=['status','updated_at'])
+    return redirect('tickets')
