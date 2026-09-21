@@ -147,3 +147,9 @@ class CatalogRankingTests(TestCase):
     def test_search_reports_when_query_was_normalized(self):
         response=self.client.get(reverse('books'),{'q':'كتاب'})
         self.assertTrue(response.context['query_was_normalized'])
+
+
+    def test_invalid_page_value_falls_back_to_first_page(self):
+        response=self.client.get(reverse('books'),{'page':'invalid'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.context['page_obj'].number,1)
