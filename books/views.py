@@ -27,7 +27,7 @@ def detail(request,slug):
 
 
 def secure_file(request, pk, kind):
-    book = get_object_or_404(Book, pk=pk)
+    book = get_object_or_404(_published_books(), pk=pk)
     if not request.user.is_authenticated:
         return HttpResponseForbidden('ورود لازم است.')
     if book.visibility != 'public' and not Entitlement.objects.filter(user=request.user, book=book).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).exists():
