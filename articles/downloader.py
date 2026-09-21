@@ -5,6 +5,8 @@ from .models import Article
 
 
 def download_pdf(article, timeout=45):
+    if article.source_id and (not article.source.is_active or not article.source.allow_full_republish):
+        return False
     if article.pdf or not article.pdf_url:
         return False
     response = requests.get(article.pdf_url, timeout=timeout, stream=True,
@@ -16,9 +18,15 @@ def download_pdf(article, timeout=45):
     filename = f'article-{article.pk}.pdf'
     temp = Path(article.pdf.storage.location) / 'articles' / 'tmp' / filename
     temp.parent.mkdir(parents=True, exist_ok=True)
+    max_bytes = 50 * 1024 * 1024
+    written = 0
     with temp.open('wb') as handle:
         for chunk in response.iter_content(chunk_size=1024 * 256):
             if chunk:
+                written += len(chunk)
+                if written > max_bytes:
+                    handle.close(); temp.unlink(missing_ok=True)
+                    return False
                 handle.write(chunk)
     with temp.open('rb') as handle:
         article.pdf.save(filename, File(handle), save=True)
