@@ -15,17 +15,20 @@ def listing(request):
     q=request.GET.get('q','').strip()[:200]
     q=' '.join(q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split()); cat=request.GET.get('cat','').strip(); sort=request.GET.get('sort','new'); kind=request.GET.get('kind','all'); price=request.GET.get('price','all')
     books=_published_books().select_related('author','category')
+    def apply_filters(qs):
+        if cat: qs=qs.filter(category__slug=cat)
+        if kind=='audio': qs=qs.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct()
+        elif kind=='text': qs=qs.filter(Q(pdf__gt='')|Q(chapters__text__gt='')).distinct()
+        if price=='free': qs=qs.filter(price=0)
+        elif price=='paid': qs=qs.filter(price__gt=0)
+        return qs
     if q:
         variants={q,q.replace('ی','ي').replace('ک','ك')}
         search_q=Q()
         for term in variants:
             search_q |= Q(name__icontains=term)|Q(author__name__icontains=term)|Q(summary__icontains=term)|Q(description__icontains=term)
         books=books.filter(search_q)
-    if cat: books=books.filter(category__slug=cat)
-    if kind=='audio': books=books.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct()
-    elif kind=='text': books=books.filter(Q(pdf__gt='')|Q(chapters__text__gt='')).distinct()
-    if price=='free': books=books.filter(price=0)
-    elif price=='paid': books=books.filter(price__gt=0)
+    books=apply_filters(books)
     if sort=='price_low': books=books.order_by('price','id')
     elif sort=='price_high': books=books.order_by('-price','id')
     else: books=books.order_by('-created_at','-id')
@@ -36,7 +39,7 @@ def listing(request):
         for token in tokens:
             relaxed |= Q(name__icontains=token)|Q(author__name__icontains=token)|Q(summary__icontains=token)
         if relaxed:
-            books=_published_books().select_related('author','category').filter(relaxed).order_by('-created_at','-id')
+            books=apply_filters(_published_books().select_related('author','category').filter(relaxed)).order_by('-created_at','-id')
             total_count=books.count()
         if total_count == 0:
             Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_zero_result',metadata={'query':q})
