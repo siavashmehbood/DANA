@@ -18,6 +18,9 @@ def listing(request):
     sort=request.GET.get('sort','new')
     kind=request.GET.get('kind','all')
     price=request.GET.get('price','all')
+    if sort not in {'new','price_low','price_high','popular','rating','name'}: sort='new'
+    if kind not in {'all','audio','text'}: kind='all'
+    if price not in {'all','free','paid'}: price='all'
     books=_published_books().select_related('author','category')
     def apply_filters(qs):
         if cat: qs=qs.filter(category__slug=cat)
