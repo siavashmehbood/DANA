@@ -29,6 +29,13 @@ def listing(request):
         if price=='free': qs=qs.filter(price=0)
         elif price=='paid': qs=qs.filter(price__gt=0)
         return qs
+    def apply_sort(qs):
+        if sort=='price_low': return qs.order_by('price','id')
+        if sort=='price_high': return qs.order_by('-price','id')
+        if sort=='popular': return qs.annotate(review_count=Count('review',filter=Q(review__approved=True))).order_by('-review_count','-created_at','-id')
+        if sort=='rating': return qs.annotate(avg_rating=Avg('review__rating',filter=Q(review__approved=True))).order_by('-avg_rating','-created_at','-id')
+        if sort=='name': return qs.order_by('name','id')
+        return qs.order_by('-created_at','-id')
     if q:
         variants={q,q.replace('ی','ي').replace('ک','ك')}
         search_q=Q()
@@ -36,12 +43,7 @@ def listing(request):
             search_q |= Q(name__icontains=term)|Q(author__name__icontains=term)|Q(summary__icontains=term)|Q(description__icontains=term)
         books=books.filter(search_q)
     books=apply_filters(books)
-    if sort=='price_low': books=books.order_by('price','id')
-    elif sort=='price_high': books=books.order_by('-price','id')
-    elif sort=='popular': books=books.annotate(review_count=Count('review',filter=Q(review__approved=True))).order_by('-review_count','-created_at','-id')
-    elif sort=='rating': books=books.annotate(avg_rating=Avg('review__rating',filter=Q(review__approved=True))).order_by('-avg_rating','-created_at','-id')
-    elif sort=='name': books=books.order_by('name','id')
-    else: books=books.order_by('-created_at','-id')
+    books=apply_sort(books)
     total_count=books.count()
     used_relaxed_search=False
     if q and total_count == 0:
@@ -50,7 +52,7 @@ def listing(request):
         for token in tokens:
             relaxed |= Q(name__icontains=token)|Q(author__name__icontains=token)|Q(summary__icontains=token)
         if relaxed:
-            books=apply_filters(_published_books().select_related('author','category').filter(relaxed)).order_by('-created_at','-id')
+            books=apply_sort(apply_filters(_published_books().select_related('author','category').filter(relaxed)))
             total_count=books.count()
             used_relaxed_search=total_count > 0
         if total_count == 0 and request.GET.get('page') in (None,'','1'):
