@@ -86,6 +86,7 @@ class Payment(models.Model):
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='payments')
     provider = models.CharField(max_length=50, default='wallet')
     authority = models.CharField(max_length=150, blank=True)
+    reference_id = models.CharField(max_length=150, blank=True)
     amount = models.DecimalField(max_digits=14, decimal_places=0)
     status = models.CharField(max_length=20, choices=STATUS, default='pending')
     callback_payload = models.JSONField(default=dict, blank=True)
