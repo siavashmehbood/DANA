@@ -29,7 +29,7 @@
 <a class="brand" href="/" aria-label="دانا، صفحه اصلی">دانا</a>
 <div class="header-search"><form action="/books/" method="get"><input name="q" placeholder="جستجوی کتاب، نویسنده یا موضوع..." aria-label="جستجوی کتاب"><button type="submit" aria-label="جستجو">⌕</button></form></div>
 <div class="header-links">
-<a href="/">خانه</a><a href="/books/">کتابخانه</a><a href="/articles/">مقالات</a>
+<a href="/">خانه</a><a href="/books/">کشف کتاب</a><a href="/books/?kind=audio">کتاب صوتی</a><a href="/articles/">مجله دانا</a>
 {% if user.is_authenticated %}<a href="/dashboard/">داشبورد</a><a href="/library/">کتابخانه من</a><a href="/gamification/leaderboard/">رتبه‌بندی</a>{% endif %}
 </div>
 {% if user.is_authenticated %}<details class="header-more"><summary>بیشتر</summary><div class="header-more-menu"><a href="/notifications/">اعلان‌ها</a><a href="/support/">پشتیبانی</a><a href="/shop/wallet/">کیف پول</a><a href="/shop/cart/" class="header-cart">سبد خرید</a><a href="/profile/">پروفایل</a>{% if user.is_staff %}<a class="admin-link" href="/admin/">⚙ مدیریت</a>{% endif %}<a href="/logout/">خروج</a></div></details>{% endif %}
