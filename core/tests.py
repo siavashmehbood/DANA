@@ -65,3 +65,8 @@ class SeoEndpointTests(TestCase):
         response=self.client.get('/sitemap.xml')
         self.assertContains(response,'visible-seo')
         self.assertNotContains(response,'draft-seo')
+
+
+    def test_canonical_url_drops_query_string(self):
+        response=self.client.get('/books/?q=test')
+        self.assertContains(response,'rel="canonical" href="http://testserver/books/"')
