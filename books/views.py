@@ -35,8 +35,8 @@ def listing(request):
     books=apply_filters(books)
     if sort=='price_low': books=books.order_by('price','id')
     elif sort=='price_high': books=books.order_by('-price','id')
-    elif sort=='popular': books=books.annotate(review_count=Count('review')).order_by('-review_count','-created_at','-id')
-    elif sort=='rating': books=books.annotate(avg_rating=Avg('review__rating')).order_by('-avg_rating','-created_at','-id')
+    elif sort=='popular': books=books.annotate(review_count=Count('review',filter=Q(review__approved=True))).order_by('-review_count','-created_at','-id')
+    elif sort=='rating': books=books.annotate(avg_rating=Avg('review__rating',filter=Q(review__approved=True))).order_by('-avg_rating','-created_at','-id')
     else: books=books.order_by('-created_at','-id')
     total_count=books.count()
     used_relaxed_search=False
