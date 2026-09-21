@@ -17,6 +17,11 @@ def _process_article(article_id):
         article = Article.objects.get(pk=article_id)
         if not article.published:
             return
+        if article.source_id and not article.source.is_active:
+            return
+        if article.source_id and not article.source.allow_full_republish:
+            translate_article(article, full_text=False)
+            return
         if not article.pdf_url:
             try:
                 resolved = resolve_pdf_url(article)
