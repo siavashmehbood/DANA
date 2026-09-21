@@ -15,6 +15,7 @@ def listing(request):
     q=raw_q
     q=' '.join(q.replace('ي','ی').replace('ى','ی').replace('ك','ک').replace('\u200c',' ').replace('\u200f',' ').replace('\u200e',' ').split())
     cat=request.GET.get('cat','').strip()[:120]
+    if cat and not Category.objects.filter(slug=cat).exists(): cat=''
     sort=request.GET.get('sort','new')
     kind=request.GET.get('kind','all')
     price=request.GET.get('price','all')
