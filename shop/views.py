@@ -158,7 +158,8 @@ def checkout(request):
 
                 order = Order.objects.create(user=user, subtotal=subtotal, discount=discount, tax=tax, total=total, status='paid', tracking_code=_tracking_code())
                 OrderItem.objects.bulk_create([OrderItem(order=order, book=i.book, price=i.book.price) for i in items])
-                Entitlement.objects.bulk_create([Entitlement(user=user, book=i.book, order=order, source='purchase') for i in items], ignore_conflicts=True)
+                for i in items:
+                    Entitlement.objects.update_or_create(user=user, book=i.book, defaults={'order':order,'source':'purchase','expires_at':None})
                 ref = f'order:{order.pk}:debit'
                 _wallet_transaction(user, total, 'debit', 'Book purchase', order=order, reference=ref)
                 Payment.objects.create(user=user, order=order, provider='wallet', amount=total, status='successful', idempotency_key=f'payment:{order.pk}')
