@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from .models import OTPCode, User
 from shop.models import Referral, Entitlement
@@ -47,3 +48,13 @@ class AccountFlowTests(TestCase):
         response = self.client.get(reverse('library'))
         self.assertContains(response, 'Active Access')
         self.assertNotContains(response, 'Expired Access')
+
+
+    def test_profile_rejects_disguised_avatar_extension(self):
+        user=User.objects.create_user(username='avatar-user',password='pass12345')
+        self.client.force_login(user)
+        bad=SimpleUploadedFile('avatar.exe',b'not-an-image',content_type='image/png')
+        response=self.client.post(reverse('profile'),{'avatar':bad})
+        self.assertRedirects(response,reverse('profile'))
+        user.refresh_from_db()
+        self.assertFalse(bool(user.avatar))
