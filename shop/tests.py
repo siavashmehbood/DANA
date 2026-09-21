@@ -153,3 +153,10 @@ class ShopFlowTests(TestCase):
         Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()+timedelta(days=1),expires_at=timezone.now()+timedelta(days=31))
         response=self.client.get(reverse('subscriptions'))
         self.assertNotContains(response,'اشتراک فعال: Future')
+
+
+    def test_featured_subscription_is_listed_first(self):
+        SubscriptionPlan.objects.create(name='Regular',slug='regular-plan',price=1,duration_days=30)
+        SubscriptionPlan.objects.create(name='Featured',slug='featured-plan',price=999,duration_days=30,featured=True)
+        response=self.client.get(reverse('subscriptions'))
+        self.assertLess(response.content.decode().find('Featured'),response.content.decode().find('Regular'))
