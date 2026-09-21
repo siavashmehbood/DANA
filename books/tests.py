@@ -164,3 +164,11 @@ class CatalogRankingTests(TestCase):
         response=self.client.get(reverse('books'),{'q':'على'})
         self.assertEqual(response.context['q'],'علی')
         self.assertTrue(response.context['query_was_normalized'])
+
+
+    def test_search_event_records_filter_context(self):
+        self.client.get(reverse('books'),{'q':'نمونه','kind':'audio','price':'paid','sort':'rating'})
+        event=Event.objects.filter(name='search').latest('created_at')
+        self.assertEqual(event.metadata['kind'],'audio')
+        self.assertEqual(event.metadata['price'],'paid')
+        self.assertEqual(event.metadata['sort'],'rating')
