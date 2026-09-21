@@ -34,7 +34,12 @@ def progress(request, pk):
         chapter_id=request.POST.get('chapter_id') or None
     except (TypeError,ValueError): return JsonResponse({'error':'Invalid progress data'},status=400)
     saved,_=ReadingProgress.objects.get_or_create(user=request.user,book=book); saved.progress=value; saved.current_page=page; saved.seconds=seconds; saved.audio_seconds=audio_seconds
-    if chapter_id: saved.current_chapter_id=chapter_id
+    if chapter_id:
+        try:
+            chapter = book.chapters.get(pk=chapter_id)
+        except (ValueError, TypeError, book.chapters.model.DoesNotExist):
+            return JsonResponse({'error':'Invalid chapter'},status=400)
+        saved.current_chapter = chapter
     saved.save()
     if seconds or audio_seconds:
         record_study_activity(request.user)
