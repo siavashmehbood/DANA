@@ -25,8 +25,10 @@ def dashboard(request):
     ltv = (sales / paying_users) if paying_users else 0
     conversion = (paying_users * 100 / users) if users else 0
     cart_users = CartItem.objects.values('user_id').distinct().count()
+    searches = Event.objects.filter(name='search',created_at__gte=now-timedelta(days=30)).count()
     zero_searches = Event.objects.filter(name='search_zero_result',created_at__gte=now-timedelta(days=30)).count()
+    search_success_rate = round(((searches-zero_searches)*100/searches),2) if searches else 0
     top_zero_searches = list(Event.objects.filter(name='search_zero_result',created_at__gte=now-timedelta(days=30)).values('metadata__query').annotate(count=Count('id')).order_by('-count')[:10])
     return render(request, 'analytics/dashboard.html', {'sales': sales, 'today_sales': today_sales, 'orders': paid.count(), 'users': users,
         'events': Event.objects.count(), 'paying_users': paying_users, 'active_readers': active_readers, 'new_users': new_users,
-        'aov': round(aov, 0), 'arpu': round(arpu, 0), 'ltv': round(ltv, 0), 'conversion': round(conversion, 2), 'cart_users': cart_users, 'zero_searches': zero_searches, 'top_zero_searches': top_zero_searches})
+        'aov': round(aov, 0), 'arpu': round(arpu, 0), 'ltv': round(ltv, 0), 'conversion': round(conversion, 2), 'cart_users': cart_users, 'searches': searches, 'zero_searches': zero_searches, 'search_success_rate': search_success_rate, 'top_zero_searches': top_zero_searches})
