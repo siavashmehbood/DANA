@@ -204,5 +204,5 @@ def subscriptions(request):
     plans=SubscriptionPlan.objects.filter(active=True).order_by('price','duration_days')
     current=None
     if request.user.is_authenticated:
-        current=Subscription.objects.filter(user=request.user,status='active',expires_at__gt=timezone.now()).select_related('plan').order_by('-expires_at').first()
+        current=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now()).select_related('plan').order_by('-expires_at').first()
     return render(request,'shop/subscriptions.html',{'plans':plans,'current_subscription':current})
