@@ -158,3 +158,9 @@ class CatalogRankingTests(TestCase):
     def test_nonpositive_page_value_falls_back_to_first_page(self):
         response=self.client.get(reverse('books'),{'page':'0'})
         self.assertEqual(response.context['page_obj'].number,1)
+
+
+    def test_alef_maqsura_query_is_normalized(self):
+        response=self.client.get(reverse('books'),{'q':'على'})
+        self.assertEqual(response.context['q'],'علی')
+        self.assertTrue(response.context['query_was_normalized'])
