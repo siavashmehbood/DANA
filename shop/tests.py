@@ -113,3 +113,11 @@ class ShopFlowTests(TestCase):
         response=self.client.post(reverse('cart'),{'book_id':draft.pk})
         self.assertEqual(response.status_code,302)
         self.assertFalse(CartItem.objects.filter(user=self.user,book=draft).exists())
+
+
+    def test_cart_removes_book_that_becomes_unpublished(self):
+        item=CartItem.objects.create(user=self.user,book=self.book)
+        self.book.status='draft'; self.book.save(update_fields=['status'])
+        response=self.client.get(reverse('cart'))
+        self.assertEqual(response.status_code,200)
+        self.assertFalse(CartItem.objects.filter(pk=item.pk).exists())
