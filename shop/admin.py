@@ -101,8 +101,8 @@ class ReferralAdmin(ModelAdmin):
 
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(ModelAdmin):
-    list_display=('name','price','duration_days','active')
-    list_editable=('price','active')
+    list_display=('name','price','duration_days','grants_catalog_access','active')
+    list_editable=('price','grants_catalog_access','active')
     search_fields=('name','slug')
 
 @admin.register(Subscription)
