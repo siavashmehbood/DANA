@@ -5,6 +5,7 @@ from django.contrib import auth, messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
 from django.core.cache import cache
+from django.conf import settings
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.db.models import Q
@@ -46,7 +47,9 @@ def login_view(request):
         if not request.POST.get('terms'): messages.error(request,'پذیرش قوانین الزامی است.'); return redirect('login')
         if _rate_limited(f'dana-otp:{phone}:{ip}',5,3600): messages.error(request,'تعداد درخواست کد زیاد است؛ بعداً دوباره تلاش کنید.'); return redirect('login')
         if OTPCode.objects.filter(phone=phone,purpose='login',created_at__gt=timezone.now()-timedelta(seconds=30)).exists(): messages.error(request,'لطفاً کمی صبر کنید.'); return redirect('login')
-        code=f'{secrets.randbelow(100000):05d}'; OTPCode.objects.create(phone=phone,code=code,purpose='login',expires_at=timezone.now()+timedelta(minutes=2)); request.session['otp_phone']=phone; print(f'[DANA OTP] {phone}: {code}'); return redirect('otp')
+        code=f'{secrets.randbelow(100000):05d}'; OTPCode.objects.create(phone=phone,code=code,purpose='login',expires_at=timezone.now()+timedelta(minutes=2)); request.session['otp_phone']=phone
+        if settings.DEBUG: print(f'[DANA OTP] {phone}: {code}')
+        return redirect('otp')
     return render(request,'auth/login.html')
 
 def otp(request):
