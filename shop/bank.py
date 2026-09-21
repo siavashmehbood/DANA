@@ -45,7 +45,7 @@ def finalize_bank_order(order, payment):
         return False
     items = list(order.items.select_related('book'))
     for item in items:
-        Entitlement.objects.get_or_create(user=order.user, book=item.book, defaults={'order': order})
+        Entitlement.objects.get_or_create(user=order.user, book=item.book, defaults={'order': order, 'source': 'purchase'})
     coupon_code = (payment.callback_payload or {}).get('coupon_code', '')
     if coupon_code:
         Coupon.objects.select_for_update().filter(code=coupon_code, active=True).update(used=__import__('django.db.models', fromlist=['F']).F('used') + 1)
@@ -128,6 +128,9 @@ def payment_callback(request):
     if payment.status == 'successful':
         return render(request, 'shop/success.html', {'order': payment.order})
     if status != 'OK':
+        if payment.status != 'pending':
+            messages.error(request, 'وضعیت این تراکنش قبلاً نهایی شده است.')
+            return redirect('cart')
         payment.status = 'cancelled'
         payment.callback_payload = {**payment.callback_payload, 'callback_status': status}
         payment.save(update_fields=['status', 'callback_payload'])
@@ -136,6 +139,9 @@ def payment_callback(request):
         messages.warning(request, 'پرداخت توسط کاربر لغو شد.')
         return redirect('checkout')
 
+    if payment.status != 'pending':
+        messages.error(request, 'این تراکنش قبلاً نهایی شده است.')
+        return redirect('cart')
     result = gateway().verify(payment.order)
     if result.ok:
         with transaction.atomic():
