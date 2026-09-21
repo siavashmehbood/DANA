@@ -153,3 +153,8 @@ class CatalogRankingTests(TestCase):
         response=self.client.get(reverse('books'),{'page':'invalid'})
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.context['page_obj'].number,1)
+
+
+    def test_nonpositive_page_value_falls_back_to_first_page(self):
+        response=self.client.get(reverse('books'),{'page':'0'})
+        self.assertEqual(response.context['page_obj'].number,1)
