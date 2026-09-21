@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 from accounts.models import User
@@ -13,6 +14,26 @@ class ArticleCategory(models.Model):
         ordering = ['name']
         verbose_name = 'دسته مقاله'
         verbose_name_plural = 'دسته‌های مقالات'
+
+    def __str__(self):
+        return self.name
+
+
+class ArticleSource(models.Model):
+    name = models.CharField(max_length=180)
+    base_url = models.URLField(blank=True)
+    feed_url = models.URLField(blank=True)
+    source_type = models.CharField(max_length=20, choices=[('rss', 'RSS'), ('api', 'API'), ('manual', 'دستی')], default='rss')
+    is_active = models.BooleanField(default=True)
+    allow_full_republish = models.BooleanField(default=False)
+    attribution_required = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'منبع مقاله'
+        verbose_name_plural = 'منابع مقالات'
 
     def __str__(self):
         return self.name
@@ -59,20 +80,28 @@ class ArticleAnnotation(models.Model):
 
 class Article(models.Model):
     ACCESS_CHOICES = [('open', 'آزاد'), ('external', 'نسخه خارجی')]
+    TRANSLATION_STATUS = [('pending','در انتظار ترجمه'),('translating','در حال ترجمه'),('translated','ترجمه شده'),('reviewed','بازبینی شده'),('failed','خطای ترجمه')]
     title = models.CharField(max_length=500)
     title_fa = models.CharField(max_length=500, blank=True)
     slug = models.SlugField(max_length=550, unique=True, allow_unicode=True)
     authors = models.CharField(max_length=1000, blank=True)
+    original_language = models.CharField(max_length=16, default='en')
     abstract = models.TextField(blank=True)
     abstract_fa = models.TextField(blank=True)
     full_text = models.TextField(blank=True)
     full_text_fa = models.TextField(blank=True)
-    translation_status = models.CharField(max_length=20, default='pending', choices=[('pending','در انتظار ترجمه'),('translated','ترجمه شده'),('reviewed','بازبینی شده')])
+    translation_status = models.CharField(max_length=20, default='pending', choices=TRANSLATION_STATUS)
     translation_hash = models.CharField(max_length=64, blank=True)
+    translation_version = models.PositiveIntegerField(default=0)
+    translation_quality = models.PositiveSmallIntegerField(null=True, blank=True)
+    translation_error = models.TextField(blank=True)
     translated_at = models.DateTimeField(null=True, blank=True)
+    publication_date = models.DateField(null=True, blank=True)
+    retrieved_at = models.DateTimeField(null=True, blank=True)
     year = models.PositiveIntegerField(null=True, blank=True)
     journal = models.CharField(max_length=500, blank=True)
     doi = models.CharField(max_length=300, blank=True)
+    source = models.ForeignKey(ArticleSource, null=True, blank=True, on_delete=models.SET_NULL, related_name='articles')
     source_provider = models.CharField(max_length=40, blank=True, default='')
     external_id = models.CharField(max_length=300, blank=True, default='')
     citation_count = models.PositiveIntegerField(default=0)
@@ -103,3 +132,25 @@ class Article(models.Model):
 
     def __str__(self):
         return self.title_fa or self.title
+
+
+class ArticleTranslationVersion(models.Model):
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='translation_versions')
+    version = models.PositiveIntegerField()
+    title_fa = models.CharField(max_length=500, blank=True)
+    abstract_fa = models.TextField(blank=True)
+    content_fa = models.TextField(blank=True)
+    provider = models.CharField(max_length=80, blank=True)
+    quality_score = models.PositiveSmallIntegerField(null=True, blank=True)
+    source_hash = models.CharField(max_length=64, blank=True)
+    is_valid = models.BooleanField(default=True)
+    error = models.TextField(blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='article_translation_versions')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-version']
+        constraints = [models.UniqueConstraint(fields=['article', 'version'], name='unique_article_translation_version')]
+
+    def __str__(self):
+        return f'{self.article_id} / v{self.version}'
