@@ -1,1 +1,11 @@
-{% extends 'base.html' %}{% block content %}<div class="panel"><h1>پشتیبانی</h1><form method="post">{% csrf_token %}<input name="subject" placeholder="موضوع" required><textarea name="body" placeholder="شرح مشکل" required></textarea><button class="btn">ثبت تیکت</button></form><hr>{% for t in tickets %}<div class="notification"><b>{{t.subject}}</b><span class="badge">{{t.get_status_display}}</span><p>{{t.body}}</p></div>{% endfor %}</div>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}پشتیبانی | دانا{% endblock %}
+{% block content %}
+<div class="panel"><h1>پشتیبانی</h1>
+<form method="post">{% csrf_token %}<input name="subject" maxlength="250" placeholder="موضوع" required><textarea name="body" maxlength="10000" placeholder="شرح مشکل" required></textarea><button class="btn">ثبت تیکت</button></form>
+<hr>
+{% for t in tickets %}<section class="notification"><b>{{t.subject}}</b> <span class="badge">{{t.get_status_display}}</span><p>{{t.body}}</p>
+{% for m in t.messages.all %}<div class="tool-item"><b>{% if m.user_id == user.id %}شما{% else %}پشتیبانی{% endif %}</b><p>{{m.body}}</p><small>{{m.created_at}}</small></div>{% endfor %}
+{% if t.status != 'closed' %}<form method="post" action="{% url 'ticket_reply' t.pk %}">{% csrf_token %}<textarea name="body" maxlength="10000" placeholder="پاسخ شما..." required></textarea><button class="btn small">ارسال پاسخ</button></form>{% endif %}
+</section>{% empty %}<div class="empty">هنوز درخواستی ثبت نکرده‌اید.</div>{% endfor %}
+</div>{% endblock %}
