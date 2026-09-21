@@ -7,7 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 from accounts.models import User
 from books.models import Author, Book
-from .models import CartItem, CheckoutRequest, Coupon, Entitlement, Order, Payment, Referral, WalletTransaction
+from .models import CartItem, CheckoutRequest, Coupon, Entitlement, Order, Payment, Referral, WalletTransaction, SubscriptionPlan, Subscription
 
 
 class ShopFlowTests(TestCase):
