@@ -160,3 +160,10 @@ class ShopFlowTests(TestCase):
         SubscriptionPlan.objects.create(name='Featured',slug='featured-plan',price=999,duration_days=30,featured=True)
         response=self.client.get(reverse('subscriptions'))
         self.assertLess(response.content.decode().find('Featured'),response.content.decode().find('Regular'))
+
+
+    def test_subscription_period_constraint_rejects_invalid_range(self):
+        from django.db import IntegrityError
+        plan=SubscriptionPlan.objects.create(name='Range',slug='range-plan',price=10,duration_days=30)
+        with self.assertRaises(IntegrityError):
+            Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now(),expires_at=timezone.now()-timedelta(days=1))
