@@ -15,7 +15,8 @@ def listing(request):
     q=raw_q
     q=' '.join(q.replace('ي','ی').replace('ى','ی').replace('ك','ک').replace('\u200c',' ').replace('\u200f',' ').replace('\u200e',' ').split())
     cat=request.GET.get('cat','').strip()[:120]
-    if cat and not Category.objects.filter(slug=cat).exists(): cat=''
+    category_qs=Category.objects.order_by('name')
+    if cat and not category_qs.filter(slug=cat).exists(): cat=''
     sort=request.GET.get('sort','new')
     kind=request.GET.get('kind','all')
     price=request.GET.get('price','all')
@@ -66,7 +67,7 @@ def listing(request):
         Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search',value=total_count,metadata={'query':q,'relaxed':used_relaxed_search,'kind':kind,'price':price,'category':cat,'sort':sort})
     paginator=Paginator(books,24)
     page_obj=paginator.get_page(page_number)
-    return render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':Category.objects.order_by('name'),'used_relaxed_search':used_relaxed_search,'query_was_normalized':bool(raw_q and raw_q != q)})
+    return render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':category_qs,'used_relaxed_search':used_relaxed_search,'query_was_normalized':bool(raw_q and raw_q != q)})
 
 def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
