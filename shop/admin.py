@@ -46,10 +46,10 @@ class WalletTransactionAdmin(ModelAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(ModelAdmin):
-    list_display = ('id', 'user', 'order', 'provider', 'amount', 'status', 'authority', 'created_at')
+    list_display = ('id', 'user', 'order', 'provider', 'amount', 'status', 'authority', 'reference_id', 'created_at')
     list_filter = ('provider', 'status', 'created_at')
     search_fields = ('authority', 'idempotency_key', 'user__username', 'user__phone', 'order__tracking_code')
-    readonly_fields = ('user', 'order', 'provider', 'authority', 'amount', 'status', 'callback_payload', 'created_at', 'updated_at', 'idempotency_key')
+    readonly_fields = ('user', 'order', 'provider', 'authority', 'reference_id', 'amount', 'status', 'callback_payload', 'created_at', 'updated_at', 'idempotency_key')
     date_hierarchy = 'created_at'
 
     def has_add_permission(self, request):
