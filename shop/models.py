@@ -125,5 +125,9 @@ class Subscription(models.Model):
     expires_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def is_active(self):
+        return self.status == 'active' and self.starts_at <= timezone.now() < self.expires_at
+
     class Meta:
         indexes = [models.Index(fields=['user','status','expires_at'], name='shop_sub_user_status_idx')]
