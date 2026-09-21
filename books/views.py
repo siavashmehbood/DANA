@@ -24,7 +24,8 @@ def listing(request):
 def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
     related=_published_books().filter(category=book.category).exclude(pk=book.pk)[:4] if book.category else Book.objects.none()
-    return render(request,'books/detail.html',{'book':book,'related':related})
+    has_access = request.user.is_authenticated and (book.visibility == 'public' or Entitlement.objects.filter(user=request.user,book=book).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).exists())
+    return render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access})
 
 
 def secure_file(request, pk, kind):
