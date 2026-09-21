@@ -1,7 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.utils import timezone
 
 from .models import XPEvent, PointLedger, UserStreak
@@ -19,6 +19,8 @@ def add_xp(user, amount, reason, source=''):
 
 @transaction.atomic
 def add_points(user, point_type, amount, reason, book=None, reference=''):
+    from accounts.models import User
+    user = User.objects.select_for_update().get(pk=user.pk)
     amount = Decimal(str(amount))
     if amount <= 0:
         return None
@@ -29,6 +31,8 @@ def add_points(user, point_type, amount, reason, book=None, reference=''):
         ).exists()
         if exists:
             return None
+    if reference and PointLedger.objects.filter(reference=reference, revoked=False).exists():
+        return None
     row = PointLedger.objects.create(
         user=user, point_type=point_type, amount=amount,
         reason=reason, book=book, reference=reference,
