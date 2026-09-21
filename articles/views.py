@@ -84,7 +84,7 @@ def detail(request, slug):
     mode = request.GET.get('lang', 'fa')
     if mode not in {'en', 'fa', 'both'}:
         mode = 'fa'
-    search = request.GET.get('find', '').strip()
+    search = request.GET.get('find', '').strip()[:200]
     article.reader_full_text = linebreaks(article.full_text or '')
     article.reader_full_text_fa = linebreaks(article.full_text_fa or '')
     if mode == 'fa' and not (article.full_text_fa or article.abstract_fa):
