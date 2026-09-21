@@ -56,6 +56,10 @@ def otp(request):
     phone=request.session.get('otp_phone')
     if not phone:return redirect('login')
     if request.method=='POST':
+        ip=request.META.get('REMOTE_ADDR','unknown')
+        if _rate_limited(f'dana-otp-verify:{phone}:{ip}',10,300):
+            messages.error(request,'تعداد تلاش‌ها زیاد است؛ چند دقیقه بعد دوباره امتحان کنید.')
+            return redirect('otp')
         row=OTPCode.objects.filter(phone=phone,purpose='login',used=False,expires_at__gt=timezone.now()).order_by('-id').first()
         if row and row.attempts<5 and row.code==request.POST.get('code','').strip():
             row.used=True; row.save(update_fields=['used']); user,created=User.objects.get_or_create(phone=phone,defaults={'terms_accepted_at':timezone.now()})
