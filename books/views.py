@@ -14,7 +14,7 @@ def _published_books():
 def listing(request):
     q=request.GET.get('q','').strip()[:200]
     q=' '.join(q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split())
-    cat=request.GET.get('cat','').strip()
+    cat=request.GET.get('cat','').strip()[:120]
     sort=request.GET.get('sort','new')
     kind=request.GET.get('kind','all')
     price=request.GET.get('price','all')
