@@ -60,7 +60,7 @@ def listing(request):
             total_count=books.count()
             used_relaxed_search=total_count > 0
         if total_count == 0 and page_number == '1':
-            Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_zero_result',metadata={'query':q})
+            Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_zero_result',metadata={'query':q,'kind':kind,'price':price,'category':cat,'sort':sort})
     if q and page_number == '1':
         Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search',value=total_count,metadata={'query':q,'relaxed':used_relaxed_search,'kind':kind,'price':price,'category':cat,'sort':sort})
     paginator=Paginator(books,24)
