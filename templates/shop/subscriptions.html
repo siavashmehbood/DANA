@@ -2,7 +2,7 @@
 {% block title %}اشتراک دانا{% endblock %}
 {% block description %}پلن‌های اشتراک دانا برای دسترسی ساده‌تر به مطالعه و شنیدن.{% endblock %}
 {% block content %}
-<section class="section"><div class="section-title"><div><span class="shelf-label">DANA PLUS</span><h1>اشتراک دانا</h1><p>پلن مناسب خودت را ببین؛ فعال‌سازی پرداخت اشتراک به‌صورت مستقل از خرید تکی طراحی شده است.</p></div></div>
+<section class="section"><div class="section-title"><div><span class="shelf-label">DANA PLUS</span><h1>اشتراک دانا</h1><p>پلن مناسب خودت را ببین؛ پلن‌های عضویت و وضعیت اشتراک خود را اینجا ببین.</p></div></div>
 {% if current_subscription %}<div class="panel"><b>اشتراک فعال: {{current_subscription.plan.name}}</b><p>اعتبار تا {{current_subscription.expires_at}}</p></div>{% endif %}
-<div class="grid">{% for plan in plans %}<article class="card"><h2>{{plan.name}}</h2><p>{{plan.description}}</p><strong>{{plan.price}} تومان</strong><p>{{plan.duration_days}} روز</p><span class="muted">فعال‌سازی آنلاین این پلن به‌زودی از همین صفحه انجام می‌شود.</span></article>{% empty %}<div class="empty"><h2>پلن فعالی وجود ندارد</h2><p>مدیر محتوا می‌تواند پلن‌ها را از پنل مدیریت تنظیم کند.</p></div>{% endfor %}</div></section>
+<div class="grid">{% for plan in plans %}<article class="card"><h2>{{plan.name}}</h2><p>{{plan.description}}</p><strong>{{plan.price}} تومان</strong><p>{{plan.duration_days}} روز</p><span class="muted">برای فعال‌سازی، این پلن باید از مسیر پرداخت اشتراک تهیه شود.</span></article>{% empty %}<div class="empty"><h2>پلن فعالی وجود ندارد</h2><p>مدیر محتوا می‌تواند پلن‌ها را از پنل مدیریت تنظیم کند.</p></div>{% endfor %}</div></section>
 {% endblock %}
