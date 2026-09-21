@@ -71,7 +71,7 @@ class ShopFlowTests(TestCase):
         callback=self.client.get(reverse('payment_callback'),{'Authority':'A456','Status':'OK'})
         self.assertEqual(callback.status_code,200)
         order=Order.objects.get(user=self.user); payment=Payment.objects.get(order=order)
-        self.assertEqual(order.status,'paid'); self.assertEqual(payment.status,'successful'); self.assertTrue(Entitlement.objects.filter(user=self.user,book=self.book).exists())
+        self.assertEqual(order.status,'paid'); self.assertEqual(payment.status,'successful'); self.assertEqual(payment.reference_id,'999'); self.assertTrue(Entitlement.objects.filter(user=self.user,book=self.book).exists())
         self.assertFalse(CartItem.objects.filter(user=self.user,book=self.book).exists())
 
     @override_settings(ZARINPAL_MERCHANT_ID='')
