@@ -124,7 +124,7 @@ class Article(models.Model):
         ordering = ['-featured', '-year', '-created_at']
         verbose_name = 'مقاله'
         verbose_name_plural = 'مقالات'
-        indexes = [models.Index(fields=['year']), models.Index(fields=['published']), models.Index(fields=['translation_status']), models.Index(fields=['source_provider','external_id'])]
+        indexes = [models.Index(fields=['year']), models.Index(fields=['published']), models.Index(fields=['translation_status']), models.Index(fields=['source_provider','external_id'], name='articles_ar_source__dcb879_idx')]
 
     def save(self, *args, **kwargs):
         if not self.slug:
