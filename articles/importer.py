@@ -199,14 +199,16 @@ def import_discovered(query, limit=20, category=None, providers=None):
             source_cache[provider], _ = ArticleSource.objects.get_or_create(name=provider or 'unknown', defaults={'source_type': 'api', 'is_active': True})
         if not source_cache[provider].is_active:
             continue
+        source = source_cache[provider]
+        allow_full = source.allow_full_republish
         defaults = {
             'title': item['title'], 'slug': _slug(item['title'], identity),
             'authors': item.get('authors', ''), 'abstract': item.get('abstract', ''),
             'year': item.get('year'), 'publication_date': item.get('publication_date'), 'journal': item.get('journal', ''),
             'doi': item.get('doi', ''), 'source_url': item.get('source_url', ''),
-            'pdf_url': item.get('pdf_url', ''), 'category': category,
-            'access': 'open' if item.get('pdf_url') else 'external', 'published': True,
-            'external_id': item.get('external_id', ''), 'source_provider': provider, 'source': source_cache[provider],
+            'pdf_url': item.get('pdf_url', '') if allow_full else '', 'category': category,
+            'access': 'open' if (allow_full and item.get('pdf_url')) else 'external', 'published': True,
+            'external_id': item.get('external_id', ''), 'source_provider': provider, 'source': source,
             'citation_count': item.get('citation_count') or 0,
             'relevance_score': item.get('relevance_score') or 0,
         }
