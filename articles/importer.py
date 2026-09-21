@@ -197,6 +197,8 @@ def import_discovered(query, limit=20, category=None, providers=None):
         provider = item.get('provider', '')
         if provider not in source_cache:
             source_cache[provider], _ = ArticleSource.objects.get_or_create(name=provider or 'unknown', defaults={'source_type': 'api', 'is_active': True})
+        if not source_cache[provider].is_active:
+            continue
         defaults = {
             'title': item['title'], 'slug': _slug(item['title'], identity),
             'authors': item.get('authors', ''), 'abstract': item.get('abstract', ''),
