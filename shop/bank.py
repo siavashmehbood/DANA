@@ -148,8 +148,9 @@ def payment_callback(request):
         with transaction.atomic():
             payment = Payment.objects.select_for_update().get(pk=payment.pk)
             payment.status = 'successful'
+            payment.reference_id = result.authority
             payment.callback_payload = {**payment.callback_payload, 'ref_id': result.authority}
-            payment.save(update_fields=['status', 'callback_payload'])
+            payment.save(update_fields=['status', 'reference_id', 'callback_payload'])
             finalize_bank_order(payment.order, payment)
         return render(request, 'shop/success.html', {'order': payment.order})
     payment.status = 'failed'
