@@ -32,4 +32,5 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.AddIndex(model_name='subscription',index=models.Index(fields=['user','status','expires_at'],name='shop_sub_user_status_idx')),
+        migrations.AddConstraint(model_name='subscription',constraint=models.CheckConstraint(condition=models.Q(('expires_at__gt',models.F('starts_at'))),name='subscription_expiry_after_start')),
     ]
