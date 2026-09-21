@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}{{ article.title_fa|default:'مقاله علمی دانا' }} | DANA{% endblock %}
+{% block og_title %}{{ article.title_fa|default:article.title }} | مجله دانا{% endblock %}
+{% block og_description %}{{ article.abstract_fa|default:article.abstract|truncatechars:180 }}{% endblock %}
 {% block content %}
 <article class="detail-card article-detail">
 {% if article.cover %}<img class="article-cover" src="{{ article.cover.url }}" alt="{{ article.title }}">{% endif %}
