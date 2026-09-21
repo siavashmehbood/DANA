@@ -77,7 +77,8 @@ def otp(request):
 def dashboard(request):
     user=request.user
     owned=Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).select_related('book__author').order_by('-granted_at')
-    progress=ReadingProgress.objects.filter(user=user).select_related('book').order_by('-updated_at')
+    valid_book_ids=owned.values_list('book_id',flat=True)
+    progress=ReadingProgress.objects.filter(user=user,book_id__in=valid_book_ids,book__status__in=['published','scheduled']).select_related('book').order_by('-updated_at')
     return render(request,'dashboard.html',{'books_count':owned.count(),'article_count':Article.objects.filter(published=True).count(),'vocabulary_count':user.saved_words.count(),'cart_count':CartItem.objects.filter(user=user).count(),'latest_articles':Article.objects.filter(published=True).order_by('-created_at')[:5],'owned_books':owned[:8],'reading_progress':progress[:4]})
 
 @login_required
