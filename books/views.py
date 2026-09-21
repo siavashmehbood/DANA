@@ -13,7 +13,11 @@ def _published_books():
 
 def listing(request):
     q=request.GET.get('q','').strip()[:200]
-    q=' '.join(q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split()); cat=request.GET.get('cat','').strip(); sort=request.GET.get('sort','new'); kind=request.GET.get('kind','all'); price=request.GET.get('price','all')
+    q=' '.join(q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split())
+    cat=request.GET.get('cat','').strip()
+    sort=request.GET.get('sort','new')
+    kind=request.GET.get('kind','all')
+    price=request.GET.get('price','all')
     books=_published_books().select_related('author','category')
     def apply_filters(qs):
         if cat: qs=qs.filter(category__slug=cat)
