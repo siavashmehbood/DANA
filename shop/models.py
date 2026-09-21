@@ -100,3 +100,29 @@ class Referral(models.Model):
     invitee = models.OneToOneField(User, on_delete=models.CASCADE, related_name='invited_by')
     rewarded = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class SubscriptionPlan(models.Model):
+    name = models.CharField(max_length=120)
+    slug = models.SlugField(unique=True)
+    price = models.DecimalField(max_digits=14, decimal_places=0, validators=[MinValueValidator(0)])
+    duration_days = models.PositiveIntegerField(default=30)
+    active = models.BooleanField(default=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Subscription(models.Model):
+    STATUS = [('active','فعال'),('expired','منقضی'),('cancelled','لغوشده')]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, related_name='subscriptions')
+    status = models.CharField(max_length=20, choices=STATUS, default='active')
+    starts_at = models.DateTimeField(default=__import__('django.utils.timezone',fromlist=['now']).now)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['user','status','expires_at'], name='shop_sub_user_status_idx')]
