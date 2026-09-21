@@ -110,6 +110,7 @@ class TranslationHistoryTests(TestCase):
         self.assertEqual((self.article.title, self.article.abstract, self.article.full_text), original)
         self.assertEqual(self.article.full_text_fa, 'متن فارسی')
         self.assertEqual(self.article.translation_version, 1)
+        self.assertEqual(self.article.translation_quality, 100)
         self.assertEqual(ArticleTranslationVersion.objects.filter(article=self.article).count(), 1)
 
     def test_failed_translation_keeps_previous_valid_persian_content(self):
