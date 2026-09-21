@@ -43,10 +43,10 @@ class ScheduledPublicationTests(TestCase):
         self.live = Book.objects.create(name='Live Book', slug='live-book', author=self.author, status='scheduled', publish_at=timezone.now()-timedelta(minutes=1))
 
     def test_future_scheduled_book_is_not_public(self):
-        self.assertNotContains(self.client.get(reverse('book_list')), 'Future Book')
+        self.assertNotContains(self.client.get(reverse('books')), 'Future Book')
         self.assertEqual(self.client.get(reverse('book_detail', args=[self.future.slug])).status_code, 404)
         self.assertNotContains(self.client.get(reverse('home')), 'Future Book')
 
     def test_due_scheduled_book_is_public(self):
-        self.assertContains(self.client.get(reverse('book_list')), 'Live Book')
+        self.assertContains(self.client.get(reverse('books')), 'Live Book')
         self.assertEqual(self.client.get(reverse('book_detail', args=[self.live.slug])).status_code, 200)
