@@ -110,6 +110,7 @@ class SubscriptionPlan(models.Model):
     duration_days = models.PositiveIntegerField(default=30, validators=[MinValueValidator(1)])
     active = models.BooleanField(default=True)
     grants_catalog_access = models.BooleanField(default=False)
+    featured = models.BooleanField(default=False)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
