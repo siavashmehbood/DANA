@@ -126,3 +126,29 @@ class TranslationHistoryTests(TestCase):
         self.assertEqual(self.article.full_text_fa, 'متن سالم')
         self.assertEqual(self.article.translation_status, 'failed')
         self.assertIn('provider unavailable', self.article.translation_error)
+
+
+class ArticleAdminTranslationTests(TestCase):
+    def setUp(self):
+        self.staff = User.objects.create_superuser(username='article-admin', password='secret', email='admin@example.com')
+        self.client.force_login(self.staff)
+        self.article = Article.objects.create(title='Admin translation', slug='admin-translation', full_text='Body', published=True)
+
+    def test_admin_can_rollback_to_previous_valid_translation(self):
+        ArticleTranslationVersion.objects.create(article=self.article, version=1, title_fa='نسخه یک', content_fa='متن یک', source_hash='one')
+        ArticleTranslationVersion.objects.create(article=self.article, version=2, title_fa='نسخه دو', content_fa='متن دو', source_hash='two')
+        self.article.title_fa = 'نسخه دو'
+        self.article.full_text_fa = 'متن دو'
+        self.article.translation_version = 2
+        self.article.translation_hash = 'two'
+        self.article.save()
+        response = self.client.post(
+            reverse('admin:articles_article_changelist'),
+            {'action': 'rollback_translation', '_selected_action': [self.article.pk]},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.translation_version, 1)
+        self.assertEqual(self.article.full_text_fa, 'متن یک')
+        self.assertEqual(self.article.translation_status, 'reviewed')
