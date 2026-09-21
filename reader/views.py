@@ -57,7 +57,7 @@ def bookmark(request, pk):
     book=get_object_or_404(Book,pk=pk)
     if not book.is_published or not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
     if request.method=='POST':
-        try: page=max(0,int(request.POST.get('page',0)))
+        try: page=min(1000000,max(0,int(request.POST.get('page',0))))
         except (TypeError,ValueError): return JsonResponse({'error':'Invalid page'},status=400)
         item=Bookmark.objects.create(user=request.user,book=book,page=page,title=request.POST.get('title','')[:150])
         return JsonResponse({'ok':True,'id':item.id,'page':item.page,'title':item.title})
@@ -67,7 +67,7 @@ def bookmark(request, pk):
 @login_required
 def note(request, pk):
     book=get_object_or_404(Book,pk=pk)
-    if not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
+    if not book.is_published or not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
     if request.method=='POST':
         try: page=max(0,int(request.POST.get('page',0)))
         except (TypeError,ValueError): return JsonResponse({'error':'Invalid page'},status=400)
