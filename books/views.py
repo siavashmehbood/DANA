@@ -11,10 +11,11 @@ def _published_books():
     return Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now()))
 
 def listing(request):
-    q=request.GET.get('q','').strip()[:200]; cat=request.GET.get('cat','').strip(); sort=request.GET.get('sort','new'); kind=request.GET.get('kind','all'); price=request.GET.get('price','all')
+    q=request.GET.get('q','').strip()[:200]
+    q=' '.join(q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split()); cat=request.GET.get('cat','').strip(); sort=request.GET.get('sort','new'); kind=request.GET.get('kind','all'); price=request.GET.get('price','all')
     books=_published_books().select_related('author','category')
     if q:
-        variants={q,q.replace('ي','ی').replace('ك','ک'),q.replace('ی','ي').replace('ک','ك'),q.replace('\u200c',' ')}
+        variants={q,q.replace('ی','ي').replace('ک','ك')}
         search_q=Q()
         for term in variants:
             search_q |= Q(name__icontains=term)|Q(author__name__icontains=term)|Q(summary__icontains=term)|Q(description__icontains=term)
