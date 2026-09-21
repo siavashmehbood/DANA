@@ -175,8 +175,19 @@ def translate_article(article, full_text=False, force=False, provider='mymemory+
         content_fa = translate_text(source_text) if full_text and source_text and (force or not article.full_text_fa) else article.full_text_fa
         if not title_fa.strip():
             raise ValueError('Translation produced an empty Persian title')
+        def quality_ok(source, translated):
+            if not source or not translated: return False
+            persian = len(re.findall(r'[\u0600-\u06FF]', translated))
+            letters = len(re.findall(r'[A-Za-z\u0600-\u06FF]', translated))
+            return letters > 0 and persian / letters >= 0.20 and len(translated.strip()) >= min(20, max(3, len(source.strip()) // 8))
+        if not quality_ok(article.title, title_fa):
+            raise ValueError('Translation quality validation failed for title')
         if full_text and source_text and not content_fa.strip():
             raise ValueError('Translation produced empty Persian content')
+        if abstract_fa and article.abstract and not quality_ok(article.abstract, abstract_fa):
+            raise ValueError('Translation quality validation failed for abstract')
+        if full_text and source_text and not quality_ok(source_text, content_fa):
+            raise ValueError('Translation quality validation failed for content')
     except Exception as exc:
         article.translation_status = 'failed'
         article.translation_error = str(exc)[:4000]
