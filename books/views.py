@@ -22,6 +22,7 @@ def listing(request):
     if kind not in {'all','audio','text'}: kind='all'
     if price not in {'all','free','paid'}: price='all'
     books=_published_books().select_related('author','category')
+
     def apply_filters(qs):
         if cat: qs=qs.filter(category__slug=cat)
         if kind=='audio': qs=qs.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct()
@@ -29,6 +30,7 @@ def listing(request):
         if price=='free': qs=qs.filter(price=0)
         elif price=='paid': qs=qs.filter(price__gt=0)
         return qs
+
     def apply_sort(qs):
         if sort=='price_low': return qs.order_by('price','id')
         if sort=='price_high': return qs.order_by('-price','id')
