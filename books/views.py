@@ -23,7 +23,8 @@ def listing(request):
     if sort=='price_low': books=books.order_by('price')
     elif sort=='price_high': books=books.order_by('-price')
     else: books=books.order_by('-created_at')
-    return render(request,'books/list.html',{'books':books,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':Category.objects.all()})
+    total_count=books.count()
+    return render(request,'books/list.html',{'books':books,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':Category.objects.all()})
 
 def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
