@@ -1,6 +1,5 @@
 from django.shortcuts import render,get_object_or_404
 from django.db.models import Q
-from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.http import FileResponse, HttpResponseForbidden
 from django.urls import reverse
 from django.utils import timezone
@@ -35,14 +34,6 @@ def secure_file(request, pk, kind):
     field = {'pdf': book.pdf, 'audio': book.audio}.get(kind)
     if not field:
         return HttpResponseForbidden('فایل موجود نیست.')
-    signer = TimestampSigner(salt='dana-secure-files')
-    token = request.GET.get('token', '')
-    expected = f'{request.user.pk}:{book.pk}:{kind}'
-    try:
-        if signer.unsign(token, max_age=3600) != expected:
-            return HttpResponseForbidden('لینک فایل معتبر نیست یا منقضی شده است.')
-    except (BadSignature, SignatureExpired):
-        return HttpResponseForbidden('لینک فایل معتبر نیست یا منقضی شده است.')
     response = FileResponse(field.open('rb'), content_type='application/pdf' if kind == 'pdf' else 'audio/mpeg')
     response['Content-Disposition'] = f'inline; filename="{field.name.rsplit("/", 1)[-1]}"'
     return response
