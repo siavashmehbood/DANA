@@ -29,10 +29,11 @@ def listing(request):
 
 def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
+    approved_reviews=book.review_set.filter(approved=True).select_related('user').order_by('-created_at')[:8]
     review_stats=book.review_set.filter(approved=True).aggregate(avg=Avg('rating'),count=Count('id'))
     related=_published_books().filter(category=book.category).exclude(pk=book.pk)[:4] if book.category else Book.objects.none()
     has_access = request.user.is_authenticated and (book.visibility == 'public' or Entitlement.objects.filter(user=request.user,book=book).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).exists())
-    return render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count']})
+    return render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count'],'approved_reviews':approved_reviews})
 
 
 def secure_file(request, pk, kind, chapter_id=None):
