@@ -13,7 +13,7 @@ from accounts.models import User
 from books.models import Book
 from gamification.models import PointLedger
 from gamification.services import add_points, purchase_points_for_amount
-from .models import CartItem, CheckoutRequest, Coupon, Entitlement, Order, OrderItem, Payment, Referral, WalletTransaction
+from .models import CartItem, CheckoutRequest, Coupon, Entitlement, Order, OrderItem, Payment, Referral, WalletTransaction, SubscriptionPlan, Subscription
 
 REFERRAL_REWARD = Decimal('50000')
 
@@ -198,3 +198,11 @@ def wallet(request):
 def orders(request):
     rows=Order.objects.filter(user=request.user).prefetch_related('items__book').order_by('-created_at')[:100]
     return render(request,'shop/orders.html',{'orders':rows})
+
+
+def subscriptions(request):
+    plans=SubscriptionPlan.objects.filter(active=True).order_by('price','duration_days')
+    current=None
+    if request.user.is_authenticated:
+        current=Subscription.objects.filter(user=request.user,status='active',expires_at__gt=timezone.now()).select_related('plan').order_by('-expires_at').first()
+    return render(request,'shop/subscriptions.html',{'plans':plans,'current_subscription':current})
