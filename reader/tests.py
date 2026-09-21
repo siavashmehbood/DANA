@@ -74,3 +74,13 @@ class StudyFlowTests(TestCase):
     def test_review_rejects_invalid_rating(self):
         response=self.client.post(reverse('reader_review',args=[self.book.pk]),{'rating':'9','text':'Bad rating'})
         self.assertEqual(response.status_code,400)
+
+
+    def test_editing_review_resets_moderation(self):
+        Review.objects.create(user=self.user,book=self.book,rating=5,text='old',approved=True,admin_score=8,admin_reply='ok')
+        response=self.client.post(reverse('reader_review',args=[self.book.pk]),{'rating':'4','text':'edited'})
+        self.assertEqual(response.status_code,200)
+        review=Review.objects.get(user=self.user,book=self.book)
+        self.assertFalse(review.approved)
+        self.assertIsNone(review.admin_score)
+        self.assertEqual(review.admin_reply,'')
