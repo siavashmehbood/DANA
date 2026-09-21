@@ -1,4 +1,5 @@
 from decimal import Decimal
+import secrets
 
 from django import forms
 from django.contrib import admin, messages
@@ -79,6 +80,7 @@ class UserAdmin(BaseUserAdmin):
                     amount=topup,
                     type='credit',
                     reason=f'شارژ توسط مدیر: {request.user.username}',
+                    reference=f'admin-topup:{request.user.pk}:{obj.pk}:{secrets.token_hex(8)}',
                 )
                 messages.success(request, f'{topup:,.0f} تومان به کیف پول کاربر اضافه شد.')
             obj.wallet_balance = locked.wallet_balance
