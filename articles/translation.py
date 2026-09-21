@@ -135,7 +135,7 @@ def rough_translate(text):
     return value
 
 
-def translate_text(text, delay=0.1, retries=1):
+def translate_text(text, delay=0.1, retries=2):
     result, service_exhausted = [], False
     for chunk in _chunks(text):
         translated_chunk = ''
@@ -144,6 +144,8 @@ def translate_text(text, delay=0.1, retries=1):
                 try:
                     response = requests.get(MYMEMORY_URL, params={'q': chunk, 'langpair': 'en|fa'}, timeout=8, headers={'User-Agent': 'DANA/2.0'})
                     if response.status_code == 429:
+                        if attempt + 1 < retries:
+                            time.sleep(min(2 ** attempt, 4)); continue
                         service_exhausted = True
                         break
                     response.raise_for_status()
