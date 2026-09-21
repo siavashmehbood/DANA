@@ -41,3 +41,9 @@ class StudyFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertFalse(ReadingProgress.objects.filter(user=self.user, book=self.book).exists())
+
+
+    def test_reader_denies_unpublished_book(self):
+        draft = Book.objects.create(name='Draft Book', slug='draft-book', author=self.book.author, status='draft', visibility='public')
+        self.assertEqual(self.client.get(reverse('reader', args=[draft.pk])).status_code, 403)
+        self.assertEqual(self.client.post(reverse('reader_progress', args=[draft.pk]), {'progress':'1'}).status_code, 403)
