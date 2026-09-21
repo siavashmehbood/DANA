@@ -121,3 +121,12 @@ class ShopFlowTests(TestCase):
         response=self.client.get(reverse('cart'))
         self.assertEqual(response.status_code,200)
         self.assertFalse(CartItem.objects.filter(pk=item.pk).exists())
+
+
+    def test_order_history_is_user_scoped(self):
+        other=User.objects.create_user(username='other-orders',password='pass12345')
+        mine=Order.objects.create(user=self.user,subtotal=100,discount=0,tax=0,total=100,status='paid',tracking_code='MINE-1')
+        Order.objects.create(user=other,subtotal=100,discount=0,tax=0,total=100,status='paid',tracking_code='OTHER-1')
+        response=self.client.get(reverse('orders'))
+        self.assertContains(response,'MINE-1')
+        self.assertNotContains(response,'OTHER-1')
