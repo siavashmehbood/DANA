@@ -1,9 +1,10 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
 from django.utils import timezone
+from django.db import transaction
 
 from .models import Article, ArticleCategory, ArticleSource, ArticleTranslationVersion
-from .translation import extract_pdf_text
+from .translation import extract_pdf_text, translate_article
 
 
 @admin.register(ArticleCategory)
@@ -34,6 +35,43 @@ class ArticleTranslationVersionAdmin(ModelAdmin):
         return False
 
 
+@admin.action(description='ترجمه/بازترجمه مقاله‌های انتخاب‌شده')
+def retranslate_articles(modeladmin, request, queryset):
+    success = failed = 0
+    for article in queryset:
+        before = article.translation_version
+        translate_article(article, full_text=bool(article.full_text or article.pdf), force=True, provider='admin')
+        article.refresh_from_db()
+        if article.translation_version > before:
+            success += 1
+        else:
+            failed += 1
+    modeladmin.message_user(request, f'{success} ترجمه جدید ثبت شد؛ {failed} مورد ناموفق بود.')
+
+
+@admin.action(description='بازگردانی به آخرین ترجمه سالم قبلی')
+def rollback_translation(modeladmin, request, queryset):
+    restored = 0
+    for article in queryset:
+        version = article.translation_versions.filter(is_valid=True).order_by('-version')[1:2].first()
+        if not version:
+            continue
+        with transaction.atomic():
+            locked = Article.objects.select_for_update().get(pk=article.pk)
+            locked.title_fa = version.title_fa
+            locked.abstract_fa = version.abstract_fa
+            locked.full_text_fa = version.content_fa
+            locked.translation_hash = version.source_hash
+            locked.translation_version = version.version
+            locked.translation_quality = version.quality_score
+            locked.translation_status = 'reviewed'
+            locked.translation_error = ''
+            locked.translated_at = timezone.now()
+            locked.save()
+        restored += 1
+    modeladmin.message_user(request, f'{restored} مقاله به ترجمه سالم قبلی بازگردانده شد.')
+
+
 @admin.action(description='استخراج متن PDF برای مطالعه آنلاین')
 def extract_full_text(modeladmin, request, queryset):
     success = 0
@@ -59,7 +97,7 @@ class ArticleAdmin(ModelAdmin):
     list_editable = ('featured', 'published')
     readonly_fields = ('downloads', 'created_at', 'updated_at', 'translated_at', 'translation_hash', 'translation_version', 'translation_error')
     autocomplete_fields = ('category', 'source')
-    actions = (extract_full_text,)
+    actions = (extract_full_text, retranslate_articles, rollback_translation)
     fieldsets = (
         ('اصل مقاله — همیشه حفظ شود', {'fields': ('title', 'authors', 'original_language', 'abstract', 'full_text', 'source', 'source_provider', 'source_url', 'publication_date', 'retrieved_at', 'journal', 'doi')}),
         ('نسخه فارسی', {'fields': ('title_fa', 'abstract_fa', 'full_text_fa', 'translation_status', 'translation_version', 'translation_quality', 'translation_error', 'translation_hash', 'translated_at')}),
