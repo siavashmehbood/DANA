@@ -47,6 +47,7 @@ def listing(request):
     books=apply_filters(books)
     books=apply_sort(books)
     total_count=books.count()
+    page_number=request.GET.get('page')
     used_relaxed_search=False
     if q and total_count == 0:
         tokens=[t for t in q.split() if len(t)>1]
@@ -59,7 +60,6 @@ def listing(request):
             used_relaxed_search=total_count > 0
         if total_count == 0 and page_number in (None,'','1'):
             Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_zero_result',metadata={'query':q})
-    page_number=request.GET.get('page')
     if q and page_number in (None,'','1'):
         Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search',value=total_count,metadata={'query':q})
     paginator=Paginator(books,24)
