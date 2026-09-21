@@ -1,6 +1,6 @@
 from django.test import TestCase
 from accounts.models import User
-from books.models import Author, Book
+from books.models import Author, Book, Chapter
 from gamification.models import PointLedger, UserStreak
 from .models import ReadingProgress, Review
 from django.urls import reverse
@@ -30,3 +30,14 @@ class StudyFlowTests(TestCase):
             user=self.user, book=self.book, rating=5, admin_score=8, approved=True
         )
         self.assertEqual(review.admin_score, 8)
+
+
+    def test_progress_rejects_chapter_from_another_book(self):
+        other = Book.objects.create(name='Other Book', slug='other-book', author=self.book.author, status='published', visibility='public')
+        foreign_chapter = Chapter.objects.create(book=other, title='Foreign', order=1)
+        response = self.client.post(
+            reverse('reader_progress', args=[self.book.pk]),
+            {'progress': '20', 'page': '4', 'chapter_id': foreign_chapter.pk},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(ReadingProgress.objects.filter(user=self.user, book=self.book).exists())
