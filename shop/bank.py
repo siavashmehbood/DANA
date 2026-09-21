@@ -91,6 +91,7 @@ def bank_checkout(request):
         with transaction.atomic():
             user = User.objects.select_for_update().get(pk=request.user.pk)
             locked_items = list(CartItem.objects.select_for_update().filter(user=user).select_related('book'))
+            locked_items = [i for i in locked_items if i.book.is_published]
             if not locked_items:
                 return redirect('cart')
             subtotal = sum((i.book.price for i in locked_items), Decimal(0))
