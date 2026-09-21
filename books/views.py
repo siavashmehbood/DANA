@@ -2,7 +2,6 @@ from django.shortcuts import render,get_object_or_404
 from django.db.models import Q, Avg, Count
 from django.core.paginator import Paginator
 from django.http import FileResponse, HttpResponseForbidden
-from django.urls import reverse
 from django.utils import timezone
 from shop.models import Entitlement
 from analytics.models import Event
