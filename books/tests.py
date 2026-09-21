@@ -4,6 +4,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from accounts.models import User
 from shop.models import Entitlement
 from .models import Author, Book, Chapter
+from analytics.models import Event
 
 class ProtectedMediaTests(TestCase):
     def setUp(self):
@@ -70,3 +71,8 @@ class PersianSearchTests(TestCase):
         Book.objects.create(name='کتاب نمونه',slug='relaxed-search',author=author,status='published')
         response=self.client.get(reverse('books'),{'q':'کتاب ناموجود'})
         self.assertContains(response,'کتاب نمونه')
+
+
+    def test_zero_result_search_is_tracked(self):
+        self.client.get(reverse('books'),{'q':'واژهکاملاًناموجود'})
+        self.assertTrue(Event.objects.filter(name='search_zero_result').exists())
