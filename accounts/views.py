@@ -85,7 +85,8 @@ def profile(request):
     if request.method=='POST':
         request.user.first_name=request.POST.get('first_name','').strip(); request.user.last_name=request.POST.get('last_name','').strip(); request.user.email=request.POST.get('email','').strip(); avatar=request.FILES.get('avatar')
         if avatar:
-            if not (avatar.content_type or '').startswith('image/') or avatar.size>5*1024*1024: messages.error(request,'تصویر نامعتبر است.'); return redirect('profile')
+            ext=(avatar.name.rsplit('.',1)[-1].lower() if '.' in avatar.name else '')
+            if ext not in {'jpg','jpeg','png','webp'} or not (avatar.content_type or '').startswith('image/') or avatar.size>5*1024*1024: messages.error(request,'تصویر نامعتبر است.'); return redirect('profile')
             request.user.avatar=avatar
         new_password=request.POST.get('new_password','')
         if new_password:
