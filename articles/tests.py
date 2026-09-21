@@ -166,3 +166,12 @@ class ArticleSourcePolicyTests(TestCase):
         self.assertEqual(article.pdf_url,'')
         self.assertEqual(article.access,'external')
         self.assertEqual(article.source,source)
+
+
+class ArticleFallbackTests(TestCase):
+    def test_detail_defaults_to_original_when_persian_is_unavailable(self):
+        article=Article.objects.create(title='Original only',slug='original-only',abstract='Original abstract',full_text='Original body',published=True)
+        response=self.client.get(reverse('article_detail',args=[article.slug]))
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.context['language_mode'],'en')
+        self.assertContains(response,'Original body')
