@@ -5,10 +5,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from books.models import Book, Category
 from articles.models import Article, ArticleCategory
 from shop.models import Entitlement
+from django.db.models import Q
+from django.utils import timezone
 
 
 def home(request):
-    base = Book.objects.filter(status__in=['published', 'scheduled']).select_related('author', 'category')
+    base = Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now())).select_related('author', 'category')
     featured = base.order_by('-created_at')[:6]
     newest = base.order_by('-created_at')[:8]
     popular = base.order_by('-id')[:8]
