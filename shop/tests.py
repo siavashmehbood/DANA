@@ -138,3 +138,11 @@ class ShopFlowTests(TestCase):
         response=self.client.get(reverse('subscriptions'))
         self.assertContains(response,'ماهانه')
         self.assertNotContains(response,'خاموش')
+
+
+    def test_subscription_active_state_obeys_period(self):
+        plan=SubscriptionPlan.objects.create(name='Active plan',slug='active-plan',price=10,duration_days=30)
+        sub=Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=1))
+        self.assertTrue(sub.is_active)
+        sub.status='cancelled'
+        self.assertFalse(sub.is_active)
