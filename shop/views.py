@@ -71,7 +71,7 @@ def reward_referral(invitee):
 @login_required
 def cart(request):
     if request.method == 'POST':
-        book = Book.objects.filter(pk=request.POST.get('book_id'), status='published').first()
+        book = Book.objects.filter(pk=request.POST.get('book_id')).filter(models.Q(status='published')|models.Q(status='scheduled',publish_at__lte=timezone.now())).first()
         if book and not Entitlement.objects.filter(user=request.user, book=book).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).exists():
             CartItem.objects.get_or_create(user=request.user, book=book)
         return redirect('cart')
@@ -135,6 +135,7 @@ def checkout(request):
                     return render(request, 'shop/success.html', {'order': order})
 
                 locked_items = list(CartItem.objects.select_for_update().filter(user=user).select_related('book'))
+                locked_items = [i for i in locked_items if i.book.is_published]
                 owned = set(Entitlement.objects.filter(user=user, book_id__in=[i.book_id for i in locked_items]).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).values_list('book_id', flat=True))
                 items = [i for i in locked_items if i.book_id not in owned]
                 if not items:
