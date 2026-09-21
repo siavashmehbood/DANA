@@ -130,3 +130,11 @@ class ShopFlowTests(TestCase):
         response=self.client.get(reverse('orders'))
         self.assertContains(response,'MINE-1')
         self.assertNotContains(response,'OTHER-1')
+
+
+    def test_subscription_catalog_shows_active_plans(self):
+        SubscriptionPlan.objects.create(name='ماهانه',slug='monthly',price=100000,duration_days=30,active=True)
+        SubscriptionPlan.objects.create(name='خاموش',slug='inactive',price=1,duration_days=1,active=False)
+        response=self.client.get(reverse('subscriptions'))
+        self.assertContains(response,'ماهانه')
+        self.assertNotContains(response,'خاموش')
