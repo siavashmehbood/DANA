@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from accounts.models import User
 from books.models import Book
 
@@ -7,10 +7,10 @@ from books.models import Book
 class Coupon(models.Model):
     code = models.CharField(max_length=50, unique=True)
     percent = models.PositiveSmallIntegerField(default=0, validators=[MaxValueValidator(100)])
-    amount = models.DecimalField(max_digits=14, decimal_places=0, default=0)
+    amount = models.DecimalField(max_digits=14, decimal_places=0, default=0, validators=[MinValueValidator(0)])
     capacity = models.PositiveIntegerField(default=1)
     used = models.PositiveIntegerField(default=0)
-    min_order = models.DecimalField(max_digits=14, decimal_places=0, default=0)
+    min_order = models.DecimalField(max_digits=14, decimal_places=0, default=0, validators=[MinValueValidator(0)])
     expires_at = models.DateTimeField(null=True, blank=True)
     active = models.BooleanField(default=True)
 
