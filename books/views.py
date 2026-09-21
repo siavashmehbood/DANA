@@ -15,7 +15,6 @@ def listing(request):
     q=request.GET.get('q','').strip()[:200]
     q=' '.join(q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split()); cat=request.GET.get('cat','').strip(); sort=request.GET.get('sort','new'); kind=request.GET.get('kind','all'); price=request.GET.get('price','all')
     books=_published_books().select_related('author','category')
-    variants=None
     if q:
         variants={q,q.replace('ی','ي').replace('ک','ك')}
         search_q=Q()
