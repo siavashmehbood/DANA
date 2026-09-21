@@ -152,3 +152,17 @@ class ArticleAdminTranslationTests(TestCase):
         self.assertEqual(self.article.translation_version, 1)
         self.assertEqual(self.article.full_text_fa, 'متن یک')
         self.assertEqual(self.article.translation_status, 'reviewed')
+
+
+class ArticleSourcePolicyTests(TestCase):
+    def test_import_does_not_attach_pdf_when_full_republish_is_disabled(self):
+        from unittest.mock import patch
+        from .importer import import_discovered
+        source=ArticleSource.objects.create(name='policy-provider',source_type='api',allow_full_republish=False)
+        row={'provider':'policy-provider','external_id':'p1','title':'Policy paper','authors':'A','abstract':'Readable abstract','year':2026,'publication_date':None,'journal':'J','doi':'10.1/policy','source_url':'https://example.test/paper','pdf_url':'https://example.test/paper.pdf','citation_count':1,'relevance_score':1}
+        with patch('articles.importer.discover_articles',return_value=[row]):
+            import_discovered('policy')
+        article=Article.objects.get(doi='10.1/policy')
+        self.assertEqual(article.pdf_url,'')
+        self.assertEqual(article.access,'external')
+        self.assertEqual(article.source,source)
