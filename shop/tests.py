@@ -3,6 +3,8 @@ from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
 from accounts.models import User
 from books.models import Author, Book
 from .models import CartItem, CheckoutRequest, Coupon, Entitlement, Order, Payment, Referral, WalletTransaction
@@ -79,3 +81,28 @@ class ShopFlowTests(TestCase):
         self.assertEqual(response.status_code,302)
         self.assertEqual(response.url,reverse('checkout'))
         self.assertFalse(Payment.objects.filter(provider='zarinpal').exists())
+
+
+    def test_expired_entitlement_does_not_block_repurchase(self):
+        self.user.wallet_balance=Decimal('200000'); self.user.save(update_fields=['wallet_balance'])
+        Entitlement.objects.create(user=self.user,book=self.book,expires_at=timezone.now()-timedelta(minutes=1),source='subscription')
+        CartItem.objects.create(user=self.user,book=self.book)
+        response=self.client.post(reverse('checkout'),{'action':'pay','idempotency_key':'repurchase-key'})
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(Order.objects.filter(user=self.user,status='paid').exists())
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.payment.requests.post')
+    def test_cancelled_callback_cannot_later_verify_same_payment(self, post):
+        request_response=Mock(); request_response.raise_for_status.return_value=None; request_response.json.return_value={'data':{'code':100,'authority':'A789'}}
+        post.return_value=request_response
+        CartItem.objects.create(user=self.user,book=self.book)
+        self.client.post(reverse('bank_checkout'))
+        first=self.client.get(reverse('payment_callback'),{'Authority':'A789','Status':'NOK'})
+        self.assertEqual(first.status_code,302)
+        second=self.client.get(reverse('payment_callback'),{'Authority':'A789','Status':'OK'})
+        self.assertEqual(second.status_code,302)
+        payment=Payment.objects.get(authority='A789')
+        self.assertEqual(payment.status,'cancelled')
+        self.assertFalse(Entitlement.objects.filter(user=self.user,book=self.book).exists())
+        self.assertEqual(post.call_count,1)
