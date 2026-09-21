@@ -1,6 +1,7 @@
 from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
+import django.core.validators
 
 class Migration(migrations.Migration):
     dependencies=[('shop','0006_validate_coupon_amounts'),('accounts','0001_initial')]
@@ -11,7 +12,7 @@ class Migration(migrations.Migration):
                 ('id',models.BigAutoField(auto_created=True,primary_key=True,serialize=False,verbose_name='ID')),
                 ('name',models.CharField(max_length=120)),
                 ('slug',models.SlugField(unique=True)),
-                ('price',models.DecimalField(decimal_places=0,max_digits=14)),
+                ('price',models.DecimalField(decimal_places=0,max_digits=14,validators=[django.core.validators.MinValueValidator(0)])),
                 ('duration_days',models.PositiveIntegerField(default=30)),
                 ('active',models.BooleanField(default=True)),
                 ('description',models.TextField(blank=True)),
