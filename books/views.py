@@ -47,7 +47,7 @@ def listing(request):
     books=apply_filters(books)
     books=apply_sort(books)
     total_count=books.count()
-    page_number=request.GET.get('page')
+    page_number=request.GET.get('page','1')[:12]
     used_relaxed_search=False
     if q and total_count == 0:
         tokens=[t for t in q.split() if len(t)>1]
