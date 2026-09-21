@@ -33,6 +33,7 @@ def listing(request):
     elif sort=='price_high': books=books.order_by('-price','id')
     else: books=books.order_by('-created_at','-id')
     total_count=books.count()
+    used_relaxed_search=False
     if q and total_count == 0:
         tokens=[t for t in q.split() if len(t)>1]
         relaxed=Q()
@@ -41,12 +42,13 @@ def listing(request):
         if relaxed:
             books=apply_filters(_published_books().select_related('author','category').filter(relaxed)).order_by('-created_at','-id')
             total_count=books.count()
+            used_relaxed_search=total_count > 0
         if total_count == 0:
             Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_zero_result',metadata={'query':q})
     if q:
         Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search',value=total_count,metadata={'query':q})
     page_obj=Paginator(books,24).get_page(request.GET.get('page'))
-    return render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':Category.objects.all()})
+    return render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':Category.objects.all(),'used_relaxed_search':used_relaxed_search})
 
 def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
