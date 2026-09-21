@@ -29,7 +29,7 @@ def admin_logout(request):
 @login_required
 def protected_book_pdf(request, pk):
     book = get_object_or_404(Book, pk=pk)
-    if book.visibility != 'public' and not Entitlement.objects.filter(user=request.user, book=book).exists():
+    if book.visibility != 'public' and not Entitlement.objects.filter(user=request.user, book=book).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).exists():
         return HttpResponse('Access denied', status=403)
     if not book.pdf or not book.is_published:
         raise Http404
