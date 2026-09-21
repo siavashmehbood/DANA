@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import reader, progress, bookmark, note, save_word, vocabulary, delete_word
+from .views import reader, progress, bookmark, note, save_word, vocabulary, delete_word, review
 
 urlpatterns = [
     path('vocabulary/', vocabulary, name='reader_vocabulary'),
@@ -9,4 +9,5 @@ urlpatterns = [
     path('<int:pk>/progress/', progress, name='reader_progress'),
     path('<int:pk>/bookmark/', bookmark, name='reader_bookmark'),
     path('<int:pk>/note/', note, name='reader_note'),
+    path('<int:pk>/review/', review, name='reader_review'),
 ]
