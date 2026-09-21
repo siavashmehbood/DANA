@@ -13,8 +13,11 @@ def listing(request):
     q=request.GET.get('q','').strip()[:200]; cat=request.GET.get('cat','').strip(); sort=request.GET.get('sort','new'); kind=request.GET.get('kind','all'); price=request.GET.get('price','all')
     books=_published_books().select_related('author','category')
     if q:
-        normalized=q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ')
-        books=books.filter(Q(name__icontains=normalized)|Q(author__name__icontains=normalized)|Q(summary__icontains=normalized)|Q(description__icontains=normalized))
+        variants={q,q.replace('ي','ی').replace('ك','ک'),q.replace('ی','ي').replace('ک','ك'),q.replace('\u200c',' ')}
+        search_q=Q()
+        for term in variants:
+            search_q |= Q(name__icontains=term)|Q(author__name__icontains=term)|Q(summary__icontains=term)|Q(description__icontains=term)
+        books=books.filter(search_q)
     if cat: books=books.filter(category__slug=cat)
     if kind=='audio': books=books.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct()
     elif kind=='text': books=books.filter(Q(pdf__gt='')|Q(chapters__text__gt='')).distinct()
