@@ -33,7 +33,6 @@ def listing(request):
     if q:
         Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search',value=total_count,metadata={'query':q})
     if q and total_count == 0:
-        Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_zero_result',metadata={'query':q})
         tokens=[t for t in q.split() if len(t)>1]
         relaxed=Q()
         for token in tokens:
@@ -41,6 +40,8 @@ def listing(request):
         if relaxed:
             books=_published_books().select_related('author','category').filter(relaxed).order_by('-created_at','-id')
             total_count=books.count()
+        if total_count == 0:
+            Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_zero_result',metadata={'query':q})
     page_obj=Paginator(books,24).get_page(request.GET.get('page'))
     return render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':Category.objects.all()})
 
