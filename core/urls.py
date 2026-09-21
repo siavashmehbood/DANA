@@ -1,11 +1,13 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import home, admin_logout, pwa_manifest, service_worker, protected_book_pdf
+from .views import home, admin_logout, pwa_manifest, service_worker, protected_book_pdf, robots_txt, sitemap_xml
 
 urlpatterns = [
     path('admin/logout/', admin_logout, name='admin_logout'),
     path('admin/', admin.site.urls),
     path('manifest.json', pwa_manifest, name='pwa_manifest'),
+    path('robots.txt', robots_txt, name='robots_txt'),
+    path('sitemap.xml', sitemap_xml, name='sitemap_xml'),
     path('sw.js', service_worker, name='service_worker'),
     path('protected/books/<int:pk>/pdf/', protected_book_pdf, name='protected_book_pdf'),
     path('', home, name='home'),
