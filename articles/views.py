@@ -35,14 +35,11 @@ def listing(request):
     if saved_only:
         articles = articles.filter(library_items__user=request.user)
     if query:
-        query = query.replace('ي','ی').replace('ك','ک').replace('\u200c',' ')
-        articles = articles.filter(
-            Q(title__icontains=query) | Q(title_fa__icontains=query) |
-            Q(authors__icontains=query) | Q(abstract__icontains=query) |
-            Q(abstract_fa__icontains=query) | Q(full_text__icontains=query) |
-            Q(full_text_fa__icontains=query) | Q(journal__icontains=query) |
-            Q(doi__icontains=query)
-        )
+        variants={query,query.replace('ي','ی').replace('ك','ک'),query.replace('ی','ي').replace('ک','ك'),query.replace('\u200c',' ')}
+        search_q=Q()
+        for term in variants:
+            search_q |= Q(title__icontains=term)|Q(title_fa__icontains=term)|Q(authors__icontains=term)|Q(abstract__icontains=term)|Q(abstract_fa__icontains=term)|Q(full_text__icontains=term)|Q(full_text_fa__icontains=term)|Q(journal__icontains=term)|Q(doi__icontains=term)
+        articles=articles.filter(search_q)
     if category:
         articles = articles.filter(category__slug=category)
     if sort == 'popular':
