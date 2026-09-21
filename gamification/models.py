@@ -45,7 +45,7 @@ class PointLedger(models.Model):
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     reason = models.CharField(max_length=250)
     book = models.ForeignKey(Book, null=True, blank=True, on_delete=models.SET_NULL)
-    reference = models.CharField(max_length=100, blank=True)
+    reference = models.CharField(max_length=100, blank=True, null=True, unique=True)
     revoked = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
