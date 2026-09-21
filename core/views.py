@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from books.models import Book, Category
 from articles.models import Article, ArticleCategory
 from shop.models import Entitlement
+from reader.models import ReadingProgress
 from django.db.models import Q
 from django.utils import timezone
 
@@ -17,9 +18,13 @@ def home(request):
     categories = Category.objects.all()[:10]
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
     article_base = Article.objects.filter(published=True).filter(readable).select_related('category')
+    continue_reading=[]
+    if request.user.is_authenticated:
+        valid_books=Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True)
+        continue_reading=ReadingProgress.objects.filter(user=request.user,book_id__in=valid_books,progress__gt=0,progress__lt=100).select_related('book__author').order_by('-updated_at')[:6]
     return render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
         'latest_articles': article_base.order_by('-created_at')[:8], 'featured_articles': article_base.filter(featured=True)[:4],
-        'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count()})
+        'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading})
 
 
 def admin_logout(request):
