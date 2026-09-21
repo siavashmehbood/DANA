@@ -194,3 +194,9 @@ class ArticleFallbackTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('article_pdf_reader',args=[article.slug]))
         self.assertRedirects(response,reverse('article_detail',args=[article.slug]))
+
+
+    def test_article_search_matches_arabic_character_variant(self):
+        Article.objects.create(title='دانش یک',slug='persian-article-search',published=True,abstract='Readable')
+        response=self.client.get(reverse('article_list'),{'q':'دانش يك'})
+        self.assertContains(response,'دانش یک')
