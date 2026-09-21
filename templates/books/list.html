@@ -1,5 +1,8 @@
 {% extends 'base.html' %}
 {% block title %}کتابخانه | دانا{% endblock %}
+{% block description %}جستجو و کشف کتاب‌های متنی و صوتی دانا بر اساس موضوع، قیمت، محبوبیت و امتیاز.{% endblock %}
+{% block og_title %}کتابخانه دانا{% endblock %}
+{% block og_description %}کتاب‌های متنی و صوتی را در کتابخانه دانا کشف کن.{% endblock %}
 {% block content %}
 <section class="section library-head"><span class="pill" style="background:#ede9fe;color:#5142d5">DANA LIBRARY</span><h1>کتابخانه دانا</h1><p class="muted">کتاب موردنظرت را پیدا کن، بررسی کن و به کتابخانه‌ات اضافه کن.</p>
 <form class="search" method="get" role="search"><label class="sr-only" for="book-search">جستجوی کتاب</label><input id="book-search" name="q" value="{{q}}" autocomplete="off" placeholder="جستجوی عنوان، نویسنده یا موضوع..."><input type="hidden" name="cat" value="{{cat}}"><input type="hidden" name="kind" value="{{kind}}"><input type="hidden" name="price" value="{{price}}"><button class="btn">جستجو</button></form></section>
