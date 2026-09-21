@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.utils import timezone
 from accounts.models import User
 from books.models import Book
 
@@ -120,7 +121,7 @@ class Subscription(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, related_name='subscriptions')
     status = models.CharField(max_length=20, choices=STATUS, default='active')
-    starts_at = models.DateTimeField(default=__import__('django.utils.timezone',fromlist=['now']).now)
+    starts_at = models.DateTimeField(default=timezone.now)
     expires_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
 
