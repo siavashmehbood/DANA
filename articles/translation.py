@@ -159,7 +159,7 @@ def translate_text(text, delay=0.1, retries=1):
 
 
 @transaction.atomic
-def translate_article(article, full_text=False, force=False, provider='mymemory+fallback'):
+def translate_article(article, full_text=False, force=False, provider='mymemory+fallback', created_by=None):
     """Create a candidate translation first; publish it atomically and retain history."""
     article = type(article).objects.select_for_update().get(pk=article.pk)
     source_text = article.full_text
@@ -197,7 +197,7 @@ def translate_article(article, full_text=False, force=False, provider='mymemory+
     next_version = article.translation_version + 1
     ArticleTranslationVersion.objects.create(
         article=article, version=next_version, title_fa=title_fa, abstract_fa=abstract_fa,
-        content_fa=content_fa, provider=provider, source_hash=source_hash, is_valid=True,
+        content_fa=content_fa, provider=provider, source_hash=source_hash, is_valid=True, created_by=created_by,
     )
     article.title_fa = title_fa
     article.abstract_fa = abstract_fa
