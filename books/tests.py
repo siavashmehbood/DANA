@@ -172,3 +172,9 @@ class CatalogRankingTests(TestCase):
         self.assertEqual(event.metadata['kind'],'audio')
         self.assertEqual(event.metadata['price'],'paid')
         self.assertEqual(event.metadata['sort'],'rating')
+
+
+    def test_unknown_category_filter_is_ignored(self):
+        response=self.client.get(reverse('books'),{'cat':'missing-category'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.context['cat'],'')
