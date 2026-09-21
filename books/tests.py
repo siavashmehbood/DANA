@@ -133,3 +133,12 @@ class CatalogRankingTests(TestCase):
         before=Event.objects.filter(name='search').count()
         self.client.get(reverse('books'),{'q':'نمونه','page':'2'})
         self.assertEqual(Event.objects.filter(name='search').count(),before)
+
+
+    def test_relaxed_search_preserves_requested_sort(self):
+        author=Author.objects.create(name='Sort Author')
+        Book.objects.create(name='نمونه گران',slug='relaxed-expensive',author=author,status='published',price=200)
+        Book.objects.create(name='نمونه ارزان',slug='relaxed-cheap',author=author,status='published',price=10)
+        response=self.client.get(reverse('books'),{'q':'نمونه ناموجود','sort':'price_low'})
+        names=[b.name for b in response.context['books']]
+        self.assertEqual(names[:2],['نمونه ارزان','نمونه گران'])
