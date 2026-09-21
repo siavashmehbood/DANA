@@ -107,7 +107,9 @@ def detail(request, slug):
 
 @login_required
 def pdf_reader(request, slug):
-    article = get_object_or_404(Article, slug=slug, published=True)
+    article = get_object_or_404(Article.objects.select_related('source'), slug=slug, published=True)
+    if article.source_id and not article.source.allow_full_republish:
+        return redirect('article_detail', slug=article.slug)
     if not article.pdf and article.pdf_url:
         try:
             download_article_pdf(article)
