@@ -22,11 +22,10 @@ def reader(request, pk):
     if not book.is_published: return HttpResponseForbidden('کتاب هنوز منتشر نشده است.')
     owned = _has_access(request.user, book) and book.visibility != 'public'
     accessible = _has_access(request.user, book)
-    preview = not accessible and book.preview_percent > 0 and bool(book.pdf)
     saved = ReadingProgress.objects.filter(user=request.user, book=book).first()
     bookmarks = Bookmark.objects.filter(user=request.user, book=book).order_by('page')
     notes = Note.objects.filter(user=request.user, book=book).order_by('-created_at')
-    return render(request, 'reader/reader.html', {'book': book, 'owned': owned, 'accessible': accessible, 'preview': preview, 'saved': saved, 'bookmarks': bookmarks, 'notes': notes})
+    return render(request, 'reader/reader.html', {'book': book, 'owned': owned, 'accessible': accessible, 'saved': saved, 'bookmarks': bookmarks, 'notes': notes})
 
 
 @login_required
