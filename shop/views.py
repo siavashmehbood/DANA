@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
 from django.db.models import F
+from django.db import models
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
 
@@ -71,11 +72,11 @@ def reward_referral(invitee):
 def cart(request):
     if request.method == 'POST':
         book = Book.objects.filter(pk=request.POST.get('book_id'), status='published').first()
-        if book and not Entitlement.objects.filter(user=request.user, book=book).exists():
+        if book and not Entitlement.objects.filter(user=request.user, book=book).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).exists():
             CartItem.objects.get_or_create(user=request.user, book=book)
         return redirect('cart')
     items = CartItem.objects.filter(user=request.user).select_related('book')
-    owned_ids = list(Entitlement.objects.filter(user=request.user, book__in=[i.book for i in items]).values_list('book_id', flat=True))
+    owned_ids = list(Entitlement.objects.filter(user=request.user, book__in=[i.book for i in items]).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).values_list('book_id', flat=True))
     if owned_ids:
         CartItem.objects.filter(user=request.user, book_id__in=owned_ids).delete()
         items = CartItem.objects.filter(user=request.user).select_related('book')
@@ -93,7 +94,7 @@ def remove_cart_item(request, pk):
 @login_required
 def checkout(request):
     items = list(CartItem.objects.filter(user=request.user).select_related('book'))
-    items = [i for i in items if not Entitlement.objects.filter(user=request.user, book=i.book).exists()]
+    items = [i for i in items if not Entitlement.objects.filter(user=request.user, book=i.book).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).exists()]
     if not items:
         CartItem.objects.filter(user=request.user).delete()
         return redirect('cart')
@@ -134,7 +135,7 @@ def checkout(request):
                     return render(request, 'shop/success.html', {'order': order})
 
                 locked_items = list(CartItem.objects.select_for_update().filter(user=user).select_related('book'))
-                owned = set(Entitlement.objects.filter(user=user, book_id__in=[i.book_id for i in locked_items]).values_list('book_id', flat=True))
+                owned = set(Entitlement.objects.filter(user=user, book_id__in=[i.book_id for i in locked_items]).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).values_list('book_id', flat=True))
                 items = [i for i in locked_items if i.book_id not in owned]
                 if not items:
                     CartItem.objects.filter(user=user).delete()
@@ -156,7 +157,7 @@ def checkout(request):
 
                 order = Order.objects.create(user=user, subtotal=subtotal, discount=discount, tax=tax, total=total, status='paid', tracking_code=_tracking_code())
                 OrderItem.objects.bulk_create([OrderItem(order=order, book=i.book, price=i.book.price) for i in items])
-                Entitlement.objects.bulk_create([Entitlement(user=user, book=i.book, order=order) for i in items], ignore_conflicts=True)
+                Entitlement.objects.bulk_create([Entitlement(user=user, book=i.book, order=order, source='purchase') for i in items], ignore_conflicts=True)
                 ref = f'order:{order.pk}:debit'
                 _wallet_transaction(user, total, 'debit', 'Book purchase', order=order, reference=ref)
                 Payment.objects.create(user=user, order=order, provider='wallet', amount=total, status='successful', idempotency_key=f'payment:{order.pk}')
