@@ -2,6 +2,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
+from django.utils import timezone
+from django.db import models
 from books.models import Book
 from shop.models import Entitlement
 from .models import ReadingProgress, Bookmark, Note, SavedWord
@@ -9,13 +11,15 @@ from gamification.services import record_study_activity
 
 
 def _has_access(user, book):
-    return book.visibility == 'public' or Entitlement.objects.filter(user=user, book=book).exists()
+    if book.visibility == 'public':
+        return True
+    return Entitlement.objects.filter(user=user, book=book).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).exists()
 
 
 @login_required
 def reader(request, pk):
     book = get_object_or_404(Book, pk=pk)
-    owned = Entitlement.objects.filter(user=request.user, book=book).exists()
+    owned = _has_access(request.user, book) and book.visibility != 'public'
     accessible = _has_access(request.user, book)
     saved = ReadingProgress.objects.filter(user=request.user, book=book).first()
     bookmarks = Bookmark.objects.filter(user=request.user, book=book).order_by('page')
