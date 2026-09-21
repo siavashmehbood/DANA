@@ -199,7 +199,7 @@ def translate_article(article, full_text=False, force=False, provider='mymemory+
     next_version = article.translation_version + 1
     ArticleTranslationVersion.objects.create(
         article=article, version=next_version, title_fa=title_fa, abstract_fa=abstract_fa,
-        content_fa=content_fa, provider=provider, source_hash=source_hash, is_valid=True, created_by=created_by,
+        content_fa=content_fa, provider=provider, quality_score=100, source_hash=source_hash, is_valid=True, created_by=created_by,
     )
     article.title_fa = title_fa
     article.abstract_fa = abstract_fa
@@ -210,6 +210,7 @@ def translate_article(article, full_text=False, force=False, provider='mymemory+
     article.translation_status = 'translated'
     article.translation_hash = source_hash
     article.translation_version = next_version
+    article.translation_quality = 100
     article.translation_error = ''
     article.translated_at = timezone.now()
     article.save()
