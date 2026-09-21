@@ -29,6 +29,14 @@ def listing(request):
     elif sort=='price_high': books=books.order_by('-price','id')
     else: books=books.order_by('-created_at','-id')
     total_count=books.count()
+    if q and total_count == 0:
+        tokens=[t for t in q.split() if len(t)>1]
+        relaxed=Q()
+        for token in tokens:
+            relaxed |= Q(name__icontains=token)|Q(author__name__icontains=token)|Q(summary__icontains=token)
+        if relaxed:
+            books=_published_books().select_related('author','category').filter(relaxed).order_by('-created_at','-id')
+            total_count=books.count()
     page_obj=Paginator(books,24).get_page(request.GET.get('page'))
     return render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':Category.objects.all()})
 
