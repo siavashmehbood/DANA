@@ -43,3 +43,15 @@ class DiscoveryTests(TestCase):
         Book.objects.create(name='کتاب یک',slug='persian-search',author=self.author,status='published')
         response=self.client.get(reverse('books'),{'q':'كتاب يك'})
         self.assertContains(response,'کتاب یک')
+
+
+class CatalogPaginationTests(TestCase):
+    def test_catalog_paginates_without_losing_results(self):
+        author=Author.objects.create(name='Catalog Author')
+        for i in range(26):
+            Book.objects.create(name=f'Book {i}',slug=f'book-{i}',author=author,status='published')
+        response=self.client.get(reverse('books'))
+        self.assertEqual(len(response.context['books']),24)
+        self.assertEqual(response.context['total_count'],26)
+        second=self.client.get(reverse('books')+'?page=2')
+        self.assertEqual(len(second.context['books']),2)
