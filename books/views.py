@@ -53,7 +53,7 @@ def listing(request):
             books=apply_filters(_published_books().select_related('author','category').filter(relaxed)).order_by('-created_at','-id')
             total_count=books.count()
             used_relaxed_search=total_count > 0
-        if total_count == 0:
+        if total_count == 0 and request.GET.get('page') in (None,'','1'):
             Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_zero_result',metadata={'query':q})
     if q and request.GET.get('page') in (None,'','1'):
         Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search',value=total_count,metadata={'query':q})
