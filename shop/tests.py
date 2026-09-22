@@ -417,3 +417,10 @@ class ShopFlowTests(TestCase):
         self.client.login(username='buyer',password='pass12345')
         response=self.client.get(reverse('subscriptions'))
         self.assertContains(response,'اشتراک فعلی شما تا پایان اعتبار فعال است')
+
+
+    def test_anonymous_catalog_does_not_issue_activation_token(self):
+        self.client.logout()
+        response=self.client.get(reverse('subscriptions'))
+        self.assertEqual(response.context['activation_key'],'')
+        self.assertNotIn('subscription_activation_key',self.client.session)
