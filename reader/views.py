@@ -23,8 +23,8 @@ def reader(request, pk):
     owned = _has_access(request.user, book) and book.visibility != 'public'
     accessible = _has_access(request.user, book)
     saved = ReadingProgress.objects.filter(user=request.user, book=book).select_related('current_chapter').first()
-    bookmarks = Bookmark.objects.filter(user=request.user, book=book).order_by('page')
-    notes = Note.objects.filter(user=request.user, book=book).order_by('-created_at')
+    bookmarks = Bookmark.objects.filter(user=request.user, book=book).order_by('page')[:500]
+    notes = Note.objects.filter(user=request.user, book=book).order_by('-created_at')[:500]
     return render(request, 'reader/reader.html', {'book': book, 'owned': owned, 'accessible': accessible, 'saved': saved, 'bookmarks': bookmarks, 'notes': notes})
 
 
