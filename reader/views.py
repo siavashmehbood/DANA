@@ -290,10 +290,15 @@ def audio_progress(request, pk):
     item,_=AudioProgress.objects.update_or_create(user=request.user,book=book,chapter=chapter,defaults={'position_seconds':position,'duration_seconds':duration,'completed':completed})
     aggregate=ReadingProgress.objects.filter(user=request.user,book=book).first()
     listened=AudioProgress.objects.filter(user=request.user,book=book).aggregate(total=models.Sum('position_seconds'))['total'] or 0
+    audio_complete=completed and chapter is None
+    if chapter is not None and completed:
+        audio_chapter_ids=list(book.chapters.exclude(audio='').values_list('id',flat=True))
+        audio_complete=bool(audio_chapter_ids) and not AudioProgress.objects.filter(user=request.user,book=book,chapter_id__in=audio_chapter_ids,completed=False).exists() and AudioProgress.objects.filter(user=request.user,book=book,chapter_id__in=audio_chapter_ids,completed=True).count()==len(audio_chapter_ids)
     if aggregate is None:
-        aggregate=ReadingProgress.objects.create(user=request.user,book=book,audio_seconds=listened,current_chapter=chapter)
+        aggregate=ReadingProgress.objects.create(user=request.user,book=book,audio_seconds=listened,current_chapter=chapter,progress=100 if audio_complete else 0)
     else:
         aggregate.audio_seconds=max(aggregate.audio_seconds,listened)
         if chapter is not None: aggregate.current_chapter=chapter
-        aggregate.save(update_fields=['audio_seconds','current_chapter','updated_at'])
+        if audio_complete: aggregate.progress=100
+        aggregate.save(update_fields=['audio_seconds','current_chapter','progress','updated_at'])
     return JsonResponse({'ok':True,'position':item.position_seconds,'duration':item.duration_seconds,'completed':item.completed})
