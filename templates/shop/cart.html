@@ -2,14 +2,14 @@
 {% block title %}سبد خرید | دانا{% endblock %}
 {% block content %}
 <section class="section cart-page">
-  <div class="cart-head"><div><span class="shelf-label">خرید کتاب</span><h1>سبد خرید شما</h1><p>کتاب‌هایی که برای خرید انتخاب کرده‌اید</p></div><a class="btn secondary" href="/books/">ادامه خرید</a></div>
+  <div class="cart-head"><div><span class="shelf-label">خرید کتاب</span><h1>سبد خرید شما</h1><p>کتاب‌هایی که برای خرید انتخاب کرده‌اید</p></div><a class="btn secondary" href="{% url 'books' %}">ادامه خرید</a></div>
   {% if items %}
   <div class="cart-layout">
     <div class="panel cart-items">
       {% for i in items %}
       <article class="cart-item">
-        <a href="/books/{{ i.book.slug }}/" class="cart-cover">{% if i.book.cover %}<img src="{{ i.book.cover.url }}" alt="{{ i.book.name }}">{% else %}<span>دانا</span>{% endif %}</a>
-        <div class="cart-info"><a href="/books/{{ i.book.slug }}/"><h3>{{ i.book.name }}</h3></a><p>{{ i.book.author.name }}</p><span class="cart-added">افزوده‌شده به سبد</span></div>
+        <a href="{% url 'book_detail' i.book.slug %}" class="cart-cover">{% if i.book.cover %}<img src="{{ i.book.cover.url }}" alt="{{ i.book.name }}">{% else %}<span>دانا</span>{% endif %}</a>
+        <div class="cart-info"><a href="{% url 'book_detail' i.book.slug %}"><h3>{{ i.book.name }}</h3></a><p>{{ i.book.author.name }}</p><span class="cart-added">افزوده‌شده به سبد</span></div>
         <strong class="cart-price">{{ i.book.price }} تومان</strong>
         <form method="post" action="{% url 'cart_remove' i.book.id %}">{% csrf_token %}<button class="remove-cart" type="submit">حذف</button></form>
       </article>
@@ -17,6 +17,6 @@
     </div>
     <aside class="panel cart-summary"><h2>خلاصه سفارش</h2><div class="row"><span>تعداد کتاب</span><b>{{ items|length }}</b></div><div class="row"><span>جمع کالاها</span><b>{{ total }} تومان</b></div><div class="cart-total"><span>مبلغ قابل پرداخت</span><strong>{{ total }} تومان</strong></div><a class="btn cart-checkout" href="{% url 'checkout' %}">ادامه و پرداخت ←</a><small>در مرحله بعد می‌توانید پرداخت از کیف پول یا پرداخت بانکی امن را انتخاب کنید.</small></aside>
   </div>
-  {% else %}<div class="panel empty cart-empty"><div class="empty-cart-icon">🛒</div><h2>سبد خرید خالی است</h2><p>از کتابخانه یک کتاب انتخاب کن و به سبدت اضافه کن.</p><a class="btn" href="/books/">رفتن به کتابخانه</a></div>{% endif %}
+  {% else %}<div class="panel empty cart-empty"><div class="empty-cart-icon">🛒</div><h2>سبد خرید خالی است</h2><p>از کتابخانه یک کتاب انتخاب کن و به سبدت اضافه کن.</p><a class="btn" href="{% url 'books' %}">رفتن به کتابخانه</a></div>{% endif %}
 </section>
 {% endblock %}
