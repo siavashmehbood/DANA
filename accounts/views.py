@@ -128,12 +128,12 @@ def profile(request):
     # conservative rather than inventing precision: cap the displayed weekly value
     # to the configured weekly goal while preserving existing persisted counters.
     weekly_seconds=ReadingProgress.objects.filter(user=request.user,updated_at__gte=week_start).aggregate(total=Sum('seconds'))['total'] or 0
-    weekly_audio_seconds=AudioProgress.objects.filter(user=request.user,updated_at__gte=week_start).aggregate(total=Sum('position_seconds'))['total'] or 0
+    # AudioProgress stores a resume cursor, not listened-time telemetry. Never
+    # present cursor positions as minutes listened or count them toward a time goal.
     completed_reading_ids=set(ReadingProgress.objects.filter(user=request.user,progress__gte=100).values_list('book_id',flat=True))
     completed_audio_ids=set(AudioProgress.objects.filter(user=request.user,completed=True).values_list('book_id',flat=True))
     completed_books=len(completed_reading_ids|completed_audio_ids)
     total_reading_seconds=ReadingProgress.objects.filter(user=request.user).aggregate(total=Sum('seconds'))['total'] or 0
-    total_audio_seconds=AudioProgress.objects.filter(user=request.user).aggregate(total=Sum('position_seconds'))['total'] or 0
     active_subscription=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now()).select_related('plan').first()
     streak=UserStreak.objects.filter(user=request.user).first()
     badges=UserBadge.objects.filter(user=request.user,badge__active=True).select_related('badge').order_by('-earned_at')[:8]
@@ -141,9 +141,9 @@ def profile(request):
     recent_progress=ReadingProgress.objects.filter(user=request.user).select_related('book__author').order_by('-updated_at')[:6]
     recent_audio=AudioProgress.objects.filter(user=request.user).select_related('book__author','chapter').order_by('-updated_at')[:6]
     in_progress_count=ReadingProgress.objects.filter(user=request.user,progress__gt=0,progress__lt=100).values('book_id').distinct().count()
-    weekly_minutes_done=min(goal.weekly_minutes,(weekly_seconds+weekly_audio_seconds)//60)
+    weekly_minutes_done=min(goal.weekly_minutes,weekly_seconds//60)
     weekly_goal_percent=min(100,round((weekly_minutes_done/max(1,goal.weekly_minutes))*100))
-    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':weekly_minutes_done,'weekly_goal_percent':weekly_goal_percent,'completed_books':completed_books,'in_progress_count':in_progress_count,'total_reading_minutes':total_reading_seconds//60,'total_audio_minutes':total_audio_seconds//60,'streak':streak,'badges':badges,'missions':missions,'recent_progress':recent_progress,'recent_audio':recent_audio,'active_subscription':active_subscription})
+    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':weekly_minutes_done,'weekly_goal_percent':weekly_goal_percent,'completed_books':completed_books,'in_progress_count':in_progress_count,'total_reading_minutes':total_reading_seconds//60,'streak':streak,'badges':badges,'missions':missions,'recent_progress':recent_progress,'recent_audio':recent_audio,'active_subscription':active_subscription})
 
 @login_required
 def logout_others(request):
