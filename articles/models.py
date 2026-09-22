@@ -128,7 +128,13 @@ class Article(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title, allow_unicode=True)[:550]
+            base = slugify(self.title, allow_unicode=True)[:520] or 'article'
+            candidate = base
+            suffix = 2
+            while Article.objects.exclude(pk=self.pk).filter(slug=candidate).exists():
+                candidate = f'{base}-{suffix}'[:550]
+                suffix += 1
+            self.slug = candidate
         super().save(*args, **kwargs)
 
     def __str__(self):
