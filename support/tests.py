@@ -27,3 +27,9 @@ class SupportFlowTests(TestCase):
         self.assertEqual(len(response.context['tickets']),20)
         second=self.client.get(reverse('tickets')+'?page=2')
         self.assertEqual(len(second.context['tickets']),5)
+
+    def test_duplicate_active_ticket_subject_is_rejected(self):
+        self.client.force_login(self.owner)
+        response=self.client.post(reverse('tickets'),{'subject':'Help','body':'Duplicate'},follow=True)
+        self.assertEqual(Ticket.objects.filter(user=self.owner,subject='Help').count(),1)
+        self.assertContains(response,'یک درخواست باز با همین موضوع دارید')
