@@ -195,3 +195,13 @@ class SubscriptionReaderAccessTests(TestCase):
         response=self.client.post(reverse('reader_highlight',args=[self.book.pk]),{'page':'4','text':'بخش مهم'})
         self.assertEqual(response.status_code,200)
         self.assertTrue(Highlight.objects.filter(user=self.user,book=self.book,page=4,text='بخش مهم').exists())
+
+
+    def test_duplicate_highlight_is_idempotent(self):
+        url=reverse('reader_highlight',args=[self.book.pk])
+        payload={'page':'5','text':'تکراری'}
+        self.client.post(url,payload)
+        response=self.client.post(url,payload)
+        self.assertEqual(response.status_code,200)
+        self.assertFalse(response.json()['created'])
+        self.assertEqual(Highlight.objects.filter(user=self.user,book=self.book,page=5,text='تکراری').count(),1)
