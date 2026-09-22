@@ -17,6 +17,9 @@ class Ticket(models.Model):
     class Meta:
         indexes = [models.Index(fields=['user','-updated_at'], name='support_user_updated_idx'), models.Index(fields=['status','priority','-updated_at'], name='support_queue_idx')]
 
+    def __str__(self):
+        return f'{self.subject} — {self.user}'
+
 class TicketMessage(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='messages')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
