@@ -27,8 +27,10 @@ from .translation import (
 def listing(request):
     query = request.GET.get('q', '').strip()[:200]
     query = ' '.join(query.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split())
-    category = request.GET.get('category', '').strip()
+    category = request.GET.get('category', '').strip()[:120]
     sort = request.GET.get('sort', 'top').strip()
+    if sort not in {'top','popular','oldest','newest'}:
+        sort='top'
     saved_only = request.GET.get('saved') == '1' and request.user.is_authenticated
     # Only show articles that have something the reader can actually open:
     # full text, translated text, an abstract, or a PDF source.
@@ -50,7 +52,7 @@ def listing(request):
         articles = articles.order_by('-relevance_score', '-citation_count', '-downloads', '-year', '-created_at')
     elif sort == 'oldest':
         articles = articles.order_by('year', 'created_at')
-    else:
+    elif sort == 'newest':
         articles = articles.order_by('-created_at')
     paginator = Paginator(articles, 24)
     page_obj = paginator.get_page(request.GET.get('page', 1))
