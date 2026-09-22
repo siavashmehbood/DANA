@@ -367,3 +367,9 @@ class BookValidationTests(TestCase):
         Book.objects.create(name='Locked Related',slug='locked-related',author=author,category=category,status='published',visibility='password',access_password='secret')
         response=self.client.get(reverse('book_detail',args=[main.slug]))
         self.assertNotContains(response,'Locked Related')
+
+
+    def test_unknown_protected_media_kind_is_not_disclosed(self):
+        self.client.force_login(self.user)
+        response=self.client.get(reverse('book_secure_file',args=[self.book.pk,'unknown']))
+        self.assertEqual(response.status_code,404)
