@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}اعلان‌ها | دانا{% endblock %}
+{% block description %}اعلان‌ها و به‌روزرسانی‌های حساب دانا را ببین.{% endblock %}
 {% block content %}
 <div class="panel">
   <div class="section-title"><h1>اعلان‌ها{% if unread_count %} <span class="badge">{{unread_count}} خوانده‌نشده</span>{% endif %}</h1>{% if items %}<form method="post" action="{% url 'notifications_mark_all_read' %}">{% csrf_token %}<button class="btn secondary" type="submit">همه خوانده شدند</button></form>{% endif %}</div>
