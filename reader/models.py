@@ -26,6 +26,7 @@ class Highlight(models.Model):
     text=models.TextField()
     created_at=models.DateTimeField(auto_now_add=True)
     class Meta:
+        constraints=[models.UniqueConstraint(fields=['user','book','page','text'],name='unique_reader_highlight')]
         indexes=[models.Index(fields=['user','book','page'],name='reader_highlight_lookup_idx')]
 
 class Note(models.Model):
