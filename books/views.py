@@ -116,11 +116,15 @@ def secure_file(request, pk, kind, chapter_id=None):
         return HttpResponseForbidden('فصل معتبر نیست.')
     book = get_object_or_404(_published_books(), pk=pk)
     if not request.user.is_authenticated:
-        return HttpResponseForbidden('ورود لازم است.')
+        response=HttpResponseForbidden('ورود لازم است.')
+        response['Cache-Control']='private, no-store'
+        return response
     if book.visibility == 'password':
         raise Http404
     if not _has_book_access(request.user, book):
-        return HttpResponseForbidden('دسترسی به این فایل ندارید.')
+        response=HttpResponseForbidden('دسترسی به این فایل ندارید.')
+        response['Cache-Control']='private, no-store'
+        return response
     if kind == 'chapter_audio':
         chapter = book.chapters.filter(pk=chapter_id).first()
         field = chapter.audio if chapter else None
