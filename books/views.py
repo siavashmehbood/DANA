@@ -21,15 +21,18 @@ def listing(request):
     sort=request.GET.get('sort','new')
     kind=request.GET.get('kind','all')
     price=request.GET.get('price','all')
+    access=request.GET.get('access','all')
     if sort not in {'new','price_low','price_high','popular','rating','name'}: sort='new'
     if kind not in {'all','audio','text'}: kind='all'
     if price not in {'all','free','paid'}: price='all'
+    if access not in {'all','subscription'}: access='all'
     books=_published_books().exclude(visibility='private').select_related('author','category')
 
     def apply_filters(qs):
         if cat: qs=qs.filter(category__slug=cat)
         if kind=='audio': qs=qs.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct()
         elif kind=='text': qs=qs.filter(Q(pdf__gt='')|Q(chapters__text__gt='')).distinct()
+        if access=='subscription': qs=qs.filter(subscription_included=True)
         if price=='free': qs=qs.filter(price=0)
         elif price=='paid': qs=qs.filter(price__gt=0)
         return qs
@@ -68,7 +71,7 @@ def listing(request):
         Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search',value=total_count,metadata={'query':q,'relaxed':used_relaxed_search,'kind':kind,'price':price,'category':cat,'sort':sort})
     paginator=Paginator(books,24)
     page_obj=paginator.get_page(page_number)
-    return render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':category_qs,'used_relaxed_search':used_relaxed_search,'query_was_normalized':bool(raw_q and raw_q != q)})
+    return render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'access':access,'categories':category_qs,'used_relaxed_search':used_relaxed_search,'query_was_normalized':bool(raw_q and raw_q != q)})
 
 def _has_book_access(user, book):
     if not user.is_authenticated:
