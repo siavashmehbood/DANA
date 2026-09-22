@@ -120,6 +120,8 @@ def library(request):
     rows=[{'book':item.book,'progress':pmap.get(item.book_id)} for item in owned]
     state=request.GET.get('state','all')
     kind=request.GET.get('kind','all')
+    if state not in {'all','reading','completed','unread'}: state='all'
+    if kind not in {'all','audio','text'}: kind='all'
     if state=='reading': rows=[row for row in rows if row['progress'] and 0 < row['progress'].progress < 100]
     elif state=='completed': rows=[row for row in rows if row['progress'] and row['progress'].progress >= 100]
     elif state=='unread': rows=[row for row in rows if not row['progress'] or row['progress'].progress <= 0]
