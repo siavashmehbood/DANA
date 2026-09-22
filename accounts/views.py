@@ -112,7 +112,10 @@ def profile(request):
     week_start=timezone.now()-timedelta(days=7)
     weekly_seconds=sum(ReadingProgress.objects.filter(user=request.user,updated_at__gte=week_start).values_list('seconds',flat=True))
     weekly_audio_seconds=sum(ReadingProgress.objects.filter(user=request.user,updated_at__gte=week_start).values_list('audio_seconds',flat=True))
-    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':(weekly_seconds+weekly_audio_seconds)//60})
+    completed_books=ReadingProgress.objects.filter(user=request.user,progress__gte=100).count()
+    total_reading_seconds=sum(ReadingProgress.objects.filter(user=request.user).values_list('seconds',flat=True))
+    total_audio_seconds=sum(ReadingProgress.objects.filter(user=request.user).values_list('audio_seconds',flat=True))
+    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':(weekly_seconds+weekly_audio_seconds)//60,'completed_books':completed_books,'total_reading_minutes':total_reading_seconds//60,'total_audio_minutes':total_audio_seconds//60})
 
 @login_required
 def logout_others(request):
