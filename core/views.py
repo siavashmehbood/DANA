@@ -68,6 +68,8 @@ def protected_book_pdf(request, pk):
             return HttpResponse('Access denied', status=403)
     if not book.pdf:
         raise Http404
+    if book.visibility == 'password':
+        return HttpResponse('Password-protected books must be opened through the reader.', status=403)
     if book.pdf.name and not book.pdf.name.lower().endswith('.pdf'):
         raise Http404
     try:
