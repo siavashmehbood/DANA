@@ -487,3 +487,15 @@ class LibraryLegacyAudioRoutingTests(TestCase):
         response=self.client.get(reverse('library'))
         row=next(item for item in response.context['library_rows'] if item['book'].pk==book.pk)
         self.assertEqual(row['latest_kind'],'audio')
+
+
+class ProfileAccessAwareActivityTests(TestCase):
+    def test_expired_private_book_is_not_offered_as_recent_resume(self):
+        user=User.objects.create_user(username='profile-expired-access',password='pass12345')
+        author=Author.objects.create(name='Profile Expired Author')
+        book=Book.objects.create(name='Expired Private Activity',slug='expired-private-activity',author=author,status='published',visibility='private')
+        Entitlement.objects.create(user=user,book=book,expires_at=timezone.now()-timedelta(minutes=1))
+        ReadingProgress.objects.create(user=user,book=book,progress=40,current_page=4)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertFalse(any(row['book'].pk==book.pk for row in response.context['recent_progress']))
