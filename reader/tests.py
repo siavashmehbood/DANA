@@ -428,7 +428,7 @@ class AudiobookExperienceTests(TestCase):
         other=Book.objects.create(name='Other Audio',slug='other-audio',author=self.book.author,status='published',visibility='private')
         foreign=Chapter.objects.create(book=other,title='Foreign',order=1,audio=SimpleUploadedFile('foreign.mp3',b'ID3foreign',content_type='audio/mpeg'))
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
-        response=self.client.get(reverse('protected_chapter_audio',args=[self.book.pk,foreign.pk]))
+        response=self.client.get(reverse('chapter_secure_audio',args=[self.book.pk,foreign.pk]))
         self.assertEqual(response.status_code,404)
 
     def test_audio_progress_persists_per_chapter(self):
@@ -458,7 +458,7 @@ class AudiobookExperienceTests(TestCase):
         self.book.subscription_included=True
         self.book.save(update_fields=['subscription_included'])
         Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=30),expires_at=timezone.now()-timedelta(seconds=1))
-        response=self.client.get(reverse('protected_book_audio',args=[self.book.pk]))
+        response=self.client.get(reverse('book_secure_file',args=[self.book.pk,'audio']))
         self.assertEqual(response.status_code,403)
 
     def test_whole_book_audio_progress_is_idempotent(self):
