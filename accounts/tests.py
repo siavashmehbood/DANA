@@ -293,7 +293,7 @@ class RecommendationColdStartTests(TestCase):
     def test_expired_subscriber_is_not_recommended_subscription_only_book(self):
         user=User.objects.create_user(username='expired-rec',password='pass12345')
         author=Author.objects.create(name='Expired Rec Author')
-        book=Book.objects.create(name='Subscription Locked Recommendation',slug='locked-rec',author=author,status='published',subscription_included=True)
+        book=Book.objects.create(name='Subscription Locked Recommendation',slug='locked-rec',author=author,status='published',price=100,subscription_included=True)
         plan=SubscriptionPlan.objects.create(name='Expired Rec Plan',slug='expired-rec-plan',price=100,duration_days=30,grants_catalog_access=True)
         Subscription.objects.create(user=user,plan=plan,status='expired',starts_at=timezone.now()-timedelta(days=31),expires_at=timezone.now()-timedelta(days=1))
         self.client.force_login(user)
