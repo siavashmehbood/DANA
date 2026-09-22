@@ -89,7 +89,7 @@ def pwa_manifest(request):
 
 
 def service_worker(request):
-    js = """const CACHE='dana-v4'; const CORE=['/','/books/','/articles/'];
+    js = """const CACHE='dana-v5'; const CORE=['/books/','/articles/'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const url=new URL(event.request.url);const cacheable=url.origin===location.origin&&(url.pathname.startsWith('/static/')||CORE.includes(url.pathname));if(!cacheable)return;event.respondWith(fetch(event.request,{credentials:'same-origin'}).then(response=>{if(response.ok&&response.type==='basic'&&!response.headers.get('Cache-Control')?.includes('private')){const copy=response.clone();caches.open(CACHE).then(c=>c.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request)));});"""
