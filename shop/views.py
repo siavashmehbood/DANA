@@ -214,6 +214,8 @@ def subscribe(request, slug):
         current=Subscription.objects.select_for_update().filter(user=user,status='active',expires_at__gt=now).order_by('-expires_at').first()
         if current and current.plan_id == plan.id:
             start=current.expires_at
+            current.status='expired'
+            current.save(update_fields=['status'])
         else:
             start=now
         Subscription.objects.create(user=user,plan=plan,starts_at=start,expires_at=start+timezone.timedelta(days=plan.duration_days))
