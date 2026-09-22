@@ -54,7 +54,8 @@ def reader(request, pk):
     if note_query: notes=notes.filter(text__icontains=note_query)
     bookmarks=bookmarks.order_by('page')[:500]
     notes=notes.order_by('-created_at')[:500]
-    response=render(request, 'reader/reader.html', {'book': book, 'owned': owned, 'accessible': accessible, 'saved': saved, 'bookmarks': bookmarks, 'notes': notes, 'bookmark_query':bookmark_query, 'note_query':note_query, 'highlights':highlights, 'highlight_query':highlight_query})
+    has_audio=bool(book.audio) or book.chapters.exclude(audio='').exists()
+    response=render(request, 'reader/reader.html', {'book': book, 'has_audio':has_audio, 'owned': owned, 'accessible': accessible, 'saved': saved, 'bookmarks': bookmarks, 'notes': notes, 'bookmark_query':bookmark_query, 'note_query':note_query, 'highlights':highlights, 'highlight_query':highlight_query})
     response['Cache-Control']='private, no-store'
     response['X-Robots-Tag']='noindex, nofollow'
     response['Referrer-Policy']='same-origin'
