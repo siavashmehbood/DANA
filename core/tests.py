@@ -390,3 +390,18 @@ class HomeSubscriberRecommendationTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('home'))
         self.assertIn(candidate,list(response.context['recommendations']))
+
+
+class HomeLatestActivityTests(TestCase):
+    def test_home_hero_resumes_newer_audio_activity(self):
+        user=User.objects.create_user(username='home-latest-activity',password='pass12345')
+        author=Author.objects.create(name='Home Latest Author')
+        text_book=Book.objects.create(name='Older Reading',slug='older-reading',author=author,status='published',visibility='public',price=0)
+        audio_book=Book.objects.create(name='Newer Listening',slug='newer-listening',author=author,status='published',visibility='public',price=0,audio=SimpleUploadedFile('latest.mp3',b'ID3latest',content_type='audio/mpeg'))
+        ReadingProgress.objects.create(user=user,book=text_book,progress=25,current_page=2)
+        AudioProgress.objects.create(user=user,book=audio_book,position_seconds=90,duration_seconds=500)
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        self.assertEqual(response.context['continue_item']['book'],audio_book)
+        self.assertEqual(response.context['continue_item']['kind'],'audio')
+        self.assertContains(response,reverse('audio_player',args=[audio_book.id]))
