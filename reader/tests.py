@@ -205,3 +205,10 @@ class SubscriptionReaderAccessTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertFalse(response.json()['created'])
         self.assertEqual(Highlight.objects.filter(user=self.user,book=self.book,page=5,text='تکراری').count(),1)
+
+
+    def test_highlight_delete_is_user_scoped(self):
+        item=Highlight.objects.create(user=self.user,book=self.book,page=8,text='حذف من')
+        response=self.client.post(reverse('reader_delete_highlight',args=[self.book.pk,item.pk]))
+        self.assertEqual(response.status_code,200)
+        self.assertFalse(Highlight.objects.filter(pk=item.pk).exists())
