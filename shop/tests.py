@@ -177,20 +177,20 @@ class ShopFlowTests(TestCase):
     def test_free_subscription_can_be_activated(self):
         plan=SubscriptionPlan.objects.create(name='Free Catalog',slug='free-catalog',price=0,duration_days=7,grants_catalog_access=True)
         self.client.login(username='buyer',password='pass12345')
-        response=self._subscribe(plan.slug)
+        response=self._subscribe(plan)
         self.assertRedirects(response,reverse('subscriptions'))
         self.assertTrue(Subscription.objects.filter(user=self.user,plan=plan,status='active').exists())
 
     def test_paid_subscription_requires_sufficient_wallet_balance(self):
         plan=SubscriptionPlan.objects.create(name='Paid Catalog',slug='paid-catalog',price=100,duration_days=30)
-        self._subscribe(plan.slug)
+        self._subscribe(plan)
         self.assertFalse(Subscription.objects.filter(user=self.user,plan=plan).exists())
 
     def test_paid_subscription_debits_wallet_and_activates(self):
         plan=SubscriptionPlan.objects.create(name='Wallet Plus',slug='wallet-plus',price=100,duration_days=30)
         self.user.wallet_balance=Decimal('250')
         self.user.save(update_fields=['wallet_balance'])
-        response=self._subscribe(plan.slug)
+        response=self._subscribe(plan)
         self.assertRedirects(response,reverse('subscriptions'))
         self.user.refresh_from_db()
         sub=Subscription.objects.get(user=self.user,plan=plan,status='active')
@@ -204,7 +204,7 @@ class ShopFlowTests(TestCase):
         plan=SubscriptionPlan.objects.create(name='Free Extend',slug='free-extend',price=0,duration_days=7)
         current=Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
         self.client.login(username='buyer',password='pass12345')
-        self._subscribe(plan.slug)
+        self._subscribe(plan)
         newest=Subscription.objects.filter(user=self.user,plan=plan).order_by('-created_at').first()
         self.assertGreaterEqual(newest.starts_at,current.expires_at)
 
@@ -213,7 +213,7 @@ class ShopFlowTests(TestCase):
         plan=SubscriptionPlan.objects.create(name='Single Active',slug='single-active',price=0,duration_days=7)
         Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
         self.client.login(username='buyer',password='pass12345')
-        self._subscribe(plan.slug)
+        self._subscribe(plan)
         self.assertEqual(Subscription.objects.filter(user=self.user,plan=plan,status='active').count(),1)
 
 
@@ -238,7 +238,7 @@ class ShopFlowTests(TestCase):
         plan=SubscriptionPlan.objects.create(name='Queue Safe',slug='queue-safe',price=0,duration_days=7)
         Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()+timedelta(days=2),expires_at=timezone.now()+timedelta(days=9))
         self.client.login(username='buyer',password='pass12345')
-        self._subscribe(plan.slug)
+        self._subscribe(plan)
         self.assertEqual(Subscription.objects.filter(user=self.user,plan=plan).count(),1)
 
 
@@ -247,7 +247,7 @@ class ShopFlowTests(TestCase):
         new=SubscriptionPlan.objects.create(name='New Free',slug='new-free',price=0,duration_days=7)
         previous=Subscription.objects.create(user=self.user,plan=old,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
         self.client.login(username='buyer',password='pass12345')
-        self._subscribe(new.slug)
+        self._subscribe(new)
         previous.refresh_from_db()
         self.assertEqual(previous.status,'cancelled')
         self.assertEqual(Subscription.objects.filter(user=self.user,status='active').count(),1)
