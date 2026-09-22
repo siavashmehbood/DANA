@@ -280,3 +280,12 @@ class BookDetailPrivacyTests(TestCase):
         response=self.client.get(reverse('book_detail',args=[book.slug]))
         self.assertIn('private',response['Cache-Control'])
         self.assertIn('Cookie',response['Vary'])
+
+
+class BookSlugTests(TestCase):
+    def test_blank_and_duplicate_slugs_are_generated_safely(self):
+        author=Author.objects.create(name='Slug Author')
+        first=Book.objects.create(name='کتاب تکراری',slug='',author=author,status='published')
+        second=Book.objects.create(name='کتاب تکراری',slug='',author=author,status='published')
+        self.assertTrue(first.slug)
+        self.assertNotEqual(first.slug,second.slug)
