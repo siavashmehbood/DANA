@@ -15,7 +15,13 @@ class OrderAdmin(ModelAdmin):
     list_display = ('tracking_code', 'user', 'subtotal', 'discount', 'tax', 'total', 'status', 'created_at')
     list_filter = ('status', 'created_at')
     search_fields = ('tracking_code', 'user__username', 'user__phone')
-    readonly_fields = ('user', 'subtotal', 'discount', 'tax', 'total', 'tracking_code', 'created_at')
+    readonly_fields = ('user', 'subtotal', 'discount', 'tax', 'total', 'tracking_code', 'status', 'created_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
     list_per_page = 25
     date_hierarchy = 'created_at'
     inlines = (OrderItemInline,)
@@ -68,6 +74,9 @@ class CheckoutRequestAdmin(ModelAdmin):
     def has_add_permission(self, request):
         return False
 
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(Entitlement)
 class EntitlementAdmin(ModelAdmin):
@@ -88,7 +97,13 @@ class CartItemAdmin(ModelAdmin):
     list_display = ('user', 'book', 'created_at')
     search_fields = ('user__username', 'user__phone', 'book__name')
     list_filter = ('created_at',)
-    readonly_fields = ('created_at',)
+    readonly_fields = ('user', 'book', 'created_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Referral)
@@ -96,7 +111,13 @@ class ReferralAdmin(ModelAdmin):
     list_display = ('inviter', 'invitee', 'rewarded', 'created_at')
     list_filter = ('rewarded', 'created_at')
     search_fields = ('inviter__username', 'inviter__phone', 'invitee__username', 'invitee__phone')
-    readonly_fields = ('created_at',)
+    readonly_fields = ('inviter', 'invitee', 'rewarded', 'created_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(SubscriptionPlan)
