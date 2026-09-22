@@ -246,4 +246,11 @@ class SubscriptionReaderAccessTests(TestCase):
         Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
         self.client.login(username='inactive-plan-reader',password='pass12345')
         response=self.client.get(reverse('reader',args=[book.pk]))
-        self.assertFalse(response.context['accessible'])
+        self.assertEqual(response.status_code,403)
+
+
+    def test_private_reader_without_entitlement_returns_forbidden(self):
+        author=Author.objects.create(name='Private Reader Author')
+        book=Book.objects.create(name='Private Reader Book',slug='private-reader-book',author=author,status='published',visibility='private')
+        response=self.client.get(reverse('reader',args=[book.pk]))
+        self.assertEqual(response.status_code,403)
