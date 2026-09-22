@@ -165,13 +165,17 @@ def profile(request):
     streak=UserStreak.objects.filter(user=request.user).first()
     badges=UserBadge.objects.filter(user=request.user,badge__active=True).select_related('badge').order_by('-earned_at')[:8]
     missions=UserMission.objects.filter(user=request.user,mission__active=True).select_related('mission').order_by('-completed_at','-id')[:6]
-    recent_progress=list(ReadingProgress.objects.filter(user=request.user).select_related('book__author').prefetch_related('book__chapters').order_by('-updated_at')[:6])
+    accessible_book_ids=set(Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True))
+    if active_subscription:
+        accessible_book_ids.update(Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),subscription_included=True).values_list('id',flat=True))
+    accessible_book_ids.update(Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public',price=0).values_list('id',flat=True))
+    recent_progress=list(ReadingProgress.objects.filter(user=request.user,book_id__in=accessible_book_ids).select_related('book__author').prefetch_related('book__chapters').order_by('-updated_at')[:6])
     recent_progress_rows=[]
     for item in recent_progress:
         has_text=bool(item.book.pdf) or any(bool(ch.text and ch.text.strip()) for ch in item.book.chapters.all())
         has_audio=bool(item.book.audio) or any(bool(ch.audio) for ch in item.book.chapters.all())
         recent_progress_rows.append({'progress':item,'book':item.book,'has_text':has_text,'has_audio':has_audio})
-    recent_audio=AudioProgress.objects.filter(user=request.user).select_related('book__author','chapter').order_by('-updated_at')[:6]
+    recent_audio=AudioProgress.objects.filter(user=request.user,book_id__in=accessible_book_ids).select_related('book__author','chapter').order_by('-updated_at')[:6]
     in_progress_count=ReadingProgress.objects.filter(user=request.user,progress__gt=0,progress__lt=100).values('book_id').distinct().count()
     weekly_minutes_done=weekly_seconds//60
     weekly_completed_ids=set(ReadingProgress.objects.filter(user=request.user,progress__gte=100,updated_at__gte=week_start).values_list('book_id',flat=True))
