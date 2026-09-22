@@ -22,7 +22,7 @@ def _has_access(user, book):
     if not book.subscription_included:
         return False
     now=timezone.now()
-    return Subscription.objects.filter(user=user,status='active',starts_at__lte=now,expires_at__gt=now,plan__active=True,plan__grants_catalog_access=True).exists()
+    return Subscription.objects.filter(user=user,status='active',starts_at__lte=now,expires_at__gt=now,plan__grants_catalog_access=True).exists()
 
 
 @login_required
