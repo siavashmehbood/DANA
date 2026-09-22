@@ -2,7 +2,7 @@ from django.test import TestCase
 from accounts.models import User
 from books.models import Author, Book, Chapter
 from gamification.models import PointLedger, UserStreak
-from shop.models import Entitlement, Subscription, SubscriptionPlan, SubscriptionPlan, Subscription
+from shop.models import Entitlement, Subscription, SubscriptionPlan
 from .models import ReadingProgress, AudioProgress, Review, Bookmark, Highlight, Note, ProblemReport, SavedWord
 from django.urls import reverse
 from django.utils import timezone
