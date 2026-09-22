@@ -26,7 +26,8 @@ STATIC_URL='/static/'; STATIC_ROOT=BASE_DIR/'staticfiles'; STATICFILES_DIRS=[BAS
 FILE_UPLOAD_MAX_MEMORY_SIZE=int(os.getenv('FILE_UPLOAD_MAX_MEMORY_SIZE',str(20*1024*1024)))
 CSRF_COOKIE_SECURE=env_bool('CSRF_COOKIE_SECURE',not DEBUG); SESSION_COOKIE_SECURE=env_bool('SESSION_COOKIE_SECURE',not DEBUG); SESSION_COOKIE_HTTPONLY=True; SESSION_COOKIE_SAMESITE='Lax'; CSRF_COOKIE_HTTPONLY=env_bool('CSRF_COOKIE_HTTPONLY',False)
 SECURE_CONTENT_TYPE_NOSNIFF=True; SECURE_REFERRER_POLICY='same-origin'; X_FRAME_OPTIONS='DENY'; SECURE_SSL_REDIRECT=env_bool('SECURE_SSL_REDIRECT',not DEBUG)
-SECURE_HSTS_SECONDS=int(os.getenv('SECURE_HSTS_SECONDS','0' if DEBUG else '31536000')); SECURE_HSTS_INCLUDE_SUBDOMAINS=not DEBUG; SECURE_HSTS_PRELOAD=not DEBUG
+SECURE_HSTS_SECONDS=int(os.getenv('SECURE_HSTS_SECONDS','0' if DEBUG else '31536000')); SECURE_HSTS_INCLUDE_SUBDOMAINS=env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS',not DEBUG); SECURE_HSTS_PRELOAD=env_bool('SECURE_HSTS_PRELOAD',not DEBUG)
+SECURE_PROXY_SSL_HEADER=('HTTP_X_FORWARDED_PROTO','https') if env_bool('TRUST_PROXY_SSL_HEADER',False) else None
 AUTH_PASSWORD_VALIDATORS=[{'NAME':'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},{'NAME':'django.contrib.auth.password_validation.MinimumLengthValidator','OPTIONS':{'min_length':8}},{'NAME':'django.contrib.auth.password_validation.CommonPasswordValidator'},{'NAME':'django.contrib.auth.password_validation.NumericPasswordValidator'}]
 EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'; EMAIL_HOST=os.getenv('EMAIL_HOST',''); EMAIL_PORT=int(os.getenv('EMAIL_PORT','587')); EMAIL_HOST_USER=os.getenv('EMAIL_HOST_USER',''); EMAIL_HOST_PASSWORD=os.getenv('EMAIL_HOST_PASSWORD',''); EMAIL_USE_TLS=env_bool('EMAIL_USE_TLS',True); DEFAULT_FROM_EMAIL=os.getenv('DEFAULT_FROM_EMAIL','noreply@example.com')
 ZARINPAL_MERCHANT_ID=os.getenv('ZARINPAL_MERCHANT_ID','')
