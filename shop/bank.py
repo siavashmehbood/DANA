@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 
 from accounts.models import User
 from books.models import Book
@@ -70,6 +71,7 @@ def finalize_bank_order(order, payment):
 
 
 @login_required
+@never_cache
 def bank_checkout(request):
     items = [i for i in CartItem.objects.filter(user=request.user).select_related('book') if i.book.is_published]
     owned = set(Entitlement.objects.filter(user=request.user, book_id__in=[i.book_id for i in items]).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id', flat=True))
@@ -122,6 +124,7 @@ def bank_checkout(request):
 
 
 @login_required
+@never_cache
 def payment_callback(request):
     authority = request.GET.get('Authority', '')
     status = request.GET.get('Status', '')
