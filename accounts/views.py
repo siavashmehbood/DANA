@@ -158,10 +158,6 @@ def profile(request):
     weekly_seconds=reading_weekly_seconds+listening_weekly_seconds
     # AudioProgress stores a resume cursor, not listened-time telemetry. Never
     # present cursor positions as minutes listened or count them toward a time goal.
-    completed_reading_ids=set(ReadingProgress.objects.filter(user=request.user,progress__gte=100).values_list('book_id',flat=True))
-    completed_audio_ids=set(AudioProgress.objects.filter(user=request.user,completed=True).values_list('book_id',flat=True))
-    completed_books=len(completed_reading_ids|completed_audio_ids)
-    total_reading_seconds=ReadingProgress.objects.filter(user=request.user).aggregate(total=Sum('seconds'))['total'] or 0
     active_subscription=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now()).select_related('plan').first()
     streak=UserStreak.objects.filter(user=request.user).first()
     badges=UserBadge.objects.filter(user=request.user,badge__active=True).select_related('badge').order_by('-earned_at')[:8]
@@ -170,6 +166,10 @@ def profile(request):
     if active_subscription:
         accessible_book_ids.update(Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),subscription_included=True).values_list('id',flat=True))
     accessible_book_ids.update(Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public',price=0).values_list('id',flat=True))
+    completed_reading_ids=set(ReadingProgress.objects.filter(user=request.user,book_id__in=accessible_book_ids,progress__gte=100).values_list('book_id',flat=True))
+    completed_audio_ids=set(AudioProgress.objects.filter(user=request.user,book_id__in=accessible_book_ids,completed=True).values_list('book_id',flat=True))
+    completed_books=len(completed_reading_ids|completed_audio_ids)
+    total_reading_seconds=ReadingProgress.objects.filter(user=request.user,book_id__in=accessible_book_ids).aggregate(total=Sum('seconds'))['total'] or 0
     recent_progress=list(ReadingProgress.objects.filter(user=request.user,book_id__in=accessible_book_ids).select_related('book__author').prefetch_related('book__chapters').order_by('-updated_at')[:6])
     recent_progress_rows=[]
     for item in recent_progress:
