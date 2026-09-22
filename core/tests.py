@@ -190,3 +190,20 @@ class RecommendationTests(TestCase):
         self.assertEqual(response['Cache-Control'],'private, no-store')
         self.assertEqual(response['X-Content-Type-Options'],'nosniff')
         self.assertIn("frame-ancestors 'self'",response['Content-Security-Policy'])
+
+
+    def test_subscription_accessible_book_is_not_recommended(self):
+        from books.models import Category
+        category=Category.objects.create(name='Sub rec',slug='sub-rec')
+        author=Author.objects.create(name='Sub Rec Author')
+        accessible=Book.objects.create(name='Already accessible',slug='already-accessible',author=author,category=category,status='published',subscription_included=True)
+        candidate=Book.objects.create(name='Buy candidate',slug='buy-candidate',author=author,category=category,status='published')
+        user=User.objects.create_user(username='sub-rec-user',password='pass12345')
+        plan=SubscriptionPlan.objects.create(name='Rec Catalog',slug='rec-catalog',price=0,duration_days=7,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        Review.objects.create(user=user,book=accessible,rating=5,text='liked',approved=True)
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        recs=list(response.context['recommendations'])
+        self.assertNotIn(accessible,recs)
+        self.assertIn(candidate,recs)
