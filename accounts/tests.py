@@ -414,3 +414,17 @@ class DashboardLatestActivityTests(TestCase):
         response=self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['continue_item']['book'],audio_book)
         self.assertEqual(response.context['continue_item']['kind'],'audio')
+
+
+class WeeklyBookGoalTests(TestCase):
+    def test_profile_counts_books_completed_during_week_for_book_goal(self):
+        from reader.models import ReadingProgress, ReadingGoal
+        user=User.objects.create_user(username='weekly-book-goal',password='pass12345')
+        author=Author.objects.create(name='Weekly Goal Author')
+        book=Book.objects.create(name='Weekly Complete',slug='weekly-complete',author=author,status='published')
+        ReadingGoal.objects.create(user=user,weekly_minutes=120,weekly_books=2)
+        ReadingProgress.objects.create(user=user,book=book,progress=100)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.context['weekly_books_done'],1)
+        self.assertEqual(response.context['weekly_books_goal_percent'],50)
