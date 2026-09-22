@@ -206,7 +206,9 @@ def library(request):
         excluded_recommendation_ids.update(Book.objects.filter(subscription_included=True).values_list('id',flat=True))
     if not preferred_categories:
         preferred_categories=set(ReadingProgress.objects.filter(user=user,book__category__isnull=False).exclude(book_id__in=excluded_recommendation_ids).values_list('book__category_id',flat=True)[:20])
-    recommendation_base=Book.objects.filter(subscription_included=False) if not active_subscription else Book.objects.all()
+    recommendation_base=Book.objects.all()
+    if not active_subscription:
+        recommendation_base=recommendation_base.filter(Q(subscription_included=False)|Q(price=0,visibility='public'))
     if preferred_categories:
         recommended_books=recommendation_base.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public',category_id__in=preferred_categories).exclude(pk__in=excluded_recommendation_ids).select_related('author','category').annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:6]
     else:
