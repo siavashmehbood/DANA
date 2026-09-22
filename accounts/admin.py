@@ -104,7 +104,8 @@ class OTPCodeAdmin(admin.ModelAdmin):
     list_display = ('phone', 'purpose', 'expires_at', 'attempts', 'used', 'created_at')
     list_filter = ('purpose', 'used', 'created_at')
     search_fields = ('phone',)
-    readonly_fields = ('code', 'created_at')
+    exclude = ('code',)
+    readonly_fields = ('created_at',)
     date_hierarchy = 'created_at'
 
 
