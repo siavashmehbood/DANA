@@ -406,4 +406,5 @@ class ShopFlowTests(TestCase):
 
     def test_subscription_catalog_is_private_cache(self):
         response=self.client.get(reverse('subscriptions'))
-        self.assertIn('no-cache',response.headers.get('Cache-Control',''))
+        self.assertIn('no-store',response.headers.get('Cache-Control',''))
+        self.assertEqual(response.headers.get('X-Robots-Tag'),'noindex, nofollow')
