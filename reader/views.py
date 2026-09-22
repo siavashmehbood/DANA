@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.db import models, transaction
 from books.models import Book
 from shop.models import Entitlement, Subscription
-from .models import ReadingProgress, Bookmark, Highlight, Note, SavedWord, Review
+from .models import ReadingProgress, Bookmark, Highlight, Note, SavedWord, Review, ProblemReport
 from gamification.services import record_study_activity
 
 
@@ -212,3 +212,16 @@ def review(request, pk):
         return JsonResponse({'error':'امتیاز و متن نظر معتبر نیست.'},status=400)
     Review.objects.update_or_create(user=request.user,book=book,defaults={'rating':rating,'text':text,'approved':False,'admin_score':None,'admin_reply':''})
     return JsonResponse({'ok':True,'message':'نظر شما برای بررسی ثبت شد.'})
+
+
+@login_required
+@require_POST
+def report_problem(request, pk):
+    book=get_object_or_404(Book,pk=pk)
+    if not book.is_published or not _has_access(request.user,book):
+        return HttpResponseForbidden('برای گزارش مشکل باید به کتاب دسترسی داشته باشید.')
+    text=request.POST.get('text','').strip()[:4000]
+    if not text:
+        return JsonResponse({'error':'شرح مشکل خالی است.'},status=400)
+    ProblemReport.objects.create(user=request.user,book=book,text=text)
+    return JsonResponse({'ok':True,'message':'گزارش برای بررسی ثبت شد.'})
