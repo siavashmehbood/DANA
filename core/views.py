@@ -30,7 +30,7 @@ def home(request):
         rated_categories=Review.objects.filter(user=request.user,approved=True,rating__gte=4,book__category__isnull=False).values_list('book__category_id',flat=True)
         preferred_categories=set(owned_categories)|set(rated_categories)
         recommendations=base.filter(category_id__in=preferred_categories).exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at').distinct()[:8]
-        if not recommendations:
+        if not recommendations.exists():
             recommendations=base.exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
     return render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
         'latest_articles': article_base.order_by('-created_at')[:8], 'featured_articles': article_base.filter(featured=True)[:4],
