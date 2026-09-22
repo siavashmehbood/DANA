@@ -117,7 +117,8 @@ def secure_file(request, pk, kind, chapter_id=None):
     if not request.user.is_authenticated:
         return HttpResponseForbidden('ورود لازم است.')
     if book.visibility == 'password':
-        return HttpResponseForbidden('کتاب رمزدار نیاز به مسیر بازگشایی دارد.')
+        from django.http import Http404
+        raise Http404
     if not _has_book_access(request.user, book):
         return HttpResponseForbidden('دسترسی به این فایل ندارید.')
     if kind == 'chapter_audio':
