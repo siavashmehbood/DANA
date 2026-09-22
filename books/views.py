@@ -1,6 +1,7 @@
 from django.shortcuts import render,get_object_or_404
 from django.db.models import Q, Avg, Count
 from django.core.paginator import Paginator
+import mimetypes
 from django.http import FileResponse, HttpResponseForbidden
 from django.utils import timezone
 from shop.models import Entitlement, Subscription
@@ -114,8 +115,10 @@ def secure_file(request, pk, kind, chapter_id=None):
         field = {'pdf': book.pdf, 'audio': book.audio}.get(kind)
     if not field:
         return HttpResponseForbidden('فایل موجود نیست.')
-    response = FileResponse(field.open('rb'), content_type='application/pdf' if kind == 'pdf' else 'audio/mpeg')
-    response['Content-Disposition'] = f'inline; filename="{field.name.rsplit("/", 1)[-1]}"'
+    content_type='application/pdf' if kind == 'pdf' else (mimetypes.guess_type(field.name)[0] or 'application/octet-stream')
+    response = FileResponse(field.open('rb'), content_type=content_type)
+    extension=field.name.rsplit('.',1)[-1].lower() if '.' in field.name else 'bin'
+    response['Content-Disposition'] = f'inline; filename="book-{book.pk}-{kind}.{extension}"'
     response['Cache-Control'] = 'private, no-store'
     response['X-Content-Type-Options'] = 'nosniff'
     return response
