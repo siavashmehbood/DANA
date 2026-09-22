@@ -102,12 +102,14 @@ class ReferralAdmin(ModelAdmin):
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(ModelAdmin):
     list_display=('name','price','duration_days','featured','grants_catalog_access','active')
+    list_filter=('active','featured','grants_catalog_access')
     list_editable=('price','featured','grants_catalog_access','active')
     search_fields=('name','slug')
 
 @admin.register(Subscription)
 class SubscriptionAdmin(ModelAdmin):
     list_display=('user','plan','status','starts_at','expires_at')
+    date_hierarchy='created_at'
     list_filter=('status','plan')
     search_fields=('user__username','user__email','plan__name')
     autocomplete_fields=('user','plan')
