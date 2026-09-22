@@ -35,4 +35,13 @@ class ReadingGoalAdmin(ModelAdmin):
     list_display=('user','weekly_minutes','weekly_books','updated_at')
     search_fields=('user__username','user__phone')
 
-admin.site.register([ReadingProgress, Bookmark, Highlight, Note, ProblemReport])
+admin.site.register([ReadingProgress, Bookmark, Highlight, Note])
+
+@admin.register(ProblemReport)
+class ProblemReportAdmin(ModelAdmin):
+    list_display=('book','user','status','created_at')
+    list_filter=('status','created_at')
+    search_fields=('book__name','user__username','user__phone','text')
+    list_editable=('status',)
+    autocomplete_fields=('book','user')
+    readonly_fields=('created_at',)
