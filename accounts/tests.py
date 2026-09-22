@@ -87,7 +87,7 @@ class LibraryFilterTests(TestCase):
     def test_library_includes_catalog_for_active_subscription(self):
         user=User.objects.create_user(username='subscriber-library',password='pass12345')
         author=Author.objects.create(name='Subscription Author')
-        Book.objects.create(name='Subscription Book',slug='subscription-book',author=author,status='published')
+        Book.objects.create(name='Subscription Book',slug='subscription-book',author=author,status='published',subscription_included=True)
         plan=SubscriptionPlan.objects.create(name='Catalog',slug='catalog-library',price=100,duration_days=30,grants_catalog_access=True)
         Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=29))
         self.client.force_login(user)
@@ -110,7 +110,7 @@ class LibraryFilterTests(TestCase):
         user=User.objects.create_user(username='library-source',password='pass12345')
         author=Author.objects.create(name='Source Author')
         purchased=Book.objects.create(name='Purchased Only',slug='purchased-only',author=author,status='published')
-        subscribed=Book.objects.create(name='Subscription Only',slug='subscription-only',author=author,status='published')
+        subscribed=Book.objects.create(name='Subscription Only',slug='subscription-only',author=author,status='published',subscription_included=True)
         Entitlement.objects.create(user=user,book=purchased)
         plan=SubscriptionPlan.objects.create(name='Source Plan',slug='source-plan',price=100,duration_days=30,grants_catalog_access=True)
         Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=1))
@@ -180,3 +180,14 @@ class DashboardSubscriptionTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['books_count'],1)
+
+
+    def test_subscription_library_excludes_non_catalog_books(self):
+        user=User.objects.create_user(username='catalog-scope',password='pass12345')
+        author=Author.objects.create(name='Catalog Scope Author')
+        Book.objects.create(name='Excluded Private',slug='excluded-private',author=author,status='published',visibility='private',subscription_included=False)
+        plan=SubscriptionPlan.objects.create(name='Scoped Catalog',slug='scoped-catalog',price=0,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=10))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertNotContains(response,'Excluded Private')
