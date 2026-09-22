@@ -5,7 +5,7 @@ from django.utils.html import escape
 from django.shortcuts import render, redirect, get_object_or_404
 from books.models import Book, Category
 from articles.models import Article, ArticleCategory
-from shop.models import Entitlement
+from shop.models import Entitlement, Subscription
 from reader.models import ReadingProgress, Review
 from django.db.models import Q, Count
 from django.utils import timezone
@@ -46,8 +46,11 @@ def admin_logout(request):
 @login_required
 def protected_book_pdf(request, pk):
     book = get_object_or_404(Book, pk=pk)
-    if book.visibility != 'public' and not Entitlement.objects.filter(user=request.user, book=book).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).exists():
-        return HttpResponse('Access denied', status=403)
+    if book.visibility != 'public':
+        entitled=Entitlement.objects.filter(user=request.user, book=book).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).exists()
+        subscribed=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True,plan__grants_catalog_access=True).exists()
+        if not entitled and not subscribed:
+            return HttpResponse('Access denied', status=403)
     if not book.pdf or not book.is_published:
         raise Http404
     response = FileResponse(book.pdf.open('rb'), content_type='application/pdf')
