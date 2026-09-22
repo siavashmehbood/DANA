@@ -1,12 +1,13 @@
 import secrets
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.core.validators import MinValueValidator
 from django.utils import timezone
 class User(AbstractUser):
     username=models.CharField(max_length=150,unique=True,blank=True,null=True)
     phone=models.CharField(max_length=20,unique=True,null=True,blank=True)
     avatar=models.ImageField(upload_to='avatars/',null=True,blank=True)
-    wallet_balance=models.DecimalField(max_digits=14,decimal_places=0,default=0)
+    wallet_balance=models.DecimalField(max_digits=14,decimal_places=0,default=0,validators=[MinValueValidator(0)])
     xp=models.PositiveIntegerField(default=0); points=models.PositiveIntegerField(default=0)
     purchase_points=models.DecimalField(max_digits=14,decimal_places=2,default=0)
     study_points=models.DecimalField(max_digits=14,decimal_places=2,default=0)
@@ -14,6 +15,8 @@ class User(AbstractUser):
     referral_code=models.CharField(max_length=12,unique=True,blank=True)
     is_deactivated=models.BooleanField(default=False)
     terms_accepted_at=models.DateTimeField(null=True,blank=True)
+    class Meta:
+        constraints=[models.CheckConstraint(condition=models.Q(wallet_balance__gte=0),name='account_wallet_nonnegative')]
     def save(self,*a,**kw):
         if not self.referral_code:self.referral_code=secrets.token_urlsafe(7)[:12].upper()
         if not self.username:self.username=self.phone or f'user_{secrets.token_hex(4)}'
