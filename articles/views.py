@@ -94,7 +94,7 @@ def detail(request, slug):
     related = Article.objects.filter(published=True).exclude(pk=article.pk)
     if article.category_id:
         related = related.filter(category_id=article.category_id)
-    related = related.order_by('-featured', '-year', '-created_at')[:4]
+    related = related.select_related('category','source').order_by('-featured', '-year', '-created_at')[:4]
     library_item = None
     annotations = []
     if request.user.is_authenticated:
