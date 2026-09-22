@@ -288,3 +288,14 @@ class RecommendationColdStartTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('library'))
         self.assertContains(response,'Retired Plan Book')
+
+
+    def test_expired_subscriber_is_not_recommended_subscription_only_book(self):
+        user=User.objects.create_user(username='expired-rec',password='pass12345')
+        author=Author.objects.create(name='Expired Rec Author')
+        book=Book.objects.create(name='Subscription Locked Recommendation',slug='locked-rec',author=author,status='published',subscription_included=True)
+        plan=SubscriptionPlan.objects.create(name='Expired Rec Plan',slug='expired-rec-plan',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,status='expired',starts_at=timezone.now()-timedelta(days=31),expires_at=timezone.now()-timedelta(days=1))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertFalse(any(item.pk == book.pk for item in response.context['recommended_books']))
