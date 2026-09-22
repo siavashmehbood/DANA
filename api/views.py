@@ -44,6 +44,6 @@ def event(request):
     if len(metadata_json) > 10000:
         return JsonResponse({'ok': False, 'error': 'metadata_too_large'}, status=400)
     if not request.session.session_key:
-        request.session.create()
+        request.session.save()
     Event.objects.create(user=request.user, name=name, value=value, metadata=metadata, session_key=request.session.session_key or '')
     return JsonResponse({'ok': True})
