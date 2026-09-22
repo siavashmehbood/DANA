@@ -323,3 +323,4 @@ class SubscriptionReaderAccessTests(TestCase):
         self.assertIn('private',response['Cache-Control'])
         self.assertIn('no-store',response['Cache-Control'])
         self.assertEqual(response['X-Robots-Tag'],'noindex, nofollow')
+        self.assertEqual(response['Referrer-Policy'],'same-origin')
