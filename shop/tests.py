@@ -385,3 +385,11 @@ class ShopFlowTests(TestCase):
         self.assertContains(response,'پس از پایان اشتراک فعلی')
         self.assertContains(response,reverse('subscribe',args=[current_plan.slug]))
         self.assertNotContains(response,reverse('subscribe',args=[other_plan.slug]))
+
+
+    def test_current_subscription_plan_is_marked_in_catalog(self):
+        plan=SubscriptionPlan.objects.create(name='Marked Plan',slug='marked-plan',price=0,duration_days=7)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        response=self.client.get(reverse('subscriptions'))
+        self.assertContains(response,'پلن فعلی')
