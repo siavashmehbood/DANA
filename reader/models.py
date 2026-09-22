@@ -18,7 +18,14 @@ class Bookmark(models.Model):
     created_at=models.DateTimeField(auto_now_add=True)
     class Meta:
         constraints=[models.UniqueConstraint(fields=['user','book','page'],name='unique_bookmark_page')]
-class Note(models.Model): user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); page=models.PositiveIntegerField(); text=models.TextField(); created_at=models.DateTimeField(auto_now_add=True)
+class Note(models.Model):
+    user=models.ForeignKey(User,on_delete=models.CASCADE)
+    book=models.ForeignKey(Book,on_delete=models.CASCADE)
+    page=models.PositiveIntegerField()
+    text=models.TextField()
+    created_at=models.DateTimeField(auto_now_add=True)
+    class Meta:
+        indexes=[models.Index(fields=['user','book','-created_at'],name='reader_note_recent_idx')]
 class ProblemReport(models.Model): user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); text=models.TextField(); status=models.CharField(max_length=20,default='open'); created_at=models.DateTimeField(auto_now_add=True)
 class Review(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); rating=models.PositiveSmallIntegerField(default=5,validators=[MinValueValidator(1),MaxValueValidator(5)]); text=models.TextField(); admin_score=models.PositiveSmallIntegerField(null=True,blank=True,validators=[MinValueValidator(1),MaxValueValidator(10)]); admin_reply=models.TextField(blank=True); approved=models.BooleanField(default=False); created_at=models.DateTimeField(auto_now_add=True)
