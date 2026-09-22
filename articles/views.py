@@ -37,7 +37,7 @@ def listing(request):
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
     articles = Article.objects.filter(published=True).filter(readable).select_related('category','source')
     if saved_only:
-        articles = articles.filter(library_items__user=request.user)
+        articles = articles.filter(library_items__user=request.user).distinct()
     if query:
         variants={query,query.replace('ی','ي').replace('ک','ك')}
         search_q=Q()
