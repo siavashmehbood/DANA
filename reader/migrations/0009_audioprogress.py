@@ -18,5 +18,6 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.AddConstraint(model_name='audioprogress',constraint=models.UniqueConstraint(fields=('user','book','chapter'),name='unique_audio_progress_chapter')),
+        migrations.AddConstraint(model_name='audioprogress',constraint=models.UniqueConstraint(condition=models.Q(chapter__isnull=True),fields=('user','book'),name='unique_audio_progress_book')),
         migrations.AddIndex(model_name='audioprogress',index=models.Index(fields=['user','book','-updated_at'],name='reader_audio_recent_idx')),
     ]
