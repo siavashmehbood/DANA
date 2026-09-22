@@ -127,15 +127,21 @@ def detail(request,slug):
     has_text = bool(book.pdf) or any(bool(ch.text and ch.text.strip()) for ch in book.chapters.all())
     saved_audio_seconds=0
     saved_progress=0
+    continue_kind=None
     if request.user.is_authenticated and has_access:
-        progress_row=ReadingProgress.objects.filter(user=request.user,book=book).values('progress','audio_seconds').first()
+        progress_obj=ReadingProgress.objects.filter(user=request.user,book=book).first()
+        progress_row={'progress':progress_obj.progress,'audio_seconds':progress_obj.audio_seconds} if progress_obj else None
         if progress_row:
             saved_progress=progress_row['progress'] or 0
             saved_audio_seconds=progress_row['audio_seconds'] or 0
-        latest_audio=AudioProgress.objects.filter(user=request.user,book=book).order_by('-updated_at').values_list('position_seconds',flat=True).first()
+        latest_audio=AudioProgress.objects.filter(user=request.user,book=book).order_by('-updated_at').first()
         if latest_audio:
-            saved_audio_seconds=max(saved_audio_seconds,latest_audio)
-    response=render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count'],'approved_reviews':approved_reviews,'saved_progress':saved_progress,'saved_audio_seconds':saved_audio_seconds,'has_audio':has_audio,'has_text':has_text})
+            saved_audio_seconds=max(saved_audio_seconds,latest_audio.position_seconds)
+        if latest_audio and latest_audio.position_seconds > 0 and (not progress_obj or latest_audio.updated_at > progress_obj.updated_at):
+            continue_kind='audio'
+        elif progress_obj and progress_obj.progress > 0:
+            continue_kind='text'
+    response=render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count'],'approved_reviews':approved_reviews,'saved_progress':saved_progress,'saved_audio_seconds':saved_audio_seconds,'continue_kind':continue_kind,'has_audio':has_audio,'has_text':has_text})
     if request.user.is_authenticated or book.visibility != 'public':
         response['Cache-Control']='private, no-store'
         response['Vary']='Cookie'
