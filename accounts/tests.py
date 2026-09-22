@@ -167,3 +167,16 @@ class OtpStorageSecurityTests(TestCase):
         row=OTPCode.objects.latest('id')
         self.assertNotEqual(len(row.code),5)
         self.assertTrue(row.code.startswith(('pbkdf2_','argon2','bcrypt','scrypt')))
+
+
+class DashboardSubscriptionTests(TestCase):
+    def test_dashboard_counts_subscription_catalog_without_duplicates(self):
+        user=User.objects.create_user(username='dashboard-sub',password='pass12345')
+        author=Author.objects.create(name='Dashboard Author')
+        book=Book.objects.create(name='Dashboard Book',slug='dashboard-book',author=author,status='published')
+        Entitlement.objects.create(user=user,book=book)
+        plan=SubscriptionPlan.objects.create(name='Dashboard Plan',slug='dashboard-plan',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        self.client.force_login(user)
+        response=self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['books_count'],1)
