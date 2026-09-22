@@ -124,7 +124,8 @@ def secure_file(request, pk, kind, chapter_id=None):
     else:
         field = {'pdf': book.pdf, 'audio': book.audio}.get(kind)
     if not field:
-        return HttpResponseForbidden('فایل موجود نیست.')
+        from django.http import Http404
+        raise Http404
     content_type='application/pdf' if kind == 'pdf' else (mimetypes.guess_type(field.name)[0] or 'application/octet-stream')
     response = FileResponse(field.open('rb'), content_type=content_type)
     extension=field.name.rsplit('.',1)[-1].lower() if '.' in field.name else 'bin'
