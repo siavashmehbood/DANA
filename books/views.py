@@ -15,7 +15,7 @@ def listing(request):
     raw_q=request.GET.get('q','').strip()[:200]
     q=raw_q
     q=' '.join(q.replace('ي','ی').replace('ى','ی').replace('ك','ک').replace('\u200c',' ').replace('\u200f',' ').replace('\u200e',' ').split())
-    cat=request.GET.get('cat','').strip()[:120]
+    cat=request.GET.get('cat','').strip()[:120].lower()
     category_qs=Category.objects.order_by('name')
     if cat and not category_qs.filter(slug=cat).exists(): cat=''
     sort=request.GET.get('sort','new')
