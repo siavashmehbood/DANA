@@ -58,13 +58,15 @@ def admin_logout(request):
 @login_required
 def protected_book_pdf(request, pk):
     book = get_object_or_404(Book, pk=pk)
+    if not book.is_published:
+        raise Http404
     free_public = book.visibility == 'public' and book.price == 0
     if not free_public:
         entitled=Entitlement.objects.filter(user=request.user, book=book).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).exists()
         subscribed=book.subscription_included and Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__grants_catalog_access=True).exists()
         if not entitled and not subscribed:
             return HttpResponse('Access denied', status=403)
-    if not book.pdf or not book.is_published:
+    if not book.pdf:
         raise Http404
     if book.pdf.name and not book.pdf.name.lower().endswith('.pdf'):
         raise Http404
