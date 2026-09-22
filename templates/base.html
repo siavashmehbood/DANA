@@ -38,7 +38,7 @@
 <a class="brand" href="{% url 'home' %}" aria-label="دانا، صفحه اصلی">دانا</a>
 <div class="header-search"><form action="{% url 'books' %}" method="get"><input name="q" placeholder="جستجوی کتاب، نویسنده یا موضوع..." aria-label="جستجوی کتاب"><button type="submit" aria-label="جستجو">⌕</button></form></div>
 <div class="header-links">
-<a href="{% url 'home' %}">خانه</a><a href="{% url 'books' %}">کشف کتاب</a><a href="/books/?kind=audio">کتاب صوتی</a><a href="{% url 'subscriptions' %}">اشتراک</a><a href="{% url 'article_list' %}">مجله دانا</a>
+<a href="{% url 'home' %}">خانه</a><a href="{% url 'books' %}">کشف کتاب</a><a href="{% url 'books' %}?kind=audio">کتاب صوتی</a><a href="{% url 'subscriptions' %}">اشتراک</a><a href="{% url 'article_list' %}">مجله دانا</a>
 {% if user.is_authenticated %}<a href="{% url 'dashboard' %}">داشبورد</a><a href="{% url 'library' %}">کتابخانه من</a><a href="{% url 'leaderboard' %}">رتبه‌بندی</a>{% endif %}
 </div>
 {% if user.is_authenticated %}<details class="header-more"><summary>بیشتر</summary><div class="header-more-menu"><a href="{% url 'notifications' %}">اعلان‌ها</a><a href="{% url 'tickets' %}">پشتیبانی</a><a href="{% url 'orders' %}">سفارش‌ها</a><a href="{% url 'wallet' %}">کیف پول</a><a href="{% url 'cart' %}" class="header-cart">سبد خرید</a><a href="{% url 'profile' %}">پروفایل</a>{% if user.is_staff %}<a class="admin-link" href="/admin/">⚙ مدیریت</a>{% endif %}<a href="{% url 'logout' %}">خروج</a></div></details>{% endif %}
