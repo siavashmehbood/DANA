@@ -20,10 +20,12 @@ class Bookmark(models.Model):
         constraints=[models.UniqueConstraint(fields=['user','book','page'],name='unique_bookmark_page')]
         indexes=[models.Index(fields=['user','book','page'],name='reader_bookmark_lookup_idx')]
 class Highlight(models.Model):
+    COLOR_CHOICES=[('yellow','زرد'),('green','سبز'),('blue','آبی'),('pink','صورتی')]
     user=models.ForeignKey(User,on_delete=models.CASCADE)
     book=models.ForeignKey(Book,on_delete=models.CASCADE)
     page=models.PositiveIntegerField()
     text=models.TextField()
+    color=models.CharField(max_length=10,choices=COLOR_CHOICES,default='yellow')
     created_at=models.DateTimeField(auto_now_add=True)
     class Meta:
         constraints=[models.UniqueConstraint(fields=['user','book','page','text'],name='unique_reader_highlight')]
