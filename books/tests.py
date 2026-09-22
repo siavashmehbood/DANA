@@ -224,3 +224,13 @@ class SubscriptionBookAccessTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertEqual(response['Cache-Control'],'private, no-store')
         self.assertEqual(response['X-Content-Type-Options'],'nosniff')
+
+
+    def test_paid_public_book_detail_requires_purchase(self):
+        user=User.objects.create_user(username='paid-public-user',password='pass12345')
+        author=Author.objects.create(name='Paid Public Author')
+        book=Book.objects.create(name='Paid Public',slug='paid-public',author=author,status='published',visibility='public',price=5000)
+        self.client.force_login(user)
+        response=self.client.get(reverse('book_detail',args=[book.slug]))
+        self.assertFalse(response.context['has_access'])
+        self.assertContains(response,'افزودن به سبد')
