@@ -373,3 +373,11 @@ class BookValidationTests(TestCase):
         self.client.force_login(self.user)
         response=self.client.get(reverse('book_secure_file',args=[self.book.pk,'unknown']))
         self.assertEqual(response.status_code,404)
+
+
+    def test_subscription_private_detail_is_noindex_and_private_cache(self):
+        plan=SubscriptionPlan.objects.create(name='Catalog SEO',slug='catalog-seo',price=0,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        response=self.client.get(reverse('book_detail',args=[self.book.slug]))
+        self.assertEqual(response.headers.get('X-Robots-Tag'),'noindex, nofollow')
+        self.assertIn('no-store',response.headers.get('Cache-Control',''))
