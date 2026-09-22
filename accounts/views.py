@@ -77,7 +77,10 @@ def otp(request):
 def dashboard(request):
     user=request.user
     owned=Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).select_related('book__author').order_by('-granted_at')
-    valid_book_ids=owned.values_list('book_id',flat=True)
+    valid_book_ids=list(owned.values_list('book_id',flat=True))
+    subscription=Subscription.objects.filter(user=user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True,plan__grants_catalog_access=True).first()
+    if subscription:
+        valid_book_ids += list(Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now())).values_list('id',flat=True))
     progress=ReadingProgress.objects.filter(user=user,book_id__in=valid_book_ids).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book').order_by('-updated_at')
     return render(request,'dashboard.html',{'books_count':owned.count(),'article_count':Article.objects.filter(published=True).count(),'vocabulary_count':user.saved_words.count(),'cart_count':CartItem.objects.filter(user=user).count(),'latest_articles':Article.objects.filter(published=True).order_by('-created_at')[:5],'owned_books':owned[:8],'reading_progress':progress[:4]})
 
