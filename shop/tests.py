@@ -288,3 +288,13 @@ class ShopFlowTests(TestCase):
         self.assertEqual(second.status_code,302)
         self.assertEqual(self.user.wallet_balance,Decimal('400'))
         self.assertEqual(WalletTransaction.objects.filter(user=self.user,reason='Subscription purchase').count(),1)
+
+
+    def test_queued_subscription_blocks_overlapping_second_plan(self):
+        first=SubscriptionPlan.objects.create(name='First queued',slug='first-queued',price=0,duration_days=30)
+        second=SubscriptionPlan.objects.create(name='Second queued',slug='second-queued',price=0,duration_days=30)
+        now=timezone.now()
+        Subscription.objects.create(user=self.user,plan=first,status='active',starts_at=now+timedelta(days=1),expires_at=now+timedelta(days=31))
+        response=self._subscribe(second)
+        self.assertEqual(response.status_code,302)
+        self.assertFalse(Subscription.objects.filter(user=self.user,plan=second).exists())
