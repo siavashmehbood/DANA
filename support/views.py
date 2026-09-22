@@ -28,8 +28,8 @@ def tickets(request):
 @require_POST
 def reply_ticket(request, pk):
     ticket = get_object_or_404(Ticket, pk=pk, user=request.user)
-    if ticket.status == 'closed':
-        messages.error(request, 'این درخواست بسته شده است.')
+    if ticket.status in {'closed','resolved'}:
+        messages.error(request, 'این درخواست بسته یا حل شده است.')
         return redirect('tickets')
     body = request.POST.get('body','').strip()[:10000]
     if not body:
