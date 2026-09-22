@@ -8,6 +8,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='otpcode',
             name='code',
-            field=models.CharField(max_length=128, db_index=False),
+            field=models.CharField(max_length=128),
         ),
     ]
