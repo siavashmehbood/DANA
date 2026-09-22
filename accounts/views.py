@@ -176,10 +176,12 @@ def profile(request):
         has_audio=bool(item.book.audio) or any(bool(ch.audio) for ch in item.book.chapters.all())
         recent_progress_rows.append({'progress':item,'book':item.book,'has_text':has_text,'has_audio':has_audio})
     recent_audio=AudioProgress.objects.filter(user=request.user,book_id__in=accessible_book_ids).select_related('book__author','chapter').order_by('-updated_at')[:6]
-    in_progress_count=ReadingProgress.objects.filter(user=request.user,progress__gt=0,progress__lt=100).values('book_id').distinct().count()
+    text_in_progress_ids=set(ReadingProgress.objects.filter(user=request.user,book_id__in=accessible_book_ids,progress__gt=0,progress__lt=100).values_list('book_id',flat=True))
+    audio_in_progress_ids=set(AudioProgress.objects.filter(user=request.user,book_id__in=accessible_book_ids,position_seconds__gt=0,completed=False).values_list('book_id',flat=True))
+    in_progress_count=len(text_in_progress_ids|audio_in_progress_ids)
     weekly_minutes_done=weekly_seconds//60
-    weekly_completed_ids=set(ReadingProgress.objects.filter(user=request.user,progress__gte=100,updated_at__gte=week_start).values_list('book_id',flat=True))
-    weekly_completed_ids.update(AudioProgress.objects.filter(user=request.user,completed=True,updated_at__gte=week_start).values_list('book_id',flat=True))
+    weekly_completed_ids=set(ReadingProgress.objects.filter(user=request.user,book_id__in=accessible_book_ids,progress__gte=100,updated_at__gte=week_start).values_list('book_id',flat=True))
+    weekly_completed_ids.update(AudioProgress.objects.filter(user=request.user,book_id__in=accessible_book_ids,completed=True,updated_at__gte=week_start).values_list('book_id',flat=True))
     weekly_books_done=len(weekly_completed_ids)
     weekly_goal_percent=min(100,round((weekly_minutes_done/max(1,goal.weekly_minutes))*100))
     weekly_books_goal_percent=min(100,round((weekly_books_done/max(1,goal.weekly_books))*100))
