@@ -32,7 +32,11 @@ class BookAdmin(ModelAdmin):
 
     @admin.action(description='انتشار کتاب‌های انتخاب‌شده')
     def publish_selected(self, request, queryset):
-        queryset.update(status='published', publish_at=None)
+        valid=queryset.exclude(visibility='password',access_password='')
+        updated=valid.update(status='published', publish_at=None)
+        skipped=queryset.count()-updated
+        if skipped:
+            self.message_user(request, f'{skipped} کتاب رمزدار بدون رمز منتشر نشد.', level='warning')
 
     @admin.action(description='بازگرداندن کتاب‌های انتخاب‌شده به پیش‌نویس')
     def unpublish_selected(self, request, queryset):
