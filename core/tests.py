@@ -7,6 +7,7 @@ from django.urls import reverse
 from accounts.models import User
 from books.models import Author, Book
 from shop.models import Entitlement
+from reader.models import Review
 
 class ProtectedMediaTests(TestCase):
     def setUp(self):
@@ -70,3 +71,17 @@ class SeoEndpointTests(TestCase):
     def test_canonical_url_drops_query_string(self):
         response=self.client.get('/books/?q=test')
         self.assertContains(response,'rel="canonical" href="http://testserver/books/"')
+
+
+class HomeDiscoveryTests(TestCase):
+    def test_popular_shelf_uses_only_approved_reviews(self):
+        author=Author.objects.create(name='Home Author')
+        approved=Book.objects.create(name='Approved popular',slug='approved-popular',author=author,status='published')
+        hidden=Book.objects.create(name='Hidden popular',slug='hidden-popular',author=author,status='published')
+        user1=User.objects.create_user(username='home-r1',password='pass12345')
+        user2=User.objects.create_user(username='home-r2',password='pass12345')
+        Review.objects.create(user=user1,book=approved,rating=3,text='ok',approved=True)
+        Review.objects.create(user=user2,book=hidden,rating=5,text='hidden',approved=False)
+        response=self.client.get(reverse('home'))
+        popular=list(response.context['popular'])
+        self.assertLess(popular.index(approved),popular.index(hidden))
