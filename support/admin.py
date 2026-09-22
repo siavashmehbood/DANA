@@ -6,6 +6,7 @@ class TicketMessageInline(admin.TabularInline):
     extra=0
     fields=('user','body','created_at')
     readonly_fields=('created_at',)
+    list_per_page=50
     autocomplete_fields=('user',)
 @admin.register(Ticket)
 class TicketAdmin(ModelAdmin):
@@ -14,6 +15,7 @@ class TicketAdmin(ModelAdmin):
     search_fields=('subject','body','user__username','user__phone')
     autocomplete_fields=('user','assigned_to')
     list_editable=('status','priority')
+    list_per_page=50
     readonly_fields=('created_at','updated_at')
     date_hierarchy='created_at'
     inlines=(TicketMessageInline,)
