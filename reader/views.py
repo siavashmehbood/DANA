@@ -198,7 +198,8 @@ def vocabulary(request):
         words=words.filter(q)
     from django.core.paginator import Paginator
     page_obj=Paginator(words,50).get_page(request.GET.get('page',1))
-    response=render(request,'reader/vocabulary.html',{'words':page_obj.object_list,'page_obj':page_obj,'query':query,'word_count':words.count()})
+    word_count=words.count()
+    response=render(request,'reader/vocabulary.html',{'words':page_obj.object_list,'page_obj':page_obj,'query':query,'word_count':word_count})
     response['Cache-Control']='private, no-store'
     response['X-Robots-Tag']='noindex, nofollow'
     response['Referrer-Policy']='same-origin'
