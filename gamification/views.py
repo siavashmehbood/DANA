@@ -22,11 +22,10 @@ def period_start(period):
 def metric_value(user,metric,start):
     if metric=='level': return level_for(user)
     if metric=='study_hours':
-        try:
-            from reader.models import ReadingProgress
-            seconds=ReadingProgress.objects.filter(user=user,updated_at__gte=start).aggregate(v=Sum('seconds'))['v'] or 0
-            return round(seconds/3600,1)
-        except Exception: return 0
+        from reader.models import ReadingActivity, ListeningActivity
+        reading=ReadingActivity.objects.filter(user=user,created_at__gte=start).aggregate(v=Sum('seconds'))['v'] or 0
+        listening=ListeningActivity.objects.filter(user=user,created_at__gte=start).aggregate(v=Sum('seconds'))['v'] or 0
+        return round((reading+listening)/3600,1)
     try:
         from reader.models import Review
         return Review.objects.filter(user=user,created_at__gte=start,admin_score__isnull=False).aggregate(v=Sum('admin_score'))['v'] or 0
