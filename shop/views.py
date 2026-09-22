@@ -220,6 +220,9 @@ def subscribe(request, slug):
 
         now=timezone.now()
         Subscription.objects.select_for_update().filter(user=user,status='active',expires_at__lte=now).update(status='expired')
+        if Subscription.objects.select_for_update().filter(user=user,status='active',starts_at__gt=now,expires_at__gt=now).exists():
+            messages.info(request,'یک تمدید اشتراک از قبل برای شما ثبت شده است.')
+            return redirect('subscriptions')
         active_now=Subscription.objects.select_for_update().filter(user=user,status='active',starts_at__lte=now,expires_at__gt=now).select_related('plan').order_by('-expires_at').first()
         if active_now and active_now.plan_id != plan.id:
             messages.info(request,'برای جلوگیری از از دست رفتن اعتبار، تغییر پلن تا پایان اشتراک فعلی غیرفعال است.')
