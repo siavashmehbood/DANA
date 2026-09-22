@@ -69,3 +69,10 @@ class EventApiTests(TestCase):
         response = self.client.post(self.url, data=json.dumps({'name': 'book_viewed', 'metadata': {'note': 'x' * 2001}}), content_type='application/json')
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'metadata_field_too_large')
+
+
+    def test_event_rejects_too_many_metadata_fields(self):
+        metadata = {str(i): i for i in range(51)}
+        response = self.client.post(self.url, data=json.dumps({'name': 'book_viewed', 'metadata': metadata}), content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'metadata_too_many_fields')
