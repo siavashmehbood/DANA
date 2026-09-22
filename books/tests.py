@@ -186,7 +186,7 @@ class SubscriptionBookAccessTests(TestCase):
     def setUp(self):
         self.user=User.objects.create_user(username='subscriber',password='pass12345')
         author=Author.objects.create(name='Subscription Author')
-        self.book=Book.objects.create(name='Subscriber Book',slug='subscriber-book',author=author,status='published',visibility='private',pdf=SimpleUploadedFile('sub.pdf',b'%PDF-1.4 test',content_type='application/pdf'))
+        self.book=Book.objects.create(name='Subscriber Book',slug='subscriber-book',author=author,status='published',visibility='private',subscription_included=True,pdf=SimpleUploadedFile('sub.pdf',b'%PDF-1.4 test',content_type='application/pdf'))
         self.client.login(username='subscriber',password='pass12345')
 
     def test_active_catalog_subscription_grants_private_book_access(self):
