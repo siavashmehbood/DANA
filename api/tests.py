@@ -87,3 +87,9 @@ class EventApiTests(TestCase):
     def test_event_response_is_not_cacheable(self):
         response = self.client.post(self.url, data=json.dumps({'name': 'book_viewed'}), content_type='application/json')
         self.assertIn('no-cache', response.headers.get('Cache-Control',''))
+
+
+    def test_event_requires_json_content_type(self):
+        response = self.client.post(self.url, data={'name': 'book_viewed'})
+        self.assertEqual(response.status_code, 415)
+        self.assertEqual(response.json()['error'], 'json_required')
