@@ -52,3 +52,14 @@ class SupportFlowTests(TestCase):
         response=self.client.post(reverse('tickets'),{'subject':'Eleventh','body':'Blocked'},follow=True)
         self.assertFalse(Ticket.objects.filter(user=self.owner,subject='Eleventh').exists())
         self.assertContains(response,'تعداد درخواست‌های باز شما زیاد است')
+
+
+    def test_customer_reply_moves_assigned_ticket_to_waiting_for_support(self):
+        staff=User.objects.create_user(username='support-staff',password='pass12345',is_staff=True)
+        self.ticket.assigned_to=staff
+        self.ticket.status='in_progress'
+        self.ticket.save(update_fields=['assigned_to','status'])
+        self.client.force_login(self.owner)
+        self.client.post(reverse('ticket_reply',args=[self.ticket.pk]),{'body':'Customer follow-up'})
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.status,'waiting')
