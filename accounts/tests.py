@@ -264,3 +264,14 @@ class AudioLibraryStateTests(TestCase):
         AudioProgress.objects.create(user=self.user,book=self.book,position_seconds=300,duration_seconds=300,completed=True)
         response=self.client.get(reverse('library'),{'state':'completed'})
         self.assertContains(response,'Audio Library Book')
+
+
+class RecommendationColdStartTests(TestCase):
+    def test_empty_library_gets_popular_fallback_recommendations(self):
+        from books.models import Author, Book
+        user=User.objects.create_user(username='cold-rec',password='pass12345')
+        author=Author.objects.create(name='Cold Author')
+        candidate=Book.objects.create(name='Cold Candidate',slug='cold-candidate',author=author,status='published',visibility='public')
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertIn(candidate,list(response.context['recommended_books']))
