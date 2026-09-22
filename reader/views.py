@@ -28,14 +28,17 @@ def reader(request, pk):
     saved = ReadingProgress.objects.filter(user=request.user, book=book).select_related('current_chapter').first()
     bookmark_query=request.GET.get('bookmark_q','').strip()[:150]
     note_query=request.GET.get('note_q','').strip()[:200]
+    highlight_query=request.GET.get('highlight_q','').strip()[:200]
     bookmarks = Bookmark.objects.filter(user=request.user, book=book)
     notes = Note.objects.filter(user=request.user, book=book)
-    highlights = Highlight.objects.filter(user=request.user, book=book).order_by('-created_at')[:500]
+    highlights = Highlight.objects.filter(user=request.user, book=book)
+    if highlight_query: highlights=highlights.filter(text__icontains=highlight_query)
+    highlights=highlights.order_by('-created_at')[:500]
     if bookmark_query: bookmarks=bookmarks.filter(title__icontains=bookmark_query)
     if note_query: notes=notes.filter(text__icontains=note_query)
     bookmarks=bookmarks.order_by('page')[:500]
     notes=notes.order_by('-created_at')[:500]
-    return render(request, 'reader/reader.html', {'book': book, 'owned': owned, 'accessible': accessible, 'saved': saved, 'bookmarks': bookmarks, 'notes': notes, 'bookmark_query':bookmark_query, 'note_query':note_query, 'highlights':highlights})
+    return render(request, 'reader/reader.html', {'book': book, 'owned': owned, 'accessible': accessible, 'saved': saved, 'bookmarks': bookmarks, 'notes': notes, 'bookmark_query':bookmark_query, 'note_query':note_query, 'highlights':highlights, 'highlight_query':highlight_query})
 
 
 @login_required
