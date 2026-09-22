@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.utils import timezone
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum
 from django.views.decorators.cache import never_cache
 from django.utils.http import url_has_allowed_host_and_scheme
 from articles.models import Article
@@ -125,7 +125,7 @@ def profile(request):
     goal,_=ReadingGoal.objects.get_or_create(user=request.user)
     week_start=timezone.now()-timedelta(days=7)
     weekly_seconds=sum(ReadingProgress.objects.filter(user=request.user,updated_at__gte=week_start).values_list('seconds',flat=True))
-    weekly_audio_seconds=AudioProgress.objects.filter(user=request.user,updated_at__gte=week_start).aggregate(total=models.Sum('position_seconds'))['total'] or 0
+    weekly_audio_seconds=AudioProgress.objects.filter(user=request.user,updated_at__gte=week_start).aggregate(total=Sum('position_seconds'))['total'] or 0
     completed_reading_ids=set(ReadingProgress.objects.filter(user=request.user,progress__gte=100).values_list('book_id',flat=True))
     completed_audio_ids=set(AudioProgress.objects.filter(user=request.user,completed=True).values_list('book_id',flat=True))
     completed_books=len(completed_reading_ids|completed_audio_ids)
