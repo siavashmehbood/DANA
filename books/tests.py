@@ -243,3 +243,10 @@ class SubscriptionBookAccessTests(TestCase):
         self.assertNotContains(listing,'Hidden Book')
         detail=self.client.get(reverse('book_detail',args=[private.slug]))
         self.assertEqual(detail.status_code,404)
+
+
+    def test_relaxed_search_never_leaks_private_books(self):
+        author=Author.objects.create(name='Private Search Author')
+        Book.objects.create(name='راز پنهان',slug='private-relaxed',author=author,status='published',visibility='private')
+        response=self.client.get(reverse('books'),{'q':'راز ناشناخته'})
+        self.assertNotContains(response,'راز پنهان')
