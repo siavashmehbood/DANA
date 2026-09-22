@@ -113,7 +113,7 @@ def secure_file(request, pk, kind, chapter_id=None):
     if kind not in {'pdf','audio','chapter_audio'}:
         return HttpResponseForbidden('نوع فایل معتبر نیست.')
     if kind == 'chapter_audio' and chapter_id is None:
-        return HttpResponseForbidden('فصل معتبر نیست.')
+        raise Http404
     book = get_object_or_404(_published_books(), pk=pk)
     if not request.user.is_authenticated:
         response=HttpResponseForbidden('ورود لازم است.')
