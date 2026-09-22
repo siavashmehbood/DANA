@@ -241,3 +241,26 @@ class ReadingProfileTests(TestCase):
         self.assertContains(response,'Profile Reading')
         self.assertContains(response,'Reader Badge')
         self.assertContains(response,'روزهای پیوسته')
+
+
+class AudioLibraryStateTests(TestCase):
+    def setUp(self):
+        from books.models import Author, Book
+        from shop.models import Entitlement
+        self.user=User.objects.create_user(username='audio-library',password='pass12345')
+        author=Author.objects.create(name='Audio Library Author')
+        self.book=Book.objects.create(name='Audio Library Book',slug='audio-library-book',author=author,status='published')
+        Entitlement.objects.create(user=self.user,book=self.book)
+        self.client.force_login(self.user)
+
+    def test_listening_only_book_appears_in_reading_filter(self):
+        from reader.models import AudioProgress
+        AudioProgress.objects.create(user=self.user,book=self.book,position_seconds=45,duration_seconds=300)
+        response=self.client.get(reverse('library'),{'state':'reading'})
+        self.assertContains(response,'Audio Library Book')
+
+    def test_completed_audio_book_appears_in_completed_filter(self):
+        from reader.models import AudioProgress
+        AudioProgress.objects.create(user=self.user,book=self.book,position_seconds=300,duration_seconds=300,completed=True)
+        response=self.client.get(reverse('library'),{'state':'completed'})
+        self.assertContains(response,'Audio Library Book')
