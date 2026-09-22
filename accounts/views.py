@@ -115,7 +115,7 @@ def logout_view(request):
 @login_required
 def library(request):
     user=request.user
-    owned=list(Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).select_related('book__author','book__category').order_by('-granted_at'))
+    owned=list(Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author','book__category').prefetch_related('book__chapters').order_by('-granted_at'))
     pmap={p.book_id:p for p in ReadingProgress.objects.filter(user=user)}
     rows=[{'book':item.book,'progress':pmap.get(item.book_id)} for item in owned]
     state=request.GET.get('state','all')
@@ -125,6 +125,6 @@ def library(request):
     if state=='reading': rows=[row for row in rows if row['progress'] and 0 < row['progress'].progress < 100]
     elif state=='completed': rows=[row for row in rows if row['progress'] and row['progress'].progress >= 100]
     elif state=='unread': rows=[row for row in rows if not row['progress'] or row['progress'].progress <= 0]
-    if kind=='audio': rows=[row for row in rows if row['book'].audio or row['book'].chapters.filter(audio__gt='').exists()]
-    elif kind=='text': rows=[row for row in rows if row['book'].pdf or row['book'].chapters.filter(text__gt='').exists()]
+    if kind=='audio': rows=[row for row in rows if row['book'].audio or any(ch.audio for ch in row['book'].chapters.all())]
+    elif kind=='text': rows=[row for row in rows if row['book'].pdf or any(ch.text for ch in row['book'].chapters.all())]
     return render(request,'library.html',{'library_rows':rows,'state':state,'kind':kind,'library_count':len(owned)})
