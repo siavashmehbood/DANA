@@ -3,7 +3,7 @@ from accounts.models import User
 from books.models import Author, Book, Chapter
 from gamification.models import PointLedger, UserStreak
 from shop.models import Entitlement, SubscriptionPlan, Subscription
-from .models import ReadingProgress, Review, Bookmark, Note
+from .models import ReadingProgress, Review, Bookmark, Highlight, Note
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
@@ -189,3 +189,9 @@ class SubscriptionReaderAccessTests(TestCase):
         response=self.client.get(reverse('reader',args=[self.book.pk]),{'note_q':'مهم'})
         self.assertContains(response,'یادداشت مهم')
         self.assertNotContains(response,'متن دیگر')
+
+
+    def test_highlight_requires_access_and_is_saved(self):
+        response=self.client.post(reverse('reader_highlight',args=[self.book.pk]),{'page':'4','text':'بخش مهم'})
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(Highlight.objects.filter(user=self.user,book=self.book,page=4,text='بخش مهم').exists())
