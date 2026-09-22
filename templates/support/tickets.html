@@ -2,7 +2,7 @@
 {% block title %}پشتیبانی | دانا{% endblock %}
 {% block content %}
 <div class="panel"><h1>پشتیبانی</h1>
-<form method="post">{% csrf_token %}<input name="subject" maxlength="250" placeholder="موضوع" required><textarea name="body" maxlength="10000" placeholder="شرح مشکل" required></textarea><button class="btn">ثبت تیکت</button></form>
+<form method="post"><h2>درخواست جدید</h2>{% csrf_token %}<label for="ticket-subject">موضوع</label><input id="ticket-subject" name="subject" maxlength="250" placeholder="موضوع" required><label for="ticket-body">شرح مشکل</label><textarea id="ticket-body" name="body" maxlength="10000" placeholder="شرح مشکل" required></textarea><button class="btn">ثبت تیکت</button></form>
 <hr>
 {% for t in tickets %}<section class="notification"><b>{{t.subject}}</b> <span class="badge">{{t.get_status_display}}</span><p>{{t.body}}</p>
 {% for m in t.messages.all %}<div class="tool-item"><b>{% if m.user_id == user.id %}شما{% else %}پشتیبانی{% endif %}</b><p>{{m.body}}</p><small>{{m.created_at}}</small></div>{% endfor %}
