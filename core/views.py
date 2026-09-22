@@ -13,7 +13,9 @@ from django.utils import timezone
 
 def home(request):
     base = Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now()),visibility='public').select_related('author', 'category')
-    featured = base.order_by('-created_at')[:6]
+    featured = base.filter(featured=True).order_by('-created_at')[:6]
+    if not featured.exists():
+        featured = base.order_by('-created_at')[:6]
     newest = base.order_by('-created_at')[:8]
     popular = base.annotate(approved_reviews=Count('review', filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
     recommendations = base.none()
