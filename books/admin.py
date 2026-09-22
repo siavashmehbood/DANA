@@ -24,7 +24,7 @@ class BookAdmin(ModelAdmin):
         ('مشخصات کتاب', {'fields': ('name', 'slug', 'author', 'category', 'level', 'cover', 'summary', 'description')}),
         ('فروش', {'fields': ('price', 'old_price', 'preview_percent')}),
         ('فایل و رسانه', {'fields': ('pdf', 'audio')}),
-        ('انتشار و دسترسی', {'fields': ('status', 'publish_at', 'visibility', 'subscription_included', 'access_password')}),
+        ('انتشار و دسترسی', {'fields': ('status', 'publish_at', 'visibility', 'featured', 'subscription_included', 'access_password')}),
     )
 
     @admin.display(boolean=True, description='PDF')
