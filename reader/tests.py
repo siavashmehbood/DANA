@@ -451,3 +451,20 @@ class AudiobookExperienceTests(TestCase):
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
         response=self.client.post(reverse('audio_progress',args=[self.book.pk]),{'chapter_id':foreign.pk,'position':'10','duration':'100'})
         self.assertEqual(response.status_code,400)
+
+
+    def test_expired_subscription_cannot_stream_audio(self):
+        plan=SubscriptionPlan.objects.create(name='Audio plan',slug='audio-plan',price=10,duration_days=30,grants_catalog_access=True)
+        self.book.subscription_included=True
+        self.book.save(update_fields=['subscription_included'])
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=30),expires_at=timezone.now()-timedelta(seconds=1))
+        response=self.client.get(reverse('protected_book_audio',args=[self.book.pk]))
+        self.assertEqual(response.status_code,403)
+
+    def test_whole_book_audio_progress_is_idempotent(self):
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        url=reverse('audio_progress',args=[self.book.pk])
+        self.client.post(url,{'position':'10','duration':'100'})
+        self.client.post(url,{'position':'20','duration':'100'})
+        self.assertEqual(AudioProgress.objects.filter(user=self.user,book=self.book,chapter__isnull=True).count(),1)
+        self.assertEqual(AudioProgress.objects.get(user=self.user,book=self.book,chapter__isnull=True).position_seconds,20)
