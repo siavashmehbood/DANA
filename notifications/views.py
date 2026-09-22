@@ -6,7 +6,8 @@ from .models import Notification
 
 @login_required
 def notifications(request):
-    return render(request,'notifications/list.html',{'items':Notification.objects.filter(user=request.user).order_by('-created_at')})
+    items=Notification.objects.filter(user=request.user).order_by('-created_at')[:200]
+    return render(request,'notifications/list.html',{'items':items})
 
 @login_required
 @require_POST
