@@ -27,7 +27,7 @@ def home(request):
     continue_reading=[]
     if request.user.is_authenticated:
         valid_books=Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True)
-        subscription_access=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True,plan__grants_catalog_access=True).exists()
+        subscription_access=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__grants_catalog_access=True).exists()
         readable_progress=Q(book_id__in=valid_books)|Q(book__visibility='public',book__price=0)
         if subscription_access:
             readable_progress |= Q(book__subscription_included=True)
@@ -61,7 +61,7 @@ def protected_book_pdf(request, pk):
     free_public = book.visibility == 'public' and book.price == 0
     if not free_public:
         entitled=Entitlement.objects.filter(user=request.user, book=book).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).exists()
-        subscribed=book.subscription_included and Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True,plan__grants_catalog_access=True).exists()
+        subscribed=book.subscription_included and Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__grants_catalog_access=True).exists()
         if not entitled and not subscribed:
             return HttpResponse('Access denied', status=403)
     if not book.pdf or not book.is_published:
