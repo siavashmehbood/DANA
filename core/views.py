@@ -35,9 +35,11 @@ def home(request):
         continue_reading=ReadingProgress.objects.filter(readable_progress,user=request.user,progress__gt=0,progress__lt=100).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author').order_by('-updated_at')[:6]
         continue_listening=AudioProgress.objects.filter(readable_progress,user=request.user,position_seconds__gt=0,completed=False).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author','chapter').order_by('-updated_at')[:6]
         owned_categories=Entitlement.objects.filter(user=request.user,book__category__isnull=False).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book__category_id',flat=True)
-        owned_ids=Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True)
-        if subscription_access:
-            owned_ids=list(owned_ids)+list(base.filter(subscription_included=True).values_list('id',flat=True))
+        owned_ids=set(Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True))
+        # Subscription access is not ownership. Keep unengaged catalog titles
+        # eligible for recommendations while excluding anything already started.
+        owned_ids.update(ReadingProgress.objects.filter(user=request.user).values_list('book_id',flat=True))
+        owned_ids.update(AudioProgress.objects.filter(user=request.user).values_list('book_id',flat=True))
         rated_categories=Review.objects.filter(user=request.user,approved=True,rating__gte=4,book__category__isnull=False).values_list('book__category_id',flat=True)
         active_categories=ReadingProgress.objects.filter(user=request.user,progress__gt=0,book__category__isnull=False).values_list('book__category_id',flat=True)
         completed_categories=ReadingProgress.objects.filter(user=request.user,progress__gte=100,book__category__isnull=False).values_list('book__category_id',flat=True)
