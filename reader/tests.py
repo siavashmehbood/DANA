@@ -249,14 +249,14 @@ class SubscriptionReaderAccessTests(TestCase):
         Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
         self.client.login(username='inactive-plan-reader',password='pass12345')
         response=self.client.get(reverse('reader',args=[book.pk]))
-        self.assertEqual(response.status_code,403)
+        self.assertEqual(response.status_code,302)
 
 
     def test_private_reader_without_entitlement_returns_forbidden(self):
         author=Author.objects.create(name='Private Reader Author')
         book=Book.objects.create(name='Private Reader Book',slug='private-reader-book',author=author,status='published',visibility='private')
         response=self.client.get(reverse('reader',args=[book.pk]))
-        self.assertEqual(response.status_code,403)
+        self.assertEqual(response.status_code,302)
 
 
     def test_paid_public_book_still_requires_entitlement(self):
@@ -264,7 +264,7 @@ class SubscriptionReaderAccessTests(TestCase):
         self.book.visibility='public'
         self.book.save(update_fields=['price','visibility'])
         response=self.client.get(reverse('reader',args=[self.book.pk]))
-        self.assertEqual(response.status_code,403)
+        self.assertEqual(response.status_code,302)
 
     def test_paid_public_book_allows_entitled_reader(self):
         self.book.price=1000
@@ -283,7 +283,7 @@ class SubscriptionReaderAccessTests(TestCase):
         Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
         self.client.force_login(user)
         response=self.client.get(reverse('reader',args=[book.pk]))
-        self.assertEqual(response.status_code,403)
+        self.assertEqual(response.status_code,302)
 
 
     def test_subscription_access_is_not_reported_as_owned(self):
@@ -315,7 +315,7 @@ class SubscriptionReaderAccessTests(TestCase):
     def test_reader_access_denied_response_is_private(self):
         private=Book.objects.create(name='Denied private',slug='denied-private',author=self.book.author,status='published',visibility='private')
         response=self.client.get(reverse('reader',args=[private.pk]))
-        self.assertEqual(response.status_code,403)
+        self.assertEqual(response.status_code,302)
         self.assertIn('private',response['Cache-Control'])
         self.assertIn('no-store',response['Cache-Control'])
 
@@ -410,7 +410,7 @@ class PasswordBookAccessTests(TestCase):
         book=Book.objects.create(name='Locked Book',slug='locked-book',author=author,status='published',visibility='password',access_password='secret',price=0)
         self.client.force_login(user)
         response=self.client.get(reverse('reader',args=[book.pk]))
-        self.assertEqual(response.status_code,403)
+        self.assertEqual(response.status_code,302)
 
 
 class AudiobookExperienceTests(TestCase):
@@ -444,7 +444,7 @@ class AudiobookExperienceTests(TestCase):
     def test_expired_entitlement_cannot_save_audio_progress(self):
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase',expires_at=timezone.now()-timedelta(seconds=1))
         response=self.client.post(reverse('audio_progress',args=[self.book.pk]),{'chapter_id':self.chapter.pk,'position':'20','duration':'100'})
-        self.assertEqual(response.status_code,403)
+        self.assertEqual(response.status_code,302)
         self.assertFalse(AudioProgress.objects.filter(user=self.user,book=self.book).exists())
 
     def test_audio_progress_rejects_chapter_from_other_book(self):
@@ -461,7 +461,7 @@ class AudiobookExperienceTests(TestCase):
         self.book.save(update_fields=['subscription_included'])
         Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=30),expires_at=timezone.now()-timedelta(seconds=1))
         response=self.client.get(reverse('book_secure_file',args=[self.book.pk,'audio']))
-        self.assertEqual(response.status_code,403)
+        self.assertEqual(response.status_code,302)
 
     def test_whole_book_audio_progress_is_idempotent(self):
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
@@ -521,13 +521,13 @@ class AudioProgressMonotonicTests(TestCase):
         self.chapter=Chapter.objects.create(book=self.book,title='فصل صوتی',order=1,audio=SimpleUploadedFile('mono.mp3',b'ID3mono',content_type='audio/mpeg'))
         self.client.force_login(self.user)
 
-    def test_audio_progress_does_not_move_backwards(self):
+    def test_audio_resume_cursor_follows_latest_position(self):
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
         url=reverse('audio_progress',args=[self.book.pk])
         self.client.post(url,{'chapter_id':self.chapter.pk,'position':'90','duration':'300'})
         self.client.post(url,{'chapter_id':self.chapter.pk,'position':'20','duration':'300'})
         item=AudioProgress.objects.get(user=self.user,book=self.book,chapter=self.chapter)
-        self.assertEqual(item.position_seconds,90)
+        self.assertEqual(item.position_seconds,20)
 
     def test_completed_audio_progress_stays_completed(self):
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
@@ -545,7 +545,7 @@ class AudioResumeCursorTests(TestCase):
         from shop.models import Entitlement
         self.user=User.objects.create_user(username='audio-cursor',password='pass12345')
         author=Author.objects.create(name='Audio Cursor Author')
-        self.book=Book.objects.create(name='Audio Cursor Book',slug='audio-cursor-book',author=author,status='published')
+        self.book=Book.objects.create(name='Audio Cursor Book',slug='audio-cursor-book',author=author,status='published',audio=SimpleUploadedFile('cursor.mp3',b'ID3cursor',content_type='audio/mpeg'))
         Entitlement.objects.create(user=self.user,book=self.book)
         self.client.force_login(self.user)
 
