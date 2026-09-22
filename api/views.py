@@ -21,7 +21,7 @@ def event(request):
     if count >= 60:
         return JsonResponse({'ok': False, 'error': 'rate_limited'}, status=429)
     cache.set(key, count + 1, timeout=60)
-    if request.content_type != 'application/json':
+    if (request.content_type or '').split(';',1)[0].strip().lower() != 'application/json':
         return JsonResponse({'ok': False, 'error': 'json_required'}, status=415)
     if len(request.body) > 20000:
         return JsonResponse({'ok': False, 'error': 'payload_too_large'}, status=413)
