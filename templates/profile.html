@@ -9,7 +9,7 @@
 <input name="first_name" value="{{user.first_name}}" placeholder="نام">
 <input name="last_name" value="{{user.last_name}}" placeholder="نام خانوادگی">
 <input name="email" type="email" value="{{user.email}}" placeholder="ایمیل">
-<input name="new_password" type="password" minlength="8" placeholder="رمز جدید (اختیاری)">
+<input name="current_password" type="password" autocomplete="current-password" placeholder="رمز فعلی (برای تغییر رمز)"><input name="new_password" type="password" minlength="8" autocomplete="new-password" placeholder="رمز جدید (اختیاری)">
 <button class="btn">ذخیره تغییرات</button>
 </form>
 <div class="stats">
