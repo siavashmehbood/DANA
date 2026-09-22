@@ -8,6 +8,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='book',
             name='subscription_included',
-            field=models.BooleanField(default=False),
+            field=models.BooleanField(default=False, verbose_name='subscription included'),
         ),
     ]
