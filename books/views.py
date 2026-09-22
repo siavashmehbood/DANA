@@ -27,7 +27,7 @@ def listing(request):
     if kind not in {'all','audio','text'}: kind='all'
     if price not in {'all','free','paid'}: price='all'
     if access not in {'all','subscription'}: access='all'
-    books=_published_books().exclude(visibility='private').select_related('author','category')
+    books=_published_books().filter(visibility='public').select_related('author','category')
 
     def apply_filters(qs):
         if cat: qs=qs.filter(category__slug=cat)
@@ -63,7 +63,7 @@ def listing(request):
         for token in tokens:
             relaxed |= Q(name__icontains=token)|Q(author__name__icontains=token)|Q(summary__icontains=token)
         if relaxed:
-            books=apply_sort(apply_filters(_published_books().exclude(visibility='private').select_related('author','category').filter(relaxed)))
+            books=apply_sort(apply_filters(_published_books().filter(visibility='public').select_related('author','category').filter(relaxed)))
             total_count=books.count()
             used_relaxed_search=total_count > 0
         if total_count == 0 and page_number == '1':
