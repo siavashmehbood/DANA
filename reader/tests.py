@@ -105,3 +105,8 @@ class StudyFlowTests(TestCase):
     def test_bookmark_get_is_not_allowed(self):
         response=self.client.get(reverse('reader_bookmark',args=[self.book.pk]))
         self.assertEqual(response.status_code,405)
+
+
+    def test_note_get_is_not_allowed(self):
+        response=self.client.get(reverse('reader_note',args=[self.book.pk]))
+        self.assertEqual(response.status_code,405)
