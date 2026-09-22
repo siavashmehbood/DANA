@@ -127,11 +127,18 @@ def library(request):
     rows=[{'book':book,'progress':pmap.get(book.id),'source':'purchased' if book.id in entitled_ids else 'subscription'} for book in books]
     state=request.GET.get('state','all')
     kind=request.GET.get('kind','all')
+    source=request.GET.get('source','all')
+    sort=request.GET.get('sort','recent')
     if state not in {'all','reading','completed','unread'}: state='all'
     if kind not in {'all','audio','text'}: kind='all'
+    if source not in {'all','purchased','subscription'}: source='all'
+    if sort not in {'recent','title','progress'}: sort='recent'
     if state=='reading': rows=[row for row in rows if row['progress'] and 0 < row['progress'].progress < 100]
     elif state=='completed': rows=[row for row in rows if row['progress'] and row['progress'].progress >= 100]
     elif state=='unread': rows=[row for row in rows if not row['progress'] or row['progress'].progress <= 0]
     if kind=='audio': rows=[row for row in rows if row['book'].audio or any(ch.audio for ch in row['book'].chapters.all())]
     elif kind=='text': rows=[row for row in rows if row['book'].pdf or any(ch.text for ch in row['book'].chapters.all())]
-    return render(request,'library.html',{'library_rows':rows,'state':state,'kind':kind,'library_count':len(rows),'active_subscription':active_subscription})
+    if source!='all': rows=[row for row in rows if row['source']==source]
+    if sort=='title': rows.sort(key=lambda row: row['book'].name)
+    elif sort=='progress': rows.sort(key=lambda row: float(row['progress'].progress) if row['progress'] else -1,reverse=True)
+    return render(request,'library.html',{'library_rows':rows,'state':state,'kind':kind,'source':source,'sort':sort,'library_count':len(rows),'active_subscription':active_subscription})
