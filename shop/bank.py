@@ -125,6 +125,11 @@ def bank_checkout(request):
             if reusable:
                 order=reusable
                 payment=order.payments.filter(provider='zarinpal',status='pending').order_by('-id').first()
+                # A previous gateway request may already have issued an authority;
+                # returning to checkout must not reserve a second remote payment.
+                if payment and payment.authority:
+                    messages.info(request,'یک پرداخت بانکی در انتظار نتیجه دارید؛ وضعیت آن را از سفارش‌های من بررسی کنید.')
+                    return redirect('orders')
             else:
                 order = Order.objects.create(user=user, subtotal=subtotal, discount=discount, tax=tax, total=total, status='pending', tracking_code=_tracking_code())
                 OrderItem.objects.bulk_create([OrderItem(order=order, book=i.book, price=i.book.price) for i in locked_items])
