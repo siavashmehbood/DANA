@@ -12,6 +12,7 @@ class ChapterInline(admin.TabularInline):
 
 @admin.register(Book)
 class BookAdmin(ModelAdmin):
+    actions = ('publish_selected','unpublish_selected')
     list_display = ('name', 'author', 'category', 'price', 'old_price', 'status', 'visibility', 'featured', 'subscription_included', 'publish_at', 'has_pdf', 'has_audio')
     list_filter = ('status', 'visibility', 'featured', 'subscription_included', 'category', 'level')
     search_fields = ('name', 'author__name', 'summary', 'description')
@@ -26,6 +27,14 @@ class BookAdmin(ModelAdmin):
         ('فایل و رسانه', {'fields': ('pdf', 'audio')}),
         ('انتشار و دسترسی', {'fields': ('status', 'publish_at', 'visibility', 'featured', 'subscription_included', 'access_password')}),
     )
+
+    @admin.action(description='انتشار کتاب‌های انتخاب‌شده')
+    def publish_selected(self, request, queryset):
+        queryset.update(status='published', publish_at=None)
+
+    @admin.action(description='بازگرداندن کتاب‌های انتخاب‌شده به پیش‌نویس')
+    def unpublish_selected(self, request, queryset):
+        queryset.update(status='draft', publish_at=None)
 
     @admin.display(boolean=True, description='PDF')
     def has_pdf(self, obj):
