@@ -7,7 +7,7 @@
   <div class="checkout-layout">
     <form class="panel checkout-form" method="post">
       {% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ checkout_key }}">
-      <label>کد تخفیف</label><div class="coupon-row"><input name="coupon" value="{{ coupon_code }}" placeholder="مثلاً DANA10"><button class="btn secondary" name="action" value="apply_coupon" type="submit">اعمال تخفیف</button></div>
+      <label for="checkout-coupon">کد تخفیف</label><div class="coupon-row"><input id="checkout-coupon" name="coupon" value="{{ coupon_code }}" placeholder="مثلاً DANA10" autocomplete="off"><button class="btn secondary" name="action" value="apply_coupon" type="submit">اعمال تخفیف</button></div>
       <p class="muted">کد تخفیف فقط در صورت معتبر بودن اعمال می‌شود.</p>
       <button class="btn checkout-pay" name="action" value="pay" type="submit">پرداخت از کیف پول ←</button>
       <a class="btn secondary checkout-pay" href="{% url 'bank_checkout' %}">پرداخت بانکی امن ←</a>
