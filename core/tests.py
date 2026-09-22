@@ -417,3 +417,18 @@ class HomeAudioOnlyLegacyResumeTests(TestCase):
         response=self.client.get(reverse('home'))
         self.assertEqual(response.context['continue_item']['kind'],'audio')
         self.assertContains(response,reverse('audio_player',args=[book.id]))
+
+
+class AudioRecommendationSignalTests(TestCase):
+    def test_listening_category_influences_home_recommendations(self):
+        from books.models import Category
+        category=Category.objects.create(name='Audio Interest',slug='audio-interest')
+        author=Author.objects.create(name='Audio Interest Author')
+        current=Book.objects.create(name='Current Audio Interest',slug='current-audio-interest',author=author,category=category,status='published',visibility='public',price=0,audio=SimpleUploadedFile('current.mp3',b'ID3',content_type='audio/mpeg'))
+        candidate=Book.objects.create(name='Next Audio Interest',slug='next-audio-interest',author=author,category=category,status='published',visibility='public',price=0,audio=SimpleUploadedFile('next.mp3',b'ID3',content_type='audio/mpeg'))
+        user=User.objects.create_user(username='audio-interest-user',password='pass12345')
+        AudioProgress.objects.create(user=user,book=current,position_seconds=60,duration_seconds=300)
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        self.assertIn(candidate,list(response.context['recommendations']))
+        self.assertNotIn(current,list(response.context['recommendations']))
