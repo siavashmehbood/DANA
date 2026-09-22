@@ -2,8 +2,8 @@ from django.db import models
 from accounts.models import User
 
 class Ticket(models.Model):
-    STATUS = [('open', 'Open'), ('in_progress', 'In Progress'), ('waiting', 'Waiting'), ('resolved', 'Resolved'), ('closed', 'Closed')]
-    PRIORITIES = [('low', 'Low'), ('normal', 'Normal'), ('high', 'High'), ('urgent', 'Urgent')]
+    STATUS = [('open', 'باز'), ('in_progress', 'در حال بررسی'), ('waiting', 'منتظر پاسخ'), ('resolved', 'حل‌شده'), ('closed', 'بسته')]
+    PRIORITIES = [('low', 'کم'), ('normal', 'عادی'), ('high', 'زیاد'), ('urgent', 'فوری')]
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     subject = models.CharField(max_length=250)
     body = models.TextField()
