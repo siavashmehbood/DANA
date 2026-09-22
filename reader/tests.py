@@ -376,3 +376,12 @@ class VocabularySearchTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('reader_vocabulary'))
         self.assertNotContains(response,'secretword')
+
+
+    def test_save_word_rejects_article_without_readable_content(self):
+        user=User.objects.create_user(username='empty-article-word',password='pass12345')
+        article=__import__('articles.models',fromlist=['Article']).Article.objects.create(title='Empty article',slug='empty-article',published=True)
+        self.client.force_login(user)
+        response=self.client.post(reverse('reader_save_word',args=[article.slug]),{'word':'test'})
+        self.assertEqual(response.status_code,400)
+        self.assertFalse(SavedWord.objects.filter(user=user).exists())
