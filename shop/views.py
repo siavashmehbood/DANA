@@ -235,15 +235,15 @@ def subscribe(request, slug):
             current.save(update_fields=['status'])
             current=None
         if current and current.plan_id == plan.id:
-            start=current.expires_at
-            current.status='expired'
-            current.save(update_fields=['status'])
+            current.expires_at=current.expires_at+timezone.timedelta(days=plan.duration_days)
+            current.save(update_fields=['expires_at'])
+            subscription=current
         else:
             if current:
                 current.status='cancelled'
                 current.save(update_fields=['status'])
             start=now
-        subscription=Subscription.objects.create(user=user,plan=plan,starts_at=start,expires_at=start+timezone.timedelta(days=plan.duration_days))
+            subscription=Subscription.objects.create(user=user,plan=plan,starts_at=start,expires_at=start+timezone.timedelta(days=plan.duration_days))
         if plan.price > 0:
             _wallet_transaction(user,plan.price,'debit','Subscription purchase',reference=f'subscription:{subscription.pk}:debit')
             messages.success(request,'اشتراک با موفقیت از کیف پول فعال شد.')
