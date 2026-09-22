@@ -16,7 +16,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from articles.models import Article
 from books.models import Book
 from shop.models import CartItem, Entitlement, Referral, Subscription
-from reader.models import ReadingProgress, ReadingGoal
+from reader.models import ReadingProgress, AudioProgress, ReadingGoal
 from .models import User, OTPCode, Device, UserSession
 
 def _phone(value):
@@ -162,7 +162,13 @@ def library(request):
         books.extend(subscription_books)
     book_ids=[book.id for book in books]
     pmap={p.book_id:p for p in ReadingProgress.objects.filter(user=user,book_id__in=book_ids)}
-    rows=[{'book':book,'progress':pmap.get(book.id),'source':'purchased' if book.id in entitled_ids else 'subscription'} for book in books]
+    amap={}
+    for item in AudioProgress.objects.filter(user=user,book_id__in=book_ids).order_by('book_id','-updated_at'):
+        amap.setdefault(item.book_id,item)
+    rows=[]
+    for book in books:
+        has_audio=bool(book.audio) or any(ch.audio for ch in book.chapters.all())
+        rows.append({'book':book,'progress':pmap.get(book.id),'audio_progress':amap.get(book.id),'has_audio':has_audio,'source':'purchased' if book.id in entitled_ids else 'subscription'})
     state=request.GET.get('state','all')
     kind=request.GET.get('kind','all')
     source=request.GET.get('source','all')
