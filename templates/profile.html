@@ -9,10 +9,10 @@
 {% csrf_token %}
 {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="تصویر پروفایل" style="width:72px;height:72px;border-radius:50%;object-fit:cover">{% endif %}
 <label>تصویر پروفایل<input name="avatar" type="file" accept="image/*"></label>
-<label>نام<input name="first_name" value="{{user.first_name}}" autocomplete="given-name"></label>
-<label>نام خانوادگی<input name="last_name" value="{{user.last_name}}" autocomplete="family-name"></label>
-<label>ایمیل<input name="email" type="email" value="{{user.email}}" autocomplete="email"></label>
-<label>رمز فعلی برای تغییر رمز<input name="current_password" type="password" autocomplete="current-password"></label><label>رمز جدید (اختیاری)<input name="new_password" type="password" minlength="8" autocomplete="new-password"></label>
+<label for="profile-first-name">نام</label><input id="profile-first-name" name="first_name" value="{{user.first_name}}" autocomplete="given-name"></label>
+<label for="profile-last-name">نام خانوادگی</label><input id="profile-last-name" name="last_name" value="{{user.last_name}}" autocomplete="family-name"></label>
+<label for="profile-email">ایمیل</label><input id="profile-email" name="email" type="email" value="{{user.email}}" autocomplete="email"></label>
+<label for="profile-current-password">رمز فعلی برای تغییر رمز</label><input id="profile-current-password" name="current_password" type="password" autocomplete="current-password"><label for="profile-new-password">رمز جدید (اختیاری)</label><input id="profile-new-password" name="new_password" type="password" minlength="8" autocomplete="new-password"></label>
 <button class="btn">ذخیره تغییرات</button>
 </form>
 <div class="stats">
