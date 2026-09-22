@@ -340,3 +340,14 @@ class ShopFlowTests(TestCase):
         self.assertLessEqual(active.starts_at,timezone.now())
         future.refresh_from_db()
         self.assertEqual(future.status,'cancelled')
+
+
+    def test_activation_expires_stale_active_membership_before_new_plan(self):
+        old=SubscriptionPlan.objects.create(name='Stale',slug='stale-plan',price=0,duration_days=7)
+        new=SubscriptionPlan.objects.create(name='Fresh',slug='fresh-plan',price=0,duration_days=7)
+        stale=Subscription.objects.create(user=self.user,plan=old,status='active',starts_at=timezone.now()-timedelta(days=9),expires_at=timezone.now()-timedelta(days=2))
+        response=self._subscribe(new)
+        self.assertEqual(response.status_code,302)
+        stale.refresh_from_db()
+        self.assertEqual(stale.status,'expired')
+        self.assertTrue(Subscription.objects.filter(user=self.user,plan=new,status='active').exists())
