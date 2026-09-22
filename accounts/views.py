@@ -10,7 +10,7 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.db.models import Q
 from articles.models import Article
-from shop.models import CartItem, Entitlement, Referral
+from shop.models import CartItem, Entitlement, Referral, Subscription
 from reader.models import ReadingProgress
 from .models import User, OTPCode, Device, UserSession
 
@@ -116,9 +116,15 @@ def logout_view(request):
 def library(request):
     user=request.user
     owned=list(Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author','book__category').prefetch_related('book__chapters').order_by('-granted_at'))
-    owned_book_ids=[item.book_id for item in owned]
-    pmap={p.book_id:p for p in ReadingProgress.objects.filter(user=user,book_id__in=owned_book_ids)}
-    rows=[{'book':item.book,'progress':pmap.get(item.book_id)} for item in owned]
+    active_subscription=Subscription.objects.filter(user=user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True,plan__grants_catalog_access=True).select_related('plan').first()
+    entitled_ids={item.book_id for item in owned}
+    books=[item.book for item in owned]
+    if active_subscription:
+        subscription_books=Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now())).exclude(pk__in=entitled_ids).select_related('author','category').prefetch_related('chapters').order_by('-created_at')[:500]
+        books.extend(subscription_books)
+    book_ids=[book.id for book in books]
+    pmap={p.book_id:p for p in ReadingProgress.objects.filter(user=user,book_id__in=book_ids)}
+    rows=[{'book':book,'progress':pmap.get(book.id),'source':'purchased' if book.id in entitled_ids else 'subscription'} for book in books]
     state=request.GET.get('state','all')
     kind=request.GET.get('kind','all')
     if state not in {'all','reading','completed','unread'}: state='all'
@@ -128,4 +134,4 @@ def library(request):
     elif state=='unread': rows=[row for row in rows if not row['progress'] or row['progress'].progress <= 0]
     if kind=='audio': rows=[row for row in rows if row['book'].audio or any(ch.audio for ch in row['book'].chapters.all())]
     elif kind=='text': rows=[row for row in rows if row['book'].pdf or any(ch.text for ch in row['book'].chapters.all())]
-    return render(request,'library.html',{'library_rows':rows,'state':state,'kind':kind,'library_count':len(owned)})
+    return render(request,'library.html',{'library_rows':rows,'state':state,'kind':kind,'library_count':len(rows),'active_subscription':active_subscription})
