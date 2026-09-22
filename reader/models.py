@@ -10,6 +10,18 @@ class ReadingProgress(models.Model):
     class Meta:
         constraints=[models.UniqueConstraint(fields=['user','book'],name='unique_reading_progress')]
         indexes=[models.Index(fields=['user','-updated_at'],name='reader_progress_recent_idx')]
+class AudioProgress(models.Model):
+    user=models.ForeignKey(User,on_delete=models.CASCADE)
+    book=models.ForeignKey(Book,on_delete=models.CASCADE)
+    chapter=models.ForeignKey(Chapter,null=True,blank=True,on_delete=models.CASCADE)
+    position_seconds=models.PositiveIntegerField(default=0)
+    duration_seconds=models.PositiveIntegerField(default=0)
+    completed=models.BooleanField(default=False)
+    updated_at=models.DateTimeField(auto_now=True)
+    class Meta:
+        constraints=[models.UniqueConstraint(fields=['user','book','chapter'],name='unique_audio_progress_chapter')]
+        indexes=[models.Index(fields=['user','book','-updated_at'],name='reader_audio_recent_idx')]
+
 class Bookmark(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE)
     book=models.ForeignKey(Book,on_delete=models.CASCADE)
