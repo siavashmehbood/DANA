@@ -119,6 +119,8 @@ def secure_file(request, pk, kind, chapter_id=None):
     book = get_object_or_404(_published_books(), pk=pk)
     if not request.user.is_authenticated:
         return HttpResponseForbidden('ورود لازم است.')
+    if book.visibility == 'password':
+        return HttpResponseForbidden('کتاب رمزدار نیاز به مسیر بازگشایی دارد.')
     if not _has_book_access(request.user, book):
         return HttpResponseForbidden('دسترسی به این فایل ندارید.')
     if kind == 'chapter_audio':
