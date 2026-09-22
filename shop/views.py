@@ -216,6 +216,7 @@ def subscribe(request, slug):
         user=User.objects.select_for_update().get(pk=request.user.pk)
         plan=get_object_or_404(SubscriptionPlan,slug=slug,active=True)
         now=timezone.now()
+        Subscription.objects.select_for_update().filter(user=user,status='active',expires_at__lte=now).update(status='expired')
         if Subscription.objects.select_for_update().filter(user=user,status='active',starts_at__gt=now,expires_at__gt=now).exists():
             messages.info(request,'یک تمدید اشتراک از قبل برای شما ثبت شده است.')
             return redirect('subscriptions')
