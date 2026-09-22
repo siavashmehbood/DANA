@@ -8,7 +8,7 @@
     <h1>مرکز مدیریت دانا</h1>
     <p>محتوا، کاربران، فروش و پشتیبانی را از یک صفحه کنترل کنید.</p>
   </div>
-  <a class="dana-site-btn" href="/">مشاهده سایت ↗</a>
+  <a class="dana-site-btn" href="{% url 'home' %}">مشاهده سایت ↗</a>
 </div>
 
 <section class="dana-kpi-grid" aria-label="شاخص‌های اصلی">
@@ -67,7 +67,7 @@
     <a href="{% url 'admin:shop_order_changelist' %}">همه سفارش‌ها ←</a>
   </div>
   <div class="dana-table-wrap">
-    <table class="dana-table">
+    <table class="dana-table"><caption class="sr-only">آخرین سفارش‌های ثبت‌شده</caption>
       <thead><tr><th>کد پیگیری</th><th>کاربر</th><th>مبلغ</th><th>وضعیت</th><th>زمان</th><th></th></tr></thead>
       <tbody>
       {% for order in recent_orders %}
