@@ -160,7 +160,7 @@ class SubscriptionReaderAccessTests(TestCase):
     def test_active_catalog_subscription_can_open_private_reader(self):
         user=User.objects.create_user(username='sub-reader',password='pass12345')
         author=Author.objects.create(name='Sub Reader Author')
-        book=Book.objects.create(name='Sub Reader Book',slug='sub-reader-book',author=author,status='published',visibility='private')
+        book=Book.objects.create(name='Sub Reader Book',slug='sub-reader-book',author=author,status='published',visibility='private',subscription_included=True)
         plan=SubscriptionPlan.objects.create(name='Reader Catalog',slug='reader-catalog',price=100,duration_days=30,grants_catalog_access=True)
         Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
         self.client.login(username='sub-reader',password='pass12345')
