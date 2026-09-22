@@ -365,3 +365,11 @@ class ShopFlowTests(TestCase):
         self.assertEqual(current.status,'active')
         self.assertFalse(Subscription.objects.filter(user=self.user,plan=new).exists())
         self.assertEqual(self.user.wallet_balance,Decimal('500'))
+
+
+    def test_subscription_catalog_refresh_changes_activation_nonce(self):
+        self.client.get(reverse('subscriptions'))
+        first=self.client.session['subscription_activation_key']
+        self.client.get(reverse('subscriptions'))
+        second=self.client.session['subscription_activation_key']
+        self.assertNotEqual(first,second)
