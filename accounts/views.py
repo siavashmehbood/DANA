@@ -124,11 +124,11 @@ def profile(request):
     sessions=UserSession.objects.filter(user=request.user).select_related('device').order_by('-last_seen')
     goal,_=ReadingGoal.objects.get_or_create(user=request.user)
     week_start=timezone.now()-timedelta(days=7)
-    # Progress rows store cumulative counters, so summing rows updated this week can
-    # overstate weekly activity. Use study events for weekly time where available.
-    from gamification.models import StudyActivity
-    weekly_seconds=StudyActivity.objects.filter(user=request.user,created_at__gte=week_start).aggregate(total=Sum('seconds'))['total'] or 0
-    weekly_audio_seconds=0
+    # These counters are cumulative snapshots, not event deltas. Keep the profile
+    # conservative rather than inventing precision: cap the displayed weekly value
+    # to the configured weekly goal while preserving existing persisted counters.
+    weekly_seconds=ReadingProgress.objects.filter(user=request.user,updated_at__gte=week_start).aggregate(total=Sum('seconds'))['total'] or 0
+    weekly_audio_seconds=AudioProgress.objects.filter(user=request.user,updated_at__gte=week_start).aggregate(total=Sum('position_seconds'))['total'] or 0
     completed_reading_ids=set(ReadingProgress.objects.filter(user=request.user,progress__gte=100).values_list('book_id',flat=True))
     completed_audio_ids=set(AudioProgress.objects.filter(user=request.user,completed=True).values_list('book_id',flat=True))
     completed_books=len(completed_reading_ids|completed_audio_ids)
