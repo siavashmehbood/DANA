@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator
 from .models import Ticket, TicketMessage
 
 @login_required
@@ -15,7 +16,9 @@ def tickets(request):
         Ticket.objects.create(user=request.user, subject=subject, body=body)
         messages.success(request, 'درخواست پشتیبانی ثبت شد.')
         return redirect('tickets')
-    return render(request,'support/tickets.html',{'tickets':Ticket.objects.filter(user=request.user).order_by('-updated_at')[:100]})
+    qs=Ticket.objects.filter(user=request.user).order_by('-updated_at')
+    page_obj=Paginator(qs,20).get_page(request.GET.get('page'))
+    return render(request,'support/tickets.html',{'tickets':page_obj.object_list,'page_obj':page_obj})
 
 
 @login_required
