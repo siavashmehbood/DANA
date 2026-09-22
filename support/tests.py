@@ -43,3 +43,12 @@ class SupportFlowTests(TestCase):
         response=self.client.post(reverse('ticket_reply',args=[self.ticket.pk]),{'body':'reopen'})
         self.assertEqual(response.status_code,302)
         self.assertFalse(TicketMessage.objects.filter(ticket=self.ticket,body='reopen').exists())
+
+
+    def test_user_cannot_open_more_than_ten_active_tickets(self):
+        self.client.force_login(self.owner)
+        for i in range(9):
+            Ticket.objects.create(user=self.owner,subject=f'Open {i}',body='Body')
+        response=self.client.post(reverse('tickets'),{'subject':'Eleventh','body':'Blocked'},follow=True)
+        self.assertFalse(Ticket.objects.filter(user=self.owner,subject='Eleventh').exists())
+        self.assertContains(response,'تعداد درخواست‌های باز شما زیاد است')
