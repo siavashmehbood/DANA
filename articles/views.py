@@ -52,7 +52,7 @@ def listing(request):
         articles = articles.order_by('year', 'created_at')
     else:
         articles = articles.order_by('-created_at')
-    paginator = Paginator(articles, 100)
+    paginator = Paginator(articles, 24)
     page_obj = paginator.get_page(request.GET.get('page', 1))
     for article in page_obj.object_list:
         article.display_title = article.title_fa or rough_translate(article.title)
