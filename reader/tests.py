@@ -312,7 +312,8 @@ class SubscriptionReaderAccessTests(TestCase):
         private=Book.objects.create(name='Denied private',slug='denied-private',author=self.book.author,status='published',visibility='private')
         response=self.client.get(reverse('reader',args=[private.pk]))
         self.assertEqual(response.status_code,403)
-        self.assertEqual(response['Cache-Control'],'private, no-store')
+        self.assertIn('private',response['Cache-Control'])
+        self.assertIn('no-store',response['Cache-Control'])
 
 
     def test_vocabulary_response_is_private_and_noindex(self):
