@@ -13,6 +13,8 @@ from gamification.services import record_study_activity
 
 
 def _has_access(user, book):
+    if book.visibility == 'password':
+        return False
     if book.visibility == 'public' and book.price == 0:
         return True
     if not user.is_authenticated:
