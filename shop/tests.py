@@ -223,3 +223,14 @@ class ShopFlowTests(TestCase):
         self.client.login(username='buyer',password='pass12345')
         self.client.post(reverse('subscribe',args=[plan.slug]))
         self.assertEqual(Subscription.objects.filter(user=self.user,plan=plan).count(),1)
+
+
+    def test_switching_free_plan_cancels_previous_active_membership(self):
+        old=SubscriptionPlan.objects.create(name='Old Free',slug='old-free',price=0,duration_days=7)
+        new=SubscriptionPlan.objects.create(name='New Free',slug='new-free',price=0,duration_days=7)
+        previous=Subscription.objects.create(user=self.user,plan=old,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        self.client.post(reverse('subscribe',args=[new.slug]))
+        previous.refresh_from_db()
+        self.assertEqual(previous.status,'cancelled')
+        self.assertEqual(Subscription.objects.filter(user=self.user,status='active').count(),1)
