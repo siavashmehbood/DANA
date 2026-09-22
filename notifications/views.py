@@ -3,9 +3,11 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
+from django.views.decorators.cache import never_cache
 from .models import Notification
 
 @login_required
+@never_cache
 def notifications(request):
     qs=Notification.objects.filter(user=request.user).order_by('-created_at')
     unread_count=qs.filter(read_at__isnull=True).count()
