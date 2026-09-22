@@ -58,3 +58,13 @@ class AccountFlowTests(TestCase):
         self.assertRedirects(response,reverse('profile'))
         user.refresh_from_db()
         self.assertFalse(bool(user.avatar))
+
+
+class LibraryFilterTests(TestCase):
+    def test_invalid_library_filters_fall_back_to_all(self):
+        user=User.objects.create_user(username='library-filter',password='pass12345')
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'),{'state':'bad','kind':'bad'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.context['state'],'all')
+        self.assertEqual(response.context['kind'],'all')
