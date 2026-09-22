@@ -10,6 +10,7 @@ class Migration(migrations.Migration):
                 ('id',models.BigAutoField(auto_created=True,primary_key=True,serialize=False,verbose_name='ID')),
                 ('page',models.PositiveIntegerField()),
                 ('text',models.TextField()),
+                ('color',models.CharField(choices=[('yellow','زرد'),('green','سبز'),('blue','آبی'),('pink','صورتی')],default='yellow',max_length=10)),
                 ('created_at',models.DateTimeField(auto_now_add=True)),
                 ('book',models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,to='books.book')),
                 ('user',models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,to='accounts.user')),
