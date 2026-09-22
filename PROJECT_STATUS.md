@@ -1,7 +1,7 @@
 # DANA Project Status
 
 ## Audit date
-2026-09-21
+2026-09-22
 
 ## Current baseline
 - Repository: `https://github.com/siavashmehbood/dana.git`
@@ -25,6 +25,11 @@
 - Expanded support ticket states and assignment/priority/category fields.
 - Added CI workflow for check, migration validation, tests and deployment security checks.
 - Added protected-reader tests, article tests and stronger shop/API tests.
+- Added real Zarinpal bank payment request/redirect/callback/verify flow with idempotent finalization and recoverable failure UX.
+- Unified text/audio resume behavior across home, dashboard, book detail, library and profile, including legacy audio-only progress compatibility.
+- Added event-based reading/listening telemetry and truthful weekly/profile/admin analytics.
+- Hardened operational Admin/CMS records for commerce, support, reader activity, authentication devices/sessions and notification delivery audit trails.
+- Improved mobile/RTL/accessibility navigation and account recovery UX.
 - Added article source provenance, translation version history, validation, rollback/retranslate workflow, original-language fallback and source-rights enforcement.
 - Enforced scheduled publication visibility, entitlement expiry, purchase provenance and payment callback state transitions.
 - Added chapter integrity constraints, point-ledger idempotency, notification read actions and stronger support validation.
@@ -42,7 +47,7 @@
 
 ## Remaining production work
 - Configure a real PostgreSQL instance and run migration/restore tests against it.
-- Connect a real payment gateway and implement provider-specific verification/callback/refund adapters.
+- Provision production Zarinpal credentials and run sandbox/production smoke verification; request/callback/verify and idempotent finalization are implemented. A provider refund adapter remains if automated refunds are required.
 - Configure private object/file storage at the web-server layer so `/media/` cannot expose private book files directly; the application reader already uses a protected endpoint.
 - Add real transactional email/SMS providers and asynchronous job processing where needed.
 - Add full browser/mobile automated QA and visual regression coverage.
