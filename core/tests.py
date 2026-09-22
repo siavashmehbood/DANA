@@ -190,6 +190,8 @@ class RecommendationTests(TestCase):
         self.assertEqual(response['Cache-Control'],'private, no-store')
         self.assertEqual(response['X-Content-Type-Options'],'nosniff')
         self.assertIn("frame-ancestors 'self'",response['Content-Security-Policy'])
+        self.assertEqual(response['X-Robots-Tag'],'noindex, nofollow')
+        self.assertEqual(response['Referrer-Policy'],'same-origin')
 
 
     def test_subscription_accessible_book_is_not_recommended(self):
