@@ -2,6 +2,7 @@ import json
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from analytics.models import Event
 
@@ -13,6 +14,7 @@ ALLOWED_EVENT_NAMES = {
 
 @login_required
 @require_POST
+@never_cache
 def event(request):
     key = f'dana-api-event:{request.user.pk}'
     count = cache.get(key, 0)
