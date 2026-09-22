@@ -93,3 +93,8 @@ class EventApiTests(TestCase):
         response = self.client.post(self.url, data={'name': 'book_viewed'})
         self.assertEqual(response.status_code, 415)
         self.assertEqual(response.json()['error'], 'json_required')
+
+
+    def test_event_accepts_json_charset_content_type(self):
+        response = self.client.post(self.url, data=json.dumps({'name': 'book_viewed'}), content_type='application/json; charset=utf-8')
+        self.assertEqual(response.status_code, 200)
