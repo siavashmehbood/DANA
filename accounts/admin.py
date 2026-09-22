@@ -95,8 +95,10 @@ class DeviceAdmin(admin.ModelAdmin):
     list_display = ('user', 'name', 'last_seen', 'created_at')
     search_fields = ('user__username', 'user__phone', 'name')
     list_filter = ('last_seen',)
-    readonly_fields = ('token', 'created_at', 'last_seen')
+    readonly_fields = ('user', 'name', 'token', 'created_at', 'last_seen')
     date_hierarchy = 'last_seen'
+    def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
 
 
 @admin.register(OTPCode)
@@ -105,8 +107,10 @@ class OTPCodeAdmin(admin.ModelAdmin):
     list_filter = ('purpose', 'used', 'created_at')
     search_fields = ('phone',)
     exclude = ('code',)
-    readonly_fields = ('created_at',)
+    readonly_fields = ('phone', 'purpose', 'expires_at', 'attempts', 'used', 'created_at')
     date_hierarchy = 'created_at'
+    def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
 
 
 @admin.register(UserSession)
@@ -114,5 +118,7 @@ class UserSessionAdmin(admin.ModelAdmin):
     list_display = ('user', 'device', 'ip', 'last_seen', 'created_at')
     search_fields = ('user__username', 'user__phone', 'ip')
     list_filter = ('last_seen', 'created_at')
-    readonly_fields = ('session_key', 'user_agent', 'ip', 'created_at', 'last_seen')
+    readonly_fields = ('user', 'device', 'session_key', 'user_agent', 'ip', 'created_at', 'last_seen')
     date_hierarchy = 'last_seen'
+    def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
