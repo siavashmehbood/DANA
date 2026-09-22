@@ -176,7 +176,8 @@ def save_word(request, slug):
     word=re.sub(r'\s+',' ',request.POST.get('word','').strip())
     if not word: return JsonResponse({'ok':False,'error':'کلمه یا عبارت خالی است.'},status=400)
     if len(word)>180: return JsonResponse({'ok':False,'error':'کلمه یا عبارت بیش از حد طولانی است.'},status=400)
-    item,created=SavedWord.objects.get_or_create(user=request.user,normalized_word=word.casefold(),defaults={'word':word,'article':article})
+    normalized=' '.join(word.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').casefold().split())
+    item,created=SavedWord.objects.get_or_create(user=request.user,normalized_word=normalized,defaults={'word':word,'article':article})
     if not created and not item.article_id: item.article=article; item.save(update_fields=['article'])
     return JsonResponse({'ok':True,'created':created,'id':item.id,'word':item.word})
 
