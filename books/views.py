@@ -125,9 +125,16 @@ def detail(request,slug):
     has_access = _has_book_access(request.user, book)
     has_audio = bool(book.audio) or any(ch.audio for ch in book.chapters.all())
     saved_audio_seconds=0
+    saved_progress=0
     if request.user.is_authenticated and has_access:
-        saved_audio_seconds=ReadingProgress.objects.filter(user=request.user,book=book).values_list('audio_seconds',flat=True).first() or 0
-    response=render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count'],'approved_reviews':approved_reviews,'saved_audio_seconds':saved_audio_seconds,'has_audio':has_audio})
+        progress_row=ReadingProgress.objects.filter(user=request.user,book=book).values('progress','audio_seconds').first()
+        if progress_row:
+            saved_progress=progress_row['progress'] or 0
+            saved_audio_seconds=progress_row['audio_seconds'] or 0
+        latest_audio=AudioProgress.objects.filter(user=request.user,book=book).order_by('-updated_at').values_list('position_seconds',flat=True).first()
+        if latest_audio:
+            saved_audio_seconds=max(saved_audio_seconds,latest_audio)
+    response=render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count'],'approved_reviews':approved_reviews,'saved_progress':saved_progress,'saved_audio_seconds':saved_audio_seconds,'has_audio':has_audio})
     if request.user.is_authenticated or book.visibility != 'public':
         response['Cache-Control']='private, no-store'
         response['Vary']='Cookie'
