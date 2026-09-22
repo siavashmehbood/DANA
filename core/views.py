@@ -65,6 +65,7 @@ def protected_book_pdf(request, pk):
     response = FileResponse(book.pdf.open('rb'), content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="book-{book.pk}.pdf"'
     response['X-Content-Type-Options'] = 'nosniff'
+    response['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'self'; sandbox allow-scripts allow-same-origin"
     response['Cache-Control'] = 'private, no-store'
     response['Content-Length'] = str(size)
     return response
