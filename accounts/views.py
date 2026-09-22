@@ -111,7 +111,8 @@ def profile(request):
     goal,_=ReadingGoal.objects.get_or_create(user=request.user)
     week_start=timezone.now()-timedelta(days=7)
     weekly_seconds=sum(ReadingProgress.objects.filter(user=request.user,updated_at__gte=week_start).values_list('seconds',flat=True))
-    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':weekly_seconds//60})
+    weekly_audio_seconds=sum(ReadingProgress.objects.filter(user=request.user,updated_at__gte=week_start).values_list('audio_seconds',flat=True))
+    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':(weekly_seconds+weekly_audio_seconds)//60})
 
 @login_required
 def logout_others(request):
