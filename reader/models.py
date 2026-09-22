@@ -41,6 +41,11 @@ class Note(models.Model):
         constraints=[models.UniqueConstraint(fields=['user','book','page','text'],name='unique_reader_note')]
         indexes=[models.Index(fields=['user','book','-created_at'],name='reader_note_recent_idx')]
 class ProblemReport(models.Model): user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); text=models.TextField(); status=models.CharField(max_length=20,default='open'); created_at=models.DateTimeField(auto_now_add=True)
+class ReadingGoal(models.Model):
+    user=models.OneToOneField(User,on_delete=models.CASCADE,related_name='reading_goal')
+    weekly_minutes=models.PositiveIntegerField(default=120,validators=[MinValueValidator(1),MaxValueValidator(10080)])
+    weekly_books=models.PositiveSmallIntegerField(default=1,validators=[MinValueValidator(1),MaxValueValidator(100)])
+    updated_at=models.DateTimeField(auto_now=True)
 class Review(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); rating=models.PositiveSmallIntegerField(default=5,validators=[MinValueValidator(1),MaxValueValidator(5)]); text=models.TextField(); admin_score=models.PositiveSmallIntegerField(null=True,blank=True,validators=[MinValueValidator(1),MaxValueValidator(10)]); admin_reply=models.TextField(blank=True); approved=models.BooleanField(default=False); created_at=models.DateTimeField(auto_now_add=True)
     class Meta: constraints=[models.UniqueConstraint(fields=['user','book'],name='unique_review_per_user_book')]
