@@ -555,3 +555,18 @@ class AudioResumeCursorTests(TestCase):
         progress.refresh_from_db()
         self.assertEqual(progress.position_seconds,45)
         self.assertFalse(progress.completed)
+
+
+class AudioStudyTimeIntegrityTests(TestCase):
+    def test_audio_resume_cursor_does_not_inflate_reading_time(self):
+        user=User.objects.create_user(username='audio-time-integrity',password='pass12345')
+        author=Author.objects.create(name='Audio Time Author')
+        book=Book.objects.create(name='Audio Time Book',slug='audio-time-book',author=author,status='published',visibility='public',price=0)
+        book.audio=SimpleUploadedFile('audio-time.mp3',b'audio',content_type='audio/mpeg')
+        book.save(update_fields=['audio'])
+        self.client.force_login(user)
+        response=self.client.post(reverse('audio_progress',args=[book.pk]),{'position':'1800','duration':'3600'})
+        self.assertEqual(response.status_code,200)
+        aggregate=ReadingProgress.objects.get(user=user,book=book)
+        self.assertEqual(aggregate.audio_seconds,0)
+        self.assertFalse(UserStreak.objects.filter(user=user).exists())
