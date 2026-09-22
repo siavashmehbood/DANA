@@ -9,6 +9,7 @@ urlpatterns = [
     path('bank-checkout/', bank_checkout, name='bank_checkout'),
     path('payment/callback/', payment_callback, name='payment_callback'),
     path('subscriptions/', subscriptions, name='subscriptions'),
+    path('subscriptions/<slug:slug>/activate/', subscribe, name='subscribe'),
     path('orders/', orders, name='orders'),
     path('orders/<str:tracking_code>/', order_detail, name='order_detail'),
     path('wallet/', wallet, name='wallet'),
