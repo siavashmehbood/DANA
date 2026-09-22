@@ -61,3 +61,7 @@ progress{width:100%;min-height:12px;accent-color:var(--dana-accent)}
 @media(max-width:380px){.stats,.profile-actions{grid-template-columns:1fr!important}}
 
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+
+/* Commerce completion: keep checkout/subscription actions usable on narrow RTL screens */
+.steps{list-style:none;margin:0;padding:0}.steps li{color:var(--dana-muted)}.steps li[aria-current="step"]{color:var(--dana-text);font-weight:800}
+@media(max-width:650px){.checkout-layout{grid-template-columns:1fr!important}.checkout-form,.cart-summary{min-width:0}.checkout-pay{width:100%;text-align:center}.coupon-row{display:grid!important;grid-template-columns:1fr!important;gap:8px}.coupon-row input,.coupon-row .btn{width:100%;min-width:0}.steps{display:grid!important;grid-template-columns:1fr!important;gap:6px}.steps li{padding:8px 10px;border-inline-start:3px solid var(--dana-line)}.steps li[aria-current="step"]{border-inline-start-color:var(--dana-accent)}.wallet-row{align-items:flex-start!important;gap:8px;flex-wrap:wrap}.wallet-row>strong{margin-inline-start:auto}.section>.grid>.card form .btn,.section>.grid>.card>a.btn{width:100%;text-align:center}}
