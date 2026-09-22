@@ -47,13 +47,13 @@ def listing(request):
     if category:
         articles = articles.filter(category__slug=category)
     if sort == 'popular':
-        articles = articles.order_by('-downloads', '-citation_count', '-relevance_score', '-year', '-created_at')
+        articles = articles.order_by('-downloads', '-citation_count', '-relevance_score', '-year', '-created_at', '-id')
     elif sort == 'top':
-        articles = articles.order_by('-relevance_score', '-citation_count', '-downloads', '-year', '-created_at')
+        articles = articles.order_by('-relevance_score', '-citation_count', '-downloads', '-year', '-created_at', '-id')
     elif sort == 'oldest':
-        articles = articles.order_by('year', 'created_at')
+        articles = articles.order_by('year', 'created_at', 'id')
     elif sort == 'newest':
-        articles = articles.order_by('-created_at')
+        articles = articles.order_by('-created_at', '-id')
     paginator = Paginator(articles, 24)
     page_obj = paginator.get_page(request.GET.get('page', 1))
     for article in page_obj.object_list:
