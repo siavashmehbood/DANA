@@ -611,3 +611,18 @@ class ExpiredSubscriptionRecoveryTests(TestCase):
         detail=self.client.get(reverse('book_detail',kwargs={'slug':book.slug}))
         self.assertFalse(detail.context['has_access'])
         self.assertContains(detail,'بررسی اشتراک')
+
+
+class AudioListeningActivityTests(TestCase):
+    def test_audio_listened_delta_is_tracked_separately_from_resume_cursor(self):
+        from .models import ListeningActivity
+        user=User.objects.create_user(username='audio-activity',password='pass12345')
+        author=Author.objects.create(name='Audio Activity Author')
+        book=Book.objects.create(name='Audio Activity Book',slug='audio-activity-book',author=author,status='published',visibility='public',price=0)
+        book.audio=SimpleUploadedFile('activity.mp3',b'audio',content_type='audio/mpeg')
+        book.save(update_fields=['audio'])
+        self.client.force_login(user)
+        response=self.client.post(reverse('audio_progress',args=[book.pk]),{'position':'1800','duration':'3600','listened_delta':'30'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(ListeningActivity.objects.filter(user=user,book=book).values_list('seconds',flat=True).get(),30)
+        self.assertEqual(ReadingProgress.objects.get(user=user,book=book).audio_seconds,0)
