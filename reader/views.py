@@ -299,6 +299,7 @@ def audio_progress(request, pk):
             item.save(update_fields=['position_seconds','duration_seconds','completed','updated_at'])
     aggregate=ReadingProgress.objects.filter(user=request.user,book=book).first()
     listened=AudioProgress.objects.filter(user=request.user,book=book).aggregate(total=models.Sum('position_seconds'))['total'] or 0
+    previous_audio_seconds=aggregate.audio_seconds if aggregate else 0
     audio_complete=completed and chapter is None
     if chapter is not None and completed:
         audio_chapter_ids=list(book.chapters.exclude(audio='').values_list('id',flat=True))
@@ -310,4 +311,6 @@ def audio_progress(request, pk):
         if chapter is not None: aggregate.current_chapter=chapter
         if audio_complete: aggregate.progress=100
         aggregate.save(update_fields=['audio_seconds','current_chapter','progress','updated_at'])
+    if listened > previous_audio_seconds:
+        record_study_activity(request.user)
     return JsonResponse({'ok':True,'position':item.position_seconds,'duration':item.duration_seconds,'completed':item.completed})
