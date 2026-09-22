@@ -449,3 +449,20 @@ class ContentAwareBookActionsTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertNotContains(response,'شروع مطالعه')
         self.assertContains(response,'شنیدن کتاب')
+
+
+class BookDetailLatestActivityTests(TestCase):
+    def test_hybrid_book_prioritizes_newer_audio_resume(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from reader.models import ReadingProgress, AudioProgress
+        from shop.models import Entitlement
+        user=User.objects.create_user(username='detail-latest',password='pass12345')
+        author=Author.objects.create(name='Detail Latest Author')
+        book=Book.objects.create(name='Detail Hybrid',slug='detail-hybrid',author=author,status='published',visibility='private',pdf=SimpleUploadedFile('detail.pdf',b'%PDF-1.4',content_type='application/pdf'),audio=SimpleUploadedFile('detail.mp3',b'ID3',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=book)
+        ReadingProgress.objects.create(user=user,book=book,progress=35,current_page=4)
+        AudioProgress.objects.create(user=user,book=book,position_seconds=120,duration_seconds=500)
+        self.client.force_login(user)
+        response=self.client.get(reverse('book_detail',args=[book.slug]))
+        self.assertEqual(response.context['continue_kind'],'audio')
+        self.assertContains(response,'ادامه آخرین فعالیت: شنیدن')
