@@ -256,7 +256,8 @@ def subscribe(request, slug):
 def subscriptions(request):
     if request.method != 'GET':
         return redirect('subscriptions')
-    request.session['subscription_activation_key']=secrets.token_urlsafe(24)
+    if request.user.is_authenticated:
+        request.session['subscription_activation_key']=secrets.token_urlsafe(24)
     plans=SubscriptionPlan.objects.filter(active=True).order_by('-featured','price','duration_days','id')
     current=None
     if request.user.is_authenticated:
@@ -265,7 +266,7 @@ def subscriptions(request):
         current=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=now,expires_at__gt=now).select_related('plan').order_by('-expires_at').first()
         if current and not current.plan.active:
             messages.info(request,'این پلن دیگر برای خرید جدید ارائه نمی‌شود، اما اشتراک فعلی شما تا پایان اعتبار فعال است.')
-    response=render(request,'shop/subscriptions.html',{'plans':plans,'current_subscription':current,'activation_key':request.session['subscription_activation_key']})
+    response=render(request,'shop/subscriptions.html',{'plans':plans,'current_subscription':current,'activation_key':request.session.get('subscription_activation_key','')})
     if request.user.is_authenticated:
         response['Cache-Control']='private, no-store'
         response['X-Robots-Tag']='noindex, nofollow'
