@@ -204,6 +204,10 @@ def orders(request):
 def subscribe(request, slug):
     if request.method != 'POST':
         return redirect('subscriptions')
+    activation_key=request.POST.get('activation_key','')
+    if not activation_key or activation_key != request.session.get('subscription_activation_key'):
+        messages.error(request,'درخواست فعال‌سازی نامعتبر یا تکراری است؛ صفحه را دوباره باز کنید.')
+        return redirect('subscriptions')
     with transaction.atomic():
         user=User.objects.select_for_update().get(pk=request.user.pk)
         plan=get_object_or_404(SubscriptionPlan,slug=slug,active=True)
@@ -234,14 +238,17 @@ def subscribe(request, slug):
             messages.success(request,'اشتراک با موفقیت از کیف پول فعال شد.')
         else:
             messages.success(request,'اشتراک رایگان فعال شد.')
+        request.session.pop('subscription_activation_key',None)
     return redirect('subscriptions')
 
 
 def subscriptions(request):
+    if 'subscription_activation_key' not in request.session:
+        request.session['subscription_activation_key']=secrets.token_urlsafe(24)
     plans=SubscriptionPlan.objects.filter(active=True).order_by('-featured','price','duration_days')
     current=None
     if request.user.is_authenticated:
         now=timezone.now()
         Subscription.objects.filter(user=request.user,status='active',expires_at__lte=now).update(status='expired')
         current=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=now,expires_at__gt=now,plan__active=True).select_related('plan').order_by('-expires_at').first()
-    return render(request,'shop/subscriptions.html',{'plans':plans,'current_subscription':current})
+    return render(request,'shop/subscriptions.html',{'plans':plans,'current_subscription':current,'activation_key':request.session['subscription_activation_key']})
