@@ -294,6 +294,15 @@ class ShopFlowTests(TestCase):
         self.assertEqual(WalletTransaction.objects.filter(user=self.user,reason='Subscription purchase').count(),1)
 
 
+    def test_queued_same_plan_is_not_extended_early(self):
+        plan=SubscriptionPlan.objects.create(name='Queued same',slug='queued-same',price=0,duration_days=30)
+        now=timezone.now()
+        queued=Subscription.objects.create(user=self.user,plan=plan,status='active',starts_at=now+timedelta(days=1),expires_at=now+timedelta(days=31))
+        original_expiry=queued.expires_at
+        self._subscribe(plan)
+        queued.refresh_from_db()
+        self.assertEqual(queued.expires_at,original_expiry)
+
     def test_queued_subscription_blocks_overlapping_second_plan(self):
         first=SubscriptionPlan.objects.create(name='First queued',slug='first-queued',price=0,duration_days=30)
         second=SubscriptionPlan.objects.create(name='Second queued',slug='second-queued',price=0,duration_days=30)
