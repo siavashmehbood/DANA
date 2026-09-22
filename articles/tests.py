@@ -298,3 +298,10 @@ class UnicodeArticleRouteTests(TestCase):
         article=Article.objects.create(title='مقاله فارسی',published=True,abstract='متن')
         response=self.client.get(reverse('article_detail',args=[article.slug]))
         self.assertEqual(response.status_code,200)
+
+
+class ArticleLanguageFallbackTests(TestCase):
+    def test_english_mode_falls_back_to_available_persian_content(self):
+        article=Article.objects.create(title='Persian only',slug='persian-only',published=True,abstract_fa='خلاصه فارسی')
+        response=self.client.get(reverse('article_detail',args=[article.slug]),{'lang':'en'})
+        self.assertEqual(response.context['language_mode'],'fa')
