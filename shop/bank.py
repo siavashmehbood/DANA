@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -71,7 +72,7 @@ def finalize_bank_order(order, payment):
 @login_required
 def bank_checkout(request):
     items = [i for i in CartItem.objects.filter(user=request.user).select_related('book') if i.book.is_published]
-    owned = set(Entitlement.objects.filter(user=request.user, book_id__in=[i.book_id for i in items]).filter(__import__('django.db.models',fromlist=['Q']).Q(expires_at__isnull=True)|__import__('django.db.models',fromlist=['Q']).Q(expires_at__gt=timezone.now())).values_list('book_id', flat=True))
+    owned = set(Entitlement.objects.filter(user=request.user, book_id__in=[i.book_id for i in items]).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id', flat=True))
     items = [i for i in items if i.book_id not in owned]
     if not items:
         CartItem.objects.filter(user=request.user).delete()
@@ -92,6 +93,8 @@ def bank_checkout(request):
             user = User.objects.select_for_update().get(pk=request.user.pk)
             locked_items = list(CartItem.objects.select_for_update().filter(user=user).select_related('book'))
             locked_items = [i for i in locked_items if i.book.is_published]
+            owned = set(Entitlement.objects.filter(user=user, book_id__in=[i.book_id for i in locked_items]).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id', flat=True))
+            locked_items = [i for i in locked_items if i.book_id not in owned]
             if not locked_items:
                 return redirect('cart')
             subtotal = sum((i.book.price for i in locked_items), Decimal(0))
