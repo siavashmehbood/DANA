@@ -141,6 +141,7 @@ def secure_file(request, pk, kind, chapter_id=None):
     extension=field.name.rsplit('.',1)[-1].lower() if '.' in field.name else 'bin'
     response['Content-Disposition'] = f'inline; filename="book-{book.pk}-{kind}.{extension}"'
     response['Cache-Control'] = 'private, no-store'
+    response['Vary'] = 'Cookie'
     response['X-Content-Type-Options'] = 'nosniff'
     response['X-Robots-Tag'] = 'noindex, nofollow'
     response['Referrer-Policy'] = 'same-origin'
