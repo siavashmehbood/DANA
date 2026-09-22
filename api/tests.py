@@ -49,3 +49,9 @@ class EventApiTests(TestCase):
         response = self.client.post(self.url, data=json.dumps({'name': 'reader_progress', 'value': 'lots'}), content_type='application/json')
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'invalid_value')
+
+
+    def test_event_records_session_attribution(self):
+        response = self.client.post(self.url, data=json.dumps({'name': 'book_viewed'}), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Event.objects.get().session_key)
