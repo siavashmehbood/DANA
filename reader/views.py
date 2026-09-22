@@ -28,10 +28,15 @@ def _has_access(user, book):
 @never_cache
 def reader(request, pk):
     book = get_object_or_404(Book.objects.prefetch_related('chapters'), pk=pk)
-    if not book.is_published: return HttpResponseForbidden('کتاب هنوز منتشر نشده است.')
+    if not book.is_published:
+        response=HttpResponseForbidden('کتاب هنوز منتشر نشده است.')
+        response['Cache-Control']='private, no-store'
+        return response
     accessible = _has_access(request.user, book)
     if not accessible:
-        return HttpResponseForbidden('برای مطالعه این کتاب دسترسی فعال لازم است.')
+        response=HttpResponseForbidden('برای مطالعه این کتاب دسترسی فعال لازم است.')
+        response['Cache-Control']='private, no-store'
+        return response
     owned = Entitlement.objects.filter(user=request.user,book=book).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).exists()
     saved = ReadingProgress.objects.filter(user=request.user, book=book).select_related('current_chapter').first()
     bookmark_query=request.GET.get('bookmark_q','').strip()[:150]
