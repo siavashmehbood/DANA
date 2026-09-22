@@ -38,3 +38,14 @@ class EventApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'unsupported_event')
         self.assertFalse(Event.objects.exists())
+
+
+    def test_event_accepts_bounded_numeric_value(self):
+        response = self.client.post(self.url, data=json.dumps({'name': 'reader_progress', 'value': 42}), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Event.objects.get().value, 42)
+
+    def test_event_rejects_non_numeric_value(self):
+        response = self.client.post(self.url, data=json.dumps({'name': 'reader_progress', 'value': 'lots'}), content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'invalid_value')
