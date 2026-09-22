@@ -400,5 +400,5 @@ class ShopFlowTests(TestCase):
         self.client.logout()
         response=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':'invalid'})
         self.assertEqual(response.status_code,302)
-        self.assertIn('/accounts/login/',response.url)
+        self.assertIn('/login/',response.url)
         self.assertFalse(Subscription.objects.filter(plan=plan).exists())
