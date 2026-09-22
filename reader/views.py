@@ -188,6 +188,7 @@ def vocabulary(request):
     query=request.GET.get('q','').strip()[:180]
     query=' '.join(query.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split())
     words=SavedWord.objects.filter(user=request.user).select_related('article')
+    words=words.filter(Q(article__isnull=True)|Q(article__published=True))
     if query:
         variants={query,query.replace('ی','ي').replace('ک','ك')}
         q=Q()
