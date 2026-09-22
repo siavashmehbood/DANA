@@ -207,13 +207,13 @@ def subscribe(request, slug):
     with transaction.atomic():
         user=User.objects.select_for_update().get(pk=request.user.pk)
         plan=get_object_or_404(SubscriptionPlan,slug=slug,active=True)
-        if Subscription.objects.filter(user=user,plan=plan,status='active',starts_at__gt=timezone.now()).exists():
+        now=timezone.now()
+        if Subscription.objects.filter(user=user,plan=plan,status='active',starts_at__gt=now).exists():
             messages.info(request,'تمدید این پلن از قبل برای شما ثبت شده است.')
             return redirect('subscriptions')
         if plan.price != 0:
             messages.info(request,'برای فعال‌سازی این پلن باید پرداخت اشتراک تکمیل شود.')
             return redirect('subscriptions')
-        now=timezone.now()
         current=Subscription.objects.select_for_update().filter(user=user,status='active',expires_at__gt=now).order_by('-expires_at').first()
         if current and current.plan_id == plan.id:
             start=current.expires_at
