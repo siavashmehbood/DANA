@@ -18,7 +18,7 @@ class ProtectedMediaTests(TestCase):
     def test_chapter_audio_requires_entitlement(self):
         self.client.force_login(self.user)
         url=reverse('chapter_secure_audio',args=[self.book.pk,self.chapter.pk])
-        self.assertEqual(self.client.get(url).status_code,403)
+        self.assertEqual(self.client.get(url).status_code,404)
         Entitlement.objects.create(user=self.user,book=self.book,source='admin')
         self.assertEqual(self.client.get(url).status_code,200)
     def test_chapter_from_another_book_cannot_be_injected(self):
