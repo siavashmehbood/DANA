@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, FileResponse, Http404
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
 from django.utils import timezone
@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.db import models, transaction
 from books.models import Book
 from shop.models import Entitlement, Subscription
-from .models import ReadingProgress, Bookmark, Highlight, Note, SavedWord, Review, ProblemReport
+from .models import ReadingProgress, AudioProgress, Bookmark, Highlight, Note, SavedWord, Review, ProblemReport
 from gamification.services import record_study_activity
 
 
@@ -245,3 +245,78 @@ def report_problem(request, pk):
         return JsonResponse({'error':'شرح مشکل خالی است.'},status=400)
     ProblemReport.objects.create(user=request.user,book=book,text=text)
     return JsonResponse({'ok':True,'message':'گزارش برای بررسی ثبت شد.'})
+
+
+@login_required
+@never_cache
+def audio_player(request, pk):
+    book=get_object_or_404(Book.objects.prefetch_related('chapters'),pk=pk)
+    if not book.is_published or not _has_access(request.user,book):
+        return HttpResponseForbidden('برای شنیدن این کتاب دسترسی فعال لازم است.')
+    chapters=list(book.chapters.exclude(audio='').order_by('order'))
+    has_book_audio=bool(book.audio)
+    if not chapters and not has_book_audio:
+        raise Http404
+    progress={p.chapter_id:p for p in AudioProgress.objects.filter(user=request.user,book=book)}
+    latest=AudioProgress.objects.filter(user=request.user,book=book).order_by('-updated_at').first()
+    response=render(request,'reader/audio_player.html',{'book':book,'chapters':chapters,'audio_progress':progress,'latest_audio':latest,'has_book_audio':has_book_audio})
+    response['Cache-Control']='private, no-store'
+    response['X-Robots-Tag']='noindex, nofollow'
+    response['Referrer-Policy']='same-origin'
+    return response
+
+
+@login_required
+@never_cache
+def protected_audio(request, pk, chapter_id=None):
+    book=get_object_or_404(Book,pk=pk)
+    if not book.is_published or not _has_access(request.user,book):
+        return HttpResponseForbidden('Access denied')
+    if chapter_id is None:
+        audio=book.audio
+    else:
+        try: audio=book.chapters.get(pk=chapter_id).audio
+        except (ValueError,TypeError,book.chapters.model.DoesNotExist): raise Http404
+    if not audio:
+        raise Http404
+    try: handle=audio.open('rb')
+    except (OSError,ValueError): raise Http404
+    response=FileResponse(handle,content_type='audio/mpeg')
+    response['Content-Disposition']=f'inline; filename="dana-audio-{book.pk}.mp3"'
+    response['Cache-Control']='private, no-store'
+    response['X-Content-Type-Options']='nosniff'
+    response['X-Robots-Tag']='noindex, nofollow'
+    response['Referrer-Policy']='same-origin'
+    return response
+
+
+@login_required
+@require_POST
+def audio_progress(request, pk):
+    book=get_object_or_404(Book,pk=pk)
+    if not book.is_published or not _has_access(request.user,book):
+        return HttpResponseForbidden('Access denied')
+    chapter_id=request.POST.get('chapter_id') or None
+    try:
+        position=max(0,min(31536000,int(float(request.POST.get('position',0)))))
+        duration=max(0,min(31536000,int(float(request.POST.get('duration',0)))))
+    except (TypeError,ValueError):
+        return JsonResponse({'error':'Invalid audio progress'},status=400)
+    chapter=None
+    if chapter_id:
+        try: chapter=book.chapters.get(pk=chapter_id)
+        except (ValueError,TypeError,book.chapters.model.DoesNotExist):
+            return JsonResponse({'error':'Invalid chapter'},status=400)
+    if chapter is None and not book.audio:
+        return JsonResponse({'error':'Audio unavailable'},status=400)
+    completed=bool(duration and position >= max(0,duration-5))
+    item,_=AudioProgress.objects.update_or_create(user=request.user,book=book,chapter=chapter,defaults={'position_seconds':position,'duration_seconds':duration,'completed':completed})
+    aggregate=ReadingProgress.objects.filter(user=request.user,book=book).first()
+    listened=AudioProgress.objects.filter(user=request.user,book=book).aggregate(total=models.Sum('position_seconds'))['total'] or 0
+    if aggregate is None:
+        aggregate=ReadingProgress.objects.create(user=request.user,book=book,audio_seconds=listened,current_chapter=chapter)
+    else:
+        aggregate.audio_seconds=max(aggregate.audio_seconds,listened)
+        if chapter is not None: aggregate.current_chapter=chapter
+        aggregate.save(update_fields=['audio_seconds','current_chapter','updated_at'])
+    return JsonResponse({'ok':True,'position':item.position_seconds,'duration':item.duration_seconds,'completed':item.completed})
