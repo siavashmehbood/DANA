@@ -4,7 +4,7 @@
 {% block og_title %}اشتراک دانا{% endblock %}
 {% block og_description %}پلن‌های اشتراک دانا برای مطالعه و شنیدن.{% endblock %}
 {% block content %}
-<section class="section"><div class="section-title"><div><span class="shelf-label">DANA PLUS</span><h1>اشتراک دانا</h1><p>پلن مناسب خودت را ببین؛ پلن‌های عضویت و وضعیت اشتراک خود را اینجا ببین.</p></div></div>
+<section class="section"><div class="section-title"><div><span class="shelf-label">DANA PLUS</span><h1>اشتراک دانا</h1><p>پلن مناسب مطالعه و شنیدن را انتخاب کن و وضعیت عضویتت را یک‌جا ببین.</p></div></div>
 {% if current_subscription %}<div class="panel"><b>اشتراک فعال: {{current_subscription.plan.name}}</b><p>اعتبار تا {{current_subscription.expires_at}}</p></div>{% endif %}
 <div class="grid" aria-label="پلن‌های اشتراک">{% for plan in plans %}<article class="card">{% if plan.featured %}<span class="badge">پیشنهاد دانا</span>{% endif %}<h2>{{plan.name}}</h2><p>{{plan.description}}</p><strong>{% if plan.price %}{{plan.price}} تومان{% else %}رایگان{% endif %}</strong><p>{{plan.duration_days}} روز</p>{% if plan.grants_catalog_access %}<span class="badge">دسترسی به کاتالوگ اشتراکی</span>{% endif %}{% if plan.price == 0 %}{% if user.is_authenticated %}<form method="post" action="{% url 'subscribe' plan.slug %}">{% csrf_token %}<button class="btn" type="submit">فعال‌سازی رایگان</button></form>{% else %}<a class="btn" href="{% url 'login' %}?next={% url 'subscriptions' %}">ورود برای فعال‌سازی</a>{% endif %}{% else %}<span class="muted">جزئیات خرید این پلن در حساب کاربری نمایش داده می‌شود.</span>{% endif %}</article>{% empty %}<div class="empty"><h2>پلن فعالی وجود ندارد</h2><p>مدیر محتوا می‌تواند پلن‌ها را از پنل مدیریت تنظیم کند.</p></div>{% endfor %}</div></section>
 {% endblock %}
