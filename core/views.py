@@ -112,6 +112,7 @@ def robots_txt(request):
 def sitemap_xml(request):
     base=request.build_absolute_uri('/').rstrip('/')
     urls=[base+'/',base+'/books/',base+'/articles/',base+'/shop/subscriptions/']
+    urls=list(dict.fromkeys(urls))
     urls += [base+'/books/'+slug+'/' for slug in Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public').values_list('slug',flat=True)[:5000]]
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
     urls += [base+'/articles/'+slug+'/' for slug in Article.objects.filter(published=True).filter(readable).values_list('slug',flat=True)[:5000]]
