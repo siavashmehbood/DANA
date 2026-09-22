@@ -35,3 +35,11 @@ class SupportFlowTests(TestCase):
         response=self.client.post(reverse('tickets'),{'subject':'Help','body':'Duplicate'},follow=True)
         self.assertEqual(Ticket.objects.filter(user=self.owner,subject='Help').count(),1)
         self.assertContains(response,'یک درخواست باز با همین موضوع دارید')
+
+    def test_resolved_ticket_rejects_customer_reply(self):
+        self.ticket.status='resolved'
+        self.ticket.save(update_fields=['status'])
+        self.client.force_login(self.owner)
+        response=self.client.post(reverse('ticket_reply',args=[self.ticket.pk]),{'body':'reopen'})
+        self.assertEqual(response.status_code,302)
+        self.assertFalse(TicketMessage.objects.filter(ticket=self.ticket,body='reopen').exists())
