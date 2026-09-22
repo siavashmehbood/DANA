@@ -208,6 +208,8 @@ def orders(request):
 def subscribe(request, slug):
     if request.method != 'POST':
         return redirect('subscriptions')
+    if not request.user.is_authenticated:
+        return redirect(f'/accounts/login/?next=/shop/subscriptions/')
     activation_key=request.POST.get('activation_key','')
     if not activation_key or activation_key != request.session.get('subscription_activation_key'):
         messages.error(request,'درخواست فعال‌سازی نامعتبر یا تکراری است؛ صفحه را دوباره باز کنید.')
