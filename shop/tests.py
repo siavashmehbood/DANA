@@ -424,3 +424,17 @@ class ShopFlowTests(TestCase):
         response=self.client.get(reverse('subscriptions'))
         self.assertEqual(response.context['activation_key'],'')
         self.assertNotIn('subscription_activation_key',self.client.session)
+
+
+    def test_same_plan_renewal_extends_existing_active_subscription(self):
+        plan=SubscriptionPlan.objects.create(name='Renewable',slug='renewable',price=0,duration_days=30)
+        current=Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        old_expiry=current.expires_at
+        self.client.login(username='buyer',password='pass12345')
+        self.client.get(reverse('subscriptions'))
+        key=self.client.session['subscription_activation_key']
+        response=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key})
+        self.assertEqual(response.status_code,302)
+        current.refresh_from_db()
+        self.assertEqual(Subscription.objects.filter(user=self.user,status='active').count(),1)
+        self.assertGreater(current.expires_at,old_expiry+timedelta(days=29))
