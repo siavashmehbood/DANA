@@ -51,9 +51,11 @@ def home(request):
         owned_ids.update(AudioProgress.objects.filter(user=request.user).values_list('book_id',flat=True))
         rated_categories=Review.objects.filter(user=request.user,approved=True,rating__gte=4,book__category__isnull=False).values_list('book__category_id',flat=True)
         active_categories=ReadingProgress.objects.filter(user=request.user,progress__gt=0,book__category__isnull=False).values_list('book__category_id',flat=True)
+        audio_categories=AudioProgress.objects.filter(user=request.user,position_seconds__gt=0,book__category__isnull=False).values_list('book__category_id',flat=True)
         completed_categories=ReadingProgress.objects.filter(user=request.user,progress__gte=100,book__category__isnull=False).values_list('book__category_id',flat=True)
-        recent_category_ids=list(ReadingProgress.objects.filter(user=request.user,book__category__isnull=False).order_by('-updated_at').values_list('book__category_id',flat=True)[:12])
-        preferred_categories=set(owned_categories)|set(rated_categories)|set(active_categories)|set(completed_categories)|set(recent_category_ids)
+        recent_text_categories=list(ReadingProgress.objects.filter(user=request.user,book__category__isnull=False).order_by('-updated_at').values_list('book__category_id',flat=True)[:12])
+        recent_audio_categories=list(AudioProgress.objects.filter(user=request.user,book__category__isnull=False).order_by('-updated_at').values_list('book__category_id',flat=True)[:12])
+        preferred_categories=set(owned_categories)|set(rated_categories)|set(active_categories)|set(audio_categories)|set(completed_categories)|set(recent_text_categories)|set(recent_audio_categories)
         recommendations=base.filter(category_id__in=preferred_categories).exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at').distinct()[:8]
         if not recommendations.exists():
             recommendations=base.exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
