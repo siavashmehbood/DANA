@@ -556,3 +556,15 @@ class GuestCartHandoffTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertTrue(CartItem.objects.filter(user=user,book=self.book).exists())
         self.assertNotIn('pending_cart_book_id',self.client.session)
+
+
+class BankCheckoutEntryPointTests(TestCase):
+    def test_checkout_uses_post_for_bank_payment_action(self):
+        user=User.objects.create_user(username='bank-entry',password='pass12345')
+        author=Author.objects.create(name='Bank Entry Author')
+        book=Book.objects.create(name='Bank Entry Book',slug='bank-entry-book',author=author,status='published',price=Decimal('1000'))
+        CartItem.objects.create(user=user,book=book)
+        self.client.force_login(user)
+        response=self.client.get(reverse('checkout'))
+        self.assertContains(response,'formaction="'+reverse('bank_checkout')+'"')
+        self.assertContains(response,'formmethod="post"')
