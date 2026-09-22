@@ -118,12 +118,14 @@ def secure_file(request, pk, kind, chapter_id=None):
     if not request.user.is_authenticated:
         response=HttpResponseForbidden('ورود لازم است.')
         response['Cache-Control']='private, no-store'
+        response['X-Robots-Tag']='noindex, nofollow'
         return response
     if book.visibility == 'password':
         raise Http404
     if not _has_book_access(request.user, book):
         response=HttpResponseForbidden('دسترسی به این فایل ندارید.')
         response['Cache-Control']='private, no-store'
+        response['X-Robots-Tag']='noindex, nofollow'
         return response
     if kind == 'chapter_audio':
         chapter = book.chapters.filter(pk=chapter_id).first()
