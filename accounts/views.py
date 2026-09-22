@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.contrib import auth, messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.sessions.models import Session
 from django.core.cache import cache
 from django.conf import settings
 from django.shortcuts import render, redirect
@@ -119,7 +120,11 @@ def profile(request):
 
 @login_required
 def logout_others(request):
-    if request.method=='POST': UserSession.objects.filter(user=request.user).exclude(session_key=request.session.session_key).delete(); messages.success(request,'جلسات دیگر بسته شدند.')
+    if request.method=='POST':
+        other_keys=list(UserSession.objects.filter(user=request.user).exclude(session_key=request.session.session_key).values_list('session_key',flat=True))
+        Session.objects.filter(session_key__in=other_keys).delete()
+        UserSession.objects.filter(session_key__in=other_keys).delete()
+        messages.success(request,'جلسات دیگر بسته شدند.')
     return redirect('profile')
 
 @login_required
