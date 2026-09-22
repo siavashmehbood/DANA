@@ -99,7 +99,15 @@ def dashboard(request):
         has_text=bool(item.book.pdf) or any(bool(ch.text and ch.text.strip()) for ch in item.book.chapters.all())
         has_audio=bool(item.book.audio) or any(bool(ch.audio) for ch in item.book.chapters.all())
         progress_rows.append({'progress':item,'book':item.book,'has_text':has_text,'has_audio':has_audio})
-    return render(request,'dashboard.html',{'books_count':len(valid_book_ids) if subscription else owned_count,'article_count':Article.objects.filter(published=True).count(),'vocabulary_count':user.saved_words.count(),'cart_count':CartItem.objects.filter(user=user).count(),'latest_articles':Article.objects.filter(published=True).order_by('-created_at')[:5],'owned_books':owned[:8],'reading_progress':progress_rows})
+    latest_text=ReadingProgress.objects.filter(user=user,book_id__in=valid_book_ids,progress__gt=0,progress__lt=100).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book').order_by('-updated_at').first()
+    latest_audio=AudioProgress.objects.filter(user=user,book_id__in=valid_book_ids,position_seconds__gt=0,completed=False).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book').order_by('-updated_at').first()
+    continue_item=None
+    if latest_text or latest_audio:
+        if latest_audio and (not latest_text or latest_audio.updated_at > latest_text.updated_at):
+            continue_item={'book':latest_audio.book,'kind':'audio'}
+        else:
+            continue_item={'book':latest_text.book,'kind':'text'}
+    return render(request,'dashboard.html',{'books_count':len(valid_book_ids) if subscription else owned_count,'article_count':Article.objects.filter(published=True).count(),'vocabulary_count':user.saved_words.count(),'cart_count':CartItem.objects.filter(user=user).count(),'latest_articles':Article.objects.filter(published=True).order_by('-created_at')[:5],'owned_books':owned[:8],'reading_progress':progress_rows,'continue_item':continue_item})
 
 @login_required
 @never_cache
