@@ -105,6 +105,8 @@ def profile(request):
             request.user.avatar=avatar
         new_password=request.POST.get('new_password','')
         if new_password:
+            if not request.user.check_password(request.POST.get('current_password','')):
+                messages.error(request,'برای تغییر رمز، رمز فعلی را وارد کنید.'); return redirect('profile')
             if len(new_password)<8: messages.error(request,'رمز عبور باید حداقل ۸ کاراکتر باشد.'); return redirect('profile')
             request.user.set_password(new_password); update_session_auth_hash(request,request.user)
         request.user.save(); messages.success(request,'پروفایل به‌روز شد.')
