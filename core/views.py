@@ -25,7 +25,11 @@ def home(request):
     continue_reading=[]
     if request.user.is_authenticated:
         valid_books=Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True)
-        continue_reading=ReadingProgress.objects.filter(user=request.user,book_id__in=valid_books,progress__gt=0,progress__lt=100).select_related('book__author').order_by('-updated_at')[:6]
+        subscription_access=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True,plan__grants_catalog_access=True).exists()
+        readable_progress=Q(book_id__in=valid_books)|Q(book__visibility='public',book__price=0)
+        if subscription_access:
+            readable_progress |= Q(book__subscription_included=True)
+        continue_reading=ReadingProgress.objects.filter(readable_progress,user=request.user,book__status='published',progress__gt=0,progress__lt=100).select_related('book__author').order_by('-updated_at')[:6]
         owned_categories=Entitlement.objects.filter(user=request.user,book__category__isnull=False).values_list('book__category_id',flat=True)
         owned_ids=Entitlement.objects.filter(user=request.user).values_list('book_id',flat=True)
         rated_categories=Review.objects.filter(user=request.user,approved=True,rating__gte=4,book__category__isnull=False).values_list('book__category_id',flat=True)
