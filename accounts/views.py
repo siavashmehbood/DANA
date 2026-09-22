@@ -162,7 +162,7 @@ def logout_view(request):
 @never_cache
 def library(request):
     user=request.user
-    now=now
+    now=timezone.now()
     owned=list(Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=now)).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=now)).select_related('book__author','book__category').prefetch_related('book__chapters').order_by('-granted_at'))
     active_subscription=Subscription.objects.filter(user=user,status='active',starts_at__lte=now,expires_at__gt=now,plan__grants_catalog_access=True).select_related('plan').first()
     entitled_ids={item.book_id for item in owned}
