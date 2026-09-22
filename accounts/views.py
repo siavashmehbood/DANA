@@ -207,10 +207,12 @@ def library(request):
     elif sort=='progress': rows.sort(key=effective_progress,reverse=True)
     visible_count=len(rows)
     preferred_categories={book.category_id for book in books if book.category_id}
-    excluded_recommendation_ids=set(book_ids)
-    excluded_recommendation_ids.update(Entitlement.objects.filter(user=user).values_list('book_id',flat=True))
-    if active_subscription:
-        excluded_recommendation_ids.update(Book.objects.filter(subscription_included=True).values_list('id',flat=True))
+    # Exclude books the reader already owns or has engaged with. An active
+    # subscription is access to a catalog, not ownership of every title; excluding
+    # the whole catalog made recommendations disappear for subscribers.
+    excluded_recommendation_ids=set(Entitlement.objects.filter(user=user).values_list('book_id',flat=True))
+    excluded_recommendation_ids.update(ReadingProgress.objects.filter(user=user).values_list('book_id',flat=True))
+    excluded_recommendation_ids.update(AudioProgress.objects.filter(user=user).values_list('book_id',flat=True))
     if not preferred_categories:
         preferred_categories=set(ReadingProgress.objects.filter(user=user,book__category__isnull=False).exclude(book_id__in=excluded_recommendation_ids).values_list('book__category_id',flat=True)[:20])
     recommendation_base=Book.objects.all()
