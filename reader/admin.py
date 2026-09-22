@@ -51,6 +51,7 @@ class BookmarkAdmin(ModelAdmin):
     search_fields=('user__username','user__phone','book__name','title')
     readonly_fields=('user','book','page','title','created_at')
     def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
 
 @admin.register(Highlight)
 class HighlightAdmin(ModelAdmin):
@@ -59,6 +60,7 @@ class HighlightAdmin(ModelAdmin):
     search_fields=('user__username','user__phone','book__name','text')
     readonly_fields=('user','book','page','text','color','created_at')
     def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
 
 @admin.register(Note)
 class NoteAdmin(ModelAdmin):
@@ -66,6 +68,7 @@ class NoteAdmin(ModelAdmin):
     search_fields=('user__username','user__phone','book__name','text')
     readonly_fields=('user','book','page','text','created_at')
     def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
 
 @admin.register(AudioProgress)
 class AudioProgressAdmin(ModelAdmin):
@@ -84,4 +87,4 @@ class ProblemReportAdmin(ModelAdmin):
     search_fields=('book__name','user__username','user__phone','text')
     list_editable=('status',)
     autocomplete_fields=('book','user')
-    readonly_fields=('created_at',)
+    readonly_fields=('book','user','text','created_at')
