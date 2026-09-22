@@ -444,3 +444,18 @@ class LibraryLatestActivityTests(TestCase):
         row=response.context['library_rows'][0]
         self.assertEqual(row['latest_kind'],'audio')
         self.assertContains(response,'ادامه آخرین فعالیت: شنیدن')
+
+
+class DashboardUnifiedActivityShelfTests(TestCase):
+    def test_audio_only_activity_appears_in_dashboard_library_shelf(self):
+        from reader.models import AudioProgress
+        user=User.objects.create_user(username='dashboard-audio-shelf',password='pass12345')
+        author=Author.objects.create(name='Dashboard Audio Shelf Author')
+        book=Book.objects.create(name='Shelf Audio Book',slug='shelf-audio-book',author=author,status='published',audio=SimpleUploadedFile('shelf.mp3',b'ID3shelf',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=book)
+        AudioProgress.objects.create(user=user,book=book,position_seconds=75,duration_seconds=400)
+        self.client.force_login(user)
+        response=self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['reading_progress'][0]['kind'],'audio')
+        self.assertContains(response,'ادامه شنیدن از 75 ثانیه')
+        self.assertContains(response,reverse('audio_player',args=[book.id]))
