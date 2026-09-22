@@ -73,6 +73,7 @@ class UserAdmin(BaseUserAdmin):
         with transaction.atomic():
             locked = User.objects.select_for_update().get(pk=obj.pk)
             if topup > 0:
+                balance_before = locked.wallet_balance
                 locked.wallet_balance += topup
                 locked.save(update_fields=['wallet_balance'])
                 WalletTransaction.objects.create(
@@ -80,6 +81,8 @@ class UserAdmin(BaseUserAdmin):
                     amount=topup,
                     type='credit',
                     reason=f'شارژ توسط مدیر: {request.user.username}',
+                    balance_before=balance_before,
+                    balance_after=locked.wallet_balance,
                     reference=f'admin-topup:{request.user.pk}:{obj.pk}:{secrets.token_hex(8)}',
                 )
                 messages.success(request, f'{topup:,.0f} تومان به کیف پول کاربر اضافه شد.')
