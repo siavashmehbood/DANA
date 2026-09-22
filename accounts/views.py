@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.contrib import auth, messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.sessions.models import Session
 from django.core.cache import cache
 from django.conf import settings
@@ -49,7 +50,7 @@ def login_view(request):
         if not request.POST.get('terms'): messages.error(request,'پذیرش قوانین الزامی است.'); return redirect('login')
         if _rate_limited(f'dana-otp:{phone}:{ip}',5,3600): messages.error(request,'تعداد درخواست کد زیاد است؛ بعداً دوباره تلاش کنید.'); return redirect('login')
         if OTPCode.objects.filter(phone=phone,purpose='login',created_at__gt=timezone.now()-timedelta(seconds=30)).exists(): messages.error(request,'لطفاً کمی صبر کنید.'); return redirect('login')
-        code=f'{secrets.randbelow(100000):05d}'; OTPCode.objects.create(phone=phone,code=code,purpose='login',expires_at=timezone.now()+timedelta(minutes=2)); request.session['otp_phone']=phone
+        code=f'{secrets.randbelow(100000):05d}'; OTPCode.objects.create(phone=phone,code=make_password(code),purpose='login',expires_at=timezone.now()+timedelta(minutes=2)); request.session['otp_phone']=phone
         if settings.DEBUG: print(f'[DANA OTP] {phone}: {code}')
         return redirect('otp')
     return render(request,'auth/login.html')
@@ -63,7 +64,7 @@ def otp(request):
             messages.error(request,'تعداد تلاش‌ها زیاد است؛ چند دقیقه بعد دوباره امتحان کنید.')
             return redirect('otp')
         row=OTPCode.objects.filter(phone=phone,purpose='login',used=False,expires_at__gt=timezone.now()).order_by('-id').first()
-        if row and row.attempts<5 and row.code==request.POST.get('code','').strip():
+        if row and row.attempts<5 and check_password(request.POST.get('code','').strip(),row.code):
             row.used=True; row.save(update_fields=['used']); user,created=User.objects.get_or_create(phone=phone,defaults={'terms_accepted_at':timezone.now()})
             if not user.is_active: messages.error(request,'این حساب غیرفعال است.'); return redirect('login')
             if not user.terms_accepted_at:user.terms_accepted_at=timezone.now(); user.save(update_fields=['terms_accepted_at'])
