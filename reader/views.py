@@ -3,7 +3,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
 from django.utils import timezone
-from django.db import models
+from django.db import models, transaction
 from books.models import Book
 from shop.models import Entitlement, Subscription
 from .models import ReadingProgress, Bookmark, Note, SavedWord, Review
@@ -53,16 +53,19 @@ def progress(request, pk):
             chapter = book.chapters.get(pk=chapter_id)
         except (ValueError, TypeError, book.chapters.model.DoesNotExist):
             return JsonResponse({'error':'Invalid chapter'},status=400)
-    saved,_=ReadingProgress.objects.get_or_create(user=request.user,book=book)
-    added_study_time = seconds > saved.seconds or audio_seconds > saved.audio_seconds
-    saved.progress=max(float(saved.progress),value); saved.current_page=max(saved.current_page,page)
-    saved.seconds=max(saved.seconds,seconds); saved.audio_seconds=max(saved.audio_seconds,audio_seconds)
-    if chapter is not None and (saved.current_chapter_id is None or chapter.order >= saved.current_chapter.order):
-        saved.current_chapter = chapter
-    fields=['progress','current_page','seconds','audio_seconds','updated_at']
-    if chapter is not None and saved.current_chapter_id == chapter.id:
-        fields.append('current_chapter')
-    saved.save(update_fields=fields)
+    with transaction.atomic():
+        saved=ReadingProgress.objects.select_for_update().filter(user=request.user,book=book).first()
+        if saved is None:
+            saved=ReadingProgress.objects.create(user=request.user,book=book)
+        added_study_time = seconds > saved.seconds or audio_seconds > saved.audio_seconds
+        saved.progress=max(float(saved.progress),value); saved.current_page=max(saved.current_page,page)
+        saved.seconds=max(saved.seconds,seconds); saved.audio_seconds=max(saved.audio_seconds,audio_seconds)
+        if chapter is not None and (saved.current_chapter_id is None or chapter.order >= saved.current_chapter.order):
+            saved.current_chapter = chapter
+        fields=['progress','current_page','seconds','audio_seconds','updated_at']
+        if chapter is not None and saved.current_chapter_id == chapter.id:
+            fields.append('current_chapter')
+        saved.save(update_fields=fields)
     if added_study_time:
         record_study_activity(request.user)
     return JsonResponse({'ok':True,'progress':float(saved.progress),'page':saved.current_page,'audio_seconds':saved.audio_seconds})
