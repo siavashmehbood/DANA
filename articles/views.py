@@ -156,7 +156,7 @@ def research_library(request):
         items = items.filter(favorite=True)
     if q:
         items = items.filter(Q(article__title__icontains=q) | Q(article__title_fa__icontains=q) | Q(article__authors__icontains=q) | Q(article__journal__icontains=q))
-    annotations = ArticleAnnotation.objects.filter(user=request.user).select_related('article')
+    annotations = ArticleAnnotation.objects.filter(user=request.user, article__published=True).select_related('article')
     stats = {
         'total': ArticleLibraryItem.objects.filter(user=request.user).count(),
         'reading': ArticleLibraryItem.objects.filter(user=request.user, status='reading').count(),
