@@ -45,11 +45,12 @@ def progress(request, pk):
         except (ValueError, TypeError, book.chapters.model.DoesNotExist):
             return JsonResponse({'error':'Invalid chapter'},status=400)
     saved,_=ReadingProgress.objects.get_or_create(user=request.user,book=book)
+    added_study_time = seconds > saved.seconds or audio_seconds > saved.audio_seconds
     saved.progress=value; saved.current_page=page
     saved.seconds=max(saved.seconds,seconds); saved.audio_seconds=max(saved.audio_seconds,audio_seconds)
     if chapter is not None: saved.current_chapter = chapter
     saved.save()
-    if seconds or audio_seconds:
+    if added_study_time:
         record_study_activity(request.user)
     return JsonResponse({'ok':True,'progress':float(saved.progress),'page':saved.current_page,'audio_seconds':saved.audio_seconds})
 
