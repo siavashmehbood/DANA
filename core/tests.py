@@ -224,3 +224,13 @@ class RecommendationTests(TestCase):
         response=self.client.get(reverse('service_worker'))
         self.assertEqual(response['Cache-Control'],'no-cache')
         self.assertEqual(response['Service-Worker-Allowed'],'/')
+
+
+class HomePrivacyTests(TestCase):
+    def test_authenticated_home_is_not_cacheable(self):
+        user=User.objects.create_user(username='private-home',password='pass12345')
+        self.client.force_login(user)
+        response=self.client.get('/')
+        self.assertIn('private',response['Cache-Control'])
+        self.assertIn('no-store',response['Cache-Control'])
+        self.assertIn('Cookie',response['Vary'])
