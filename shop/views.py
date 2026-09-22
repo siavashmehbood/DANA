@@ -214,7 +214,11 @@ def subscribe(request, slug):
         if plan.price != 0:
             messages.info(request,'برای فعال‌سازی این پلن باید پرداخت اشتراک تکمیل شود.')
             return redirect('subscriptions')
-        current=Subscription.objects.select_for_update().filter(user=user,status='active',expires_at__gt=now).order_by('-expires_at').first()
+        current=Subscription.objects.select_for_update().filter(user=user,status='active').order_by('-expires_at').first()
+        if current and current.expires_at <= now:
+            current.status='expired'
+            current.save(update_fields=['status'])
+            current=None
         if current and current.plan_id == plan.id:
             start=current.expires_at
             current.status='expired'
