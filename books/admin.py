@@ -12,13 +12,13 @@ class ChapterInline(admin.TabularInline):
 
 @admin.register(Book)
 class BookAdmin(ModelAdmin):
-    list_display = ('name', 'author', 'category', 'price', 'old_price', 'status', 'visibility', 'subscription_included', 'publish_at', 'has_pdf', 'has_audio')
-    list_filter = ('status', 'visibility', 'subscription_included', 'category', 'level')
+    list_display = ('name', 'author', 'category', 'price', 'old_price', 'status', 'visibility', 'featured', 'subscription_included', 'publish_at', 'has_pdf', 'has_audio')
+    list_filter = ('status', 'visibility', 'featured', 'subscription_included', 'category', 'level')
     search_fields = ('name', 'author__name', 'summary', 'description')
     prepopulated_fields = {'slug': ('name',)}
     list_per_page = 25
     autocomplete_fields = ('author', 'category', 'level')
-    list_editable = ('status', 'subscription_included')
+    list_editable = ('status', 'featured', 'subscription_included')
     inlines = (ChapterInline,)
     fieldsets = (
         ('مشخصات کتاب', {'fields': ('name', 'slug', 'author', 'category', 'level', 'cover', 'summary', 'description')}),
