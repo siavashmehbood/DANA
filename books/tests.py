@@ -225,6 +225,7 @@ class SubscriptionBookAccessTests(TestCase):
         self.assertEqual(response['Cache-Control'],'private, no-store')
         self.assertIn('Cookie',response['Vary'])
         self.assertEqual(response['X-Content-Type-Options'],'nosniff')
+        self.assertEqual(response['Cross-Origin-Resource-Policy'],'same-origin')
 
 
     def test_paid_public_book_detail_requires_purchase(self):
