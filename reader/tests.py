@@ -254,3 +254,19 @@ class SubscriptionReaderAccessTests(TestCase):
         book=Book.objects.create(name='Private Reader Book',slug='private-reader-book',author=author,status='published',visibility='private')
         response=self.client.get(reverse('reader',args=[book.pk]))
         self.assertEqual(response.status_code,403)
+
+
+    def test_paid_public_book_still_requires_entitlement(self):
+        self.book.price=1000
+        self.book.visibility='public'
+        self.book.save(update_fields=['price','visibility'])
+        response=self.client.get(reverse('reader',args=[self.book.pk]))
+        self.assertEqual(response.status_code,403)
+
+    def test_paid_public_book_allows_entitled_reader(self):
+        self.book.price=1000
+        self.book.visibility='public'
+        self.book.save(update_fields=['price','visibility'])
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        response=self.client.get(reverse('reader',args=[self.book.pk]))
+        self.assertEqual(response.status_code,200)
