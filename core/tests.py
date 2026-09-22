@@ -108,3 +108,16 @@ class RecommendationTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('home'))
         self.assertIn(book,list(response.context['recommendations']))
+
+
+    def test_home_categories_hide_empty_and_future_only_categories(self):
+        from books.models import Category
+        active=Category.objects.create(name='Active category',slug='active-category')
+        future_only=Category.objects.create(name='Future category',slug='future-category')
+        author=Author.objects.create(name='Category Author')
+        Book.objects.create(name='Live category book',slug='live-category-book',author=author,category=active,status='published')
+        Book.objects.create(name='Future category book',slug='future-category-book',author=author,category=future_only,status='scheduled',publish_at=timezone.now()+timedelta(days=1))
+        response=self.client.get(reverse('home'))
+        categories=list(response.context['categories'])
+        self.assertIn(active,categories)
+        self.assertNotIn(future_only,categories)
