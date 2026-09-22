@@ -12,8 +12,8 @@ class ChapterInline(admin.TabularInline):
 
 @admin.register(Book)
 class BookAdmin(ModelAdmin):
-    list_display = ('name', 'author', 'category', 'price', 'old_price', 'status', 'visibility', 'publish_at', 'has_pdf', 'has_audio')
-    list_filter = ('status', 'visibility', 'category', 'level')
+    list_display = ('name', 'author', 'category', 'price', 'old_price', 'status', 'visibility', 'subscription_included', 'publish_at', 'has_pdf', 'has_audio')
+    list_filter = ('status', 'visibility', 'subscription_included', 'category', 'level')
     search_fields = ('name', 'author__name', 'summary', 'description')
     prepopulated_fields = {'slug': ('name',)}
     list_per_page = 25
@@ -24,7 +24,7 @@ class BookAdmin(ModelAdmin):
         ('مشخصات کتاب', {'fields': ('name', 'slug', 'author', 'category', 'level', 'cover', 'summary', 'description')}),
         ('فروش', {'fields': ('price', 'old_price', 'preview_percent')}),
         ('فایل و رسانه', {'fields': ('pdf', 'audio')}),
-        ('انتشار و دسترسی', {'fields': ('status', 'publish_at', 'visibility', 'access_password')}),
+        ('انتشار و دسترسی', {'fields': ('status', 'publish_at', 'visibility', 'subscription_included', 'access_password')}),
     )
 
     @admin.display(boolean=True, description='PDF')
