@@ -84,3 +84,13 @@ class StudyFlowTests(TestCase):
         self.assertFalse(review.approved)
         self.assertIsNone(review.admin_score)
         self.assertEqual(review.admin_reply,'')
+
+
+    def test_bookmark_same_page_is_idempotent_and_updates_title(self):
+        url=reverse('reader_bookmark',args=[self.book.pk])
+        first=self.client.post(url,{'page':'7','title':'اول'})
+        second=self.client.post(url,{'page':'7','title':'جدید'})
+        self.assertTrue(first.json()['created'])
+        self.assertFalse(second.json()['created'])
+        self.assertEqual(self.book.bookmark_set.filter(user=self.user,page=7).count(),1)
+        self.assertEqual(self.book.bookmark_set.get(user=self.user,page=7).title,'جدید')
