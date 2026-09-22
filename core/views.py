@@ -60,6 +60,8 @@ def protected_book_pdf(request, pk):
             return HttpResponse('Access denied', status=403)
     if not book.pdf or not book.is_published:
         raise Http404
+    if book.pdf.name and not book.pdf.name.lower().endswith('.pdf'):
+        raise Http404
     try:
         size=book.pdf.size
     except (OSError,ValueError):
