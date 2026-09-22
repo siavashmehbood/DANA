@@ -2,9 +2,11 @@ from django.test import TestCase
 from accounts.models import User
 from books.models import Author, Book, Chapter
 from gamification.models import PointLedger, UserStreak
-from shop.models import Entitlement
+from shop.models import Entitlement, SubscriptionPlan, Subscription
 from .models import ReadingProgress, Review
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
 
 
 class StudyFlowTests(TestCase):
@@ -146,3 +148,16 @@ class StudyFlowTests(TestCase):
         self.client.post(url,{'progress':'20','chapter_id':first.pk})
         saved=ReadingProgress.objects.get(user=self.user,book=self.book)
         self.assertEqual(saved.current_chapter_id,second.pk)
+
+
+class SubscriptionReaderAccessTests(TestCase):
+    def test_active_catalog_subscription_can_open_private_reader(self):
+        user=User.objects.create_user(username='sub-reader',password='pass12345')
+        author=Author.objects.create(name='Sub Reader Author')
+        book=Book.objects.create(name='Sub Reader Book',slug='sub-reader-book',author=author,status='published',visibility='private')
+        plan=SubscriptionPlan.objects.create(name='Reader Catalog',slug='reader-catalog',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        self.client.login(username='sub-reader',password='pass12345')
+        response=self.client.get(reverse('reader',args=[book.pk]))
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(response.context['accessible'])
