@@ -154,7 +154,7 @@ class SubscriptionReaderAccessTests(TestCase):
     def setUp(self):
         self.user=User.objects.create_user(username='subscription-reader',password='pass12345')
         author=Author.objects.create(name='Subscription Test Author')
-        self.book=Book.objects.create(name='Subscription Test Book',slug='subscription-test-book',author=author,status='published',visibility='public')
+        self.book=Book.objects.create(name='Subscription Test Book',slug='subscription-test-book',author=author,status='published',visibility='public',subscription_included=True)
         self.client.force_login(self.user)
 
     def test_active_catalog_subscription_can_open_private_reader(self):
