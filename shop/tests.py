@@ -243,3 +243,15 @@ class ShopFlowTests(TestCase):
         Subscription.objects.create(user=self.user,plan=first,starts_at=timezone.now(),expires_at=timezone.now()+timedelta(days=7))
         with self.assertRaises(IntegrityError):
             Subscription.objects.create(user=self.user,plan=second,starts_at=timezone.now(),expires_at=timezone.now()+timedelta(days=7))
+
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.payment.requests.post')
+    def test_bank_checkout_does_not_repurchase_owned_book(self, post):
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        CartItem.objects.create(user=self.user,book=self.book)
+        response=self.client.post(reverse('bank_checkout'))
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,reverse('cart'))
+        self.assertFalse(Order.objects.filter(user=self.user).exists())
+        post.assert_not_called()
