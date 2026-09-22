@@ -39,9 +39,13 @@ def home(request):
         recommendations=base.filter(category_id__in=preferred_categories).exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at').distinct()[:8]
         if not recommendations.exists():
             recommendations=base.exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
-    return render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
+    response=render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
         'latest_articles': article_base.order_by('-created_at')[:8], 'featured_articles': article_base.filter(featured=True)[:4],
         'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading, 'audio_books': audio_books, 'recommendations': recommendations})
+    if request.user.is_authenticated:
+        response['Cache-Control']='private, no-store'
+        response['Vary']='Cookie'
+    return response
 
 
 def admin_logout(request):
