@@ -85,3 +85,17 @@ class HomeDiscoveryTests(TestCase):
         response=self.client.get(reverse('home'))
         popular=list(response.context['popular'])
         self.assertLess(popular.index(approved),popular.index(hidden))
+
+
+class RecommendationTests(TestCase):
+    def test_high_rating_category_drives_recommendation(self):
+        from books.models import Category
+        category=Category.objects.create(name='Recommended',slug='recommended')
+        author=Author.objects.create(name='Recommend Author')
+        rated=Book.objects.create(name='Rated',slug='rated-book',author=author,category=category,status='published')
+        candidate=Book.objects.create(name='Candidate',slug='candidate-book',author=author,category=category,status='published')
+        user=User.objects.create_user(username='recommender',password='pass12345')
+        Review.objects.create(user=user,book=rated,rating=5,text='great',approved=True)
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        self.assertIn(candidate,list(response.context['recommendations']))
