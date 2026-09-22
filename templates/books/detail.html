@@ -15,34 +15,7 @@
     </div>
   </div>
 </section>
-{% if book.audio or book.chapters.all %}
-<section class="section audio-section">
-  <div class="section-title"><div><span class="shelf-label">DANA AUDIO</span><h2>نسخه صوتی کتاب</h2><p>پخش مستقیم و انتخاب فصل‌ها</p></div></div>
-  <div class="audio-player panel">
-    <div class="audio-now"><b id="audio-title">{{ book.name }}</b><span id="audio-time">00:00 / 00:00</span></div>
-    {% if has_access %}<audio id="book-audio" controls preload="metadata" {% if book.audio %}src="{% url 'book_secure_file' book.pk 'audio' %}"{% endif %}></audio><div class="audio-controls"><button type="button" data-audio-back>−۱۵ ثانیه</button><button type="button" data-audio-forward>+۱۵ ثانیه</button><label>سرعت <select data-audio-speed><option value="0.75">۰٫۷۵×</option><option value="1" selected>۱×</option><option value="1.25">۱٫۲۵×</option><option value="1.5">۱٫۵×</option><option value="2">۲×</option></select></label><label>تایمر خواب <select data-sleep><option value="0">خاموش</option><option value="15">۱۵ دقیقه</option><option value="30">۳۰ دقیقه</option><option value="60">۶۰ دقیقه</option></select></label></div>{% else %}<div class="empty">برای پخش نسخه صوتی ابتدا دسترسی این کتاب را فعال کنید.</div>{% endif %}
-    <div class="audio-chapters">
-      {% for chapter in book.chapters.all %}{% if chapter.audio %}<button type="button" class="audio-chapter" {% if not has_access %}disabled{% endif %} data-audio="{% if has_access %}{% url 'chapter_secure_audio' book.pk chapter.pk %}{% endif %}" data-title="{{ chapter.title }}"><span>{{ forloop.counter }}</span>{{ chapter.title }}</button>{% endif %}{% empty %}<div class="muted">هنوز فصل صوتی ثبت نشده است.</div>{% endfor %}
-    </div>
-  </div>
-</section>
-<script>
-const audio=document.getElementById('book-audio');
-const title=document.getElementById('audio-title');
-const timeLabel=document.getElementById('audio-time');
-const fmt=s=>{s=Math.max(0,Math.floor(s||0));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
-if(audio){
- const progressUrl='{% url 'reader_progress' book.pk %}'; const csrfToken='{{ csrf_token }}'; const resumeAt=Number('{{ saved_audio_seconds|default:0 }}')||0; let sleepTimer=null; let lastSaved=0; let resumed=false;
- audio.addEventListener('loadedmetadata',()=>{if(!resumed&&resumeAt>0&&resumeAt<audio.duration){audio.currentTime=resumeAt;resumed=true}timeLabel.textContent=fmt(audio.currentTime)+' / '+fmt(audio.duration)});
- audio.addEventListener('timeupdate',()=>{timeLabel.textContent=fmt(audio.currentTime)+' / '+fmt(audio.duration);if(Math.abs(audio.currentTime-lastSaved)>=15){lastSaved=audio.currentTime;fetch(progressUrl,{method:'POST',headers:{'X-CSRFToken':csrfToken,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({audio_seconds:String(Math.floor(audio.currentTime))})}).catch(()=>{})}});
- document.querySelector('[data-audio-back]')?.addEventListener('click',()=>audio.currentTime=Math.max(0,audio.currentTime-15));
- document.querySelector('[data-audio-forward]')?.addEventListener('click',()=>audio.currentTime=Math.min(audio.duration||Infinity,audio.currentTime+15));
- document.querySelector('[data-audio-speed]')?.addEventListener('change',e=>audio.playbackRate=Number(e.target.value)||1);
- document.querySelector('[data-sleep]')?.addEventListener('change',e=>{if(sleepTimer)clearTimeout(sleepTimer);const minutes=Number(e.target.value)||0;if(minutes)sleepTimer=setTimeout(()=>audio.pause(),minutes*60000)});
- document.querySelectorAll('.audio-chapter').forEach(btn=>btn.addEventListener('click',()=>{resumed=true;audio.src=btn.dataset.audio;title.textContent=btn.dataset.title;audio.play().catch(()=>{});}));
-}
-</script>
-{% endif %}
+{% if has_audio %}<section class="section audio-section"><div class="section-title"><div><span class="shelf-label">DANA AUDIO</span><h2>نسخه صوتی کتاب</h2><p>{% if has_access %}پخش امن، ادامه از آخرین موقعیت و انتخاب فصل‌ها در پخش‌کننده کامل دانا.{% else %}برای شنیدن نسخه صوتی، دسترسی کتاب را فعال کن.{% endif %}</p></div></div><div class="panel">{% if has_access %}<a class="btn" href="{% url 'audio_player' book.pk %}">{% if saved_audio_seconds %}ادامه شنیدن{% else %}باز کردن پخش‌کننده صوتی{% endif %}</a>{% else %}<a class="btn secondary" href="#main-content">مشاهده گزینه‌های دسترسی</a>{% endif %}</div></section>{% endif %}
 <section class="section">
   <div class="book-content"><article class="panel"><h2>درباره کتاب</h2><p>{{ book.description|default:book.summary }}</p></article>
   <aside class="panel"><h3>مشخصات</h3><div class="row"><span>نویسنده</span><b>{{ book.author.name }}</b></div><div class="row"><span>دسته‌بندی</span><b>{{ book.category.name|default:'-' }}</b></div><div class="row"><span>نمونه مطالعه</span><b>{{ book.preview_percent }}٪</b></div><div class="row"><span>نسخه صوتی</span><b>{% if book.audio or book.chapters.all %}دارد{% else %}ندارد{% endif %}</b></div></aside></div>
