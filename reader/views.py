@@ -196,7 +196,9 @@ def vocabulary(request):
         q=Q()
         for term in variants: q |= Q(word__icontains=term)
         words=words.filter(q)
-    response=render(request,'reader/vocabulary.html',{'words':words[:500],'query':query})
+    from django.core.paginator import Paginator
+    page_obj=Paginator(words,50).get_page(request.GET.get('page',1))
+    response=render(request,'reader/vocabulary.html',{'words':page_obj.object_list,'page_obj':page_obj,'query':query})
     response['Cache-Control']='private, no-store'
     response['X-Robots-Tag']='noindex, nofollow'
     response['Referrer-Policy']='same-origin'
