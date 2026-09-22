@@ -239,5 +239,5 @@ class HomePrivacyTests(TestCase):
     def test_service_worker_does_not_precache_personalized_home(self):
         response=self.client.get('/sw.js')
         body=response.content.decode()
-        self.assertIn("CORE=['/books/','/articles/']",body)
-        self.assertNotIn("CORE=['/','/books/'",body)
+        self.assertIn("CORE=[]",body)
+        self.assertNotIn("CORE=['/",body)
