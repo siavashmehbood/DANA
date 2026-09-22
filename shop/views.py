@@ -245,7 +245,7 @@ def subscribe(request, slug):
             start=now
             subscription=Subscription.objects.create(user=user,plan=plan,starts_at=start,expires_at=start+timezone.timedelta(days=plan.duration_days))
         if plan.price > 0:
-            _wallet_transaction(user,plan.price,'debit','Subscription purchase',reference=f'subscription:{subscription.pk}:debit')
+            _wallet_transaction(user,plan.price,'debit','Subscription purchase',reference=f'subscription:{subscription.pk}:debit:{secrets.token_hex(8)}')
             messages.success(request,'اشتراک با موفقیت از کیف پول فعال شد.')
         else:
             messages.success(request,'اشتراک رایگان فعال شد.')
