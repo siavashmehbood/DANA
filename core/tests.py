@@ -356,3 +356,17 @@ class AudioHomeIntegrationTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('home'))
         self.assertIn(candidate,list(response.context['recommendations']))
+
+
+class AudioRangeTests(TestCase):
+    def test_entitled_audio_supports_byte_ranges(self):
+        user=User.objects.create_user(username='range-user',password='pass12345')
+        author=Author.objects.create(name='Range Author')
+        payload=b'ID3'+b'a'*100
+        book=Book.objects.create(name='Range Audio',slug='range-audio',author=author,status='published',visibility='private',audio=SimpleUploadedFile('range.mp3',payload,content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=book,source='purchase')
+        self.client.force_login(user)
+        response=self.client.get(reverse('book_secure_file',args=[book.pk,'audio']),HTTP_RANGE='bytes=3-12')
+        self.assertEqual(response.status_code,206)
+        self.assertEqual(response['Content-Range'],f'bytes 3-12/{len(payload)}')
+        self.assertEqual(response.content,b'a'*10)
