@@ -2,7 +2,7 @@ from django.contrib import admin
 from unfold.admin import ModelAdmin
 
 from gamification.services import add_points, study_points_for_score
-from .models import ReadingProgress, Bookmark, Highlight, Note, ProblemReport, Review
+from .models import ReadingProgress, ReadingGoal, Bookmark, Highlight, Note, ProblemReport, Review
 
 
 @admin.register(Review)
@@ -30,4 +30,4 @@ class ReviewAdmin(ModelAdmin):
             )
 
 
-admin.site.register([ReadingProgress, Bookmark, Highlight, Note, ProblemReport])
+admin.site.register([ReadingProgress, ReadingGoal, Bookmark, Highlight, Note, ProblemReport])
