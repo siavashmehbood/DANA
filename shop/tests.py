@@ -409,3 +409,11 @@ class ShopFlowTests(TestCase):
         response=self.client.get(reverse('subscriptions'))
         self.assertIn('no-store',response.headers.get('Cache-Control',''))
         self.assertEqual(response.headers.get('X-Robots-Tag'),'noindex, nofollow')
+
+
+    def test_retired_plan_notice_explains_existing_access(self):
+        plan=SubscriptionPlan.objects.create(name='Legacy',slug='legacy-plan',price=0,duration_days=7,active=False)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        response=self.client.get(reverse('subscriptions'))
+        self.assertContains(response,'اشتراک فعلی شما تا پایان اعتبار فعال است')
