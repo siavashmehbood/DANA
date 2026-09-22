@@ -20,7 +20,6 @@ def home(request):
     audio_books = base.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct().order_by('-created_at')[:8]
     public_book_filter=(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())) & ~Q(book__visibility='private')
     categories = Category.objects.annotate(book_count=Count('book',filter=public_book_filter)).filter(book_count__gt=0).order_by('-book_count','name')[:10]
-    urls=list(dict.fromkeys(urls))
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
     article_base = Article.objects.filter(published=True).filter(readable).select_related('category')
     continue_reading=[]
