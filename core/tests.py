@@ -370,3 +370,23 @@ class AudioRangeTests(TestCase):
         self.assertEqual(response.status_code,206)
         self.assertEqual(response['Content-Range'],f'bytes 3-12/{len(payload)}')
         self.assertEqual(response.content,b'a'*10)
+
+
+class HomeSubscriberRecommendationTests(TestCase):
+    def test_active_subscriber_home_recommends_unengaged_catalog_title(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from accounts.models import User
+        from books.models import Author, Book, Category
+        from shop.models import Entitlement, Subscription, SubscriptionPlan
+        user=User.objects.create_user(username='home-subscriber-recs',password='pass12345')
+        author=Author.objects.create(name='Home Subscriber Author')
+        category=Category.objects.create(name='Home Subscriber Category',slug='home-subscriber-category')
+        seed=Book.objects.create(name='Home Seed',slug='home-seed',author=author,category=category,status='published',visibility='public')
+        candidate=Book.objects.create(name='Home Catalog Candidate',slug='home-catalog-candidate',author=author,category=category,status='published',visibility='public',subscription_included=True)
+        Entitlement.objects.create(user=user,book=seed)
+        plan=SubscriptionPlan.objects.create(name='Home Catalog',slug='home-catalog-plan',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=29))
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        self.assertIn(candidate,list(response.context['recommendations']))
