@@ -351,3 +351,10 @@ class BookValidationTests(TestCase):
         self.assertContains(response,'Public Catalog Book')
         self.assertNotContains(response,'Private Catalog Book')
         self.assertNotContains(response,'Password Catalog Book')
+
+
+    def test_password_book_detail_is_hidden_without_unlock(self):
+        author=Author.objects.create(name='Hidden Password Author')
+        Book.objects.create(name='Hidden Password Detail',slug='hidden-password-detail',author=author,status='published',visibility='password',access_password='secret')
+        response=self.client.get(reverse('book_detail',args=['hidden-password-detail']))
+        self.assertEqual(response.status_code,404)
