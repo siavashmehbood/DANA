@@ -210,7 +210,8 @@ def subscribe(request, slug):
     if request.method != 'POST':
         return redirect('subscriptions')
     activation_key=request.POST.get('activation_key','')
-    if not activation_key or activation_key != request.session.get('subscription_activation_key'):
+    expected_key=request.session.pop('subscription_activation_key',None)
+    if not activation_key or activation_key != expected_key:
         messages.error(request,'درخواست فعال‌سازی نامعتبر یا تکراری است؛ صفحه را دوباره باز کنید.')
         return redirect('subscriptions')
     with transaction.atomic():
@@ -249,7 +250,6 @@ def subscribe(request, slug):
             messages.success(request,'اشتراک با موفقیت از کیف پول فعال شد.')
         else:
             messages.success(request,'اشتراک رایگان فعال شد.')
-        request.session.pop('subscription_activation_key',None)
     return redirect('subscriptions')
 
 
