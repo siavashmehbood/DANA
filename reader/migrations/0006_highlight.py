@@ -15,5 +15,6 @@ class Migration(migrations.Migration):
                 ('user',models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,to='accounts.user')),
             ],
         ),
+        migrations.AddConstraint(model_name='highlight',constraint=models.UniqueConstraint(fields=('user','book','page','text'),name='unique_reader_highlight')),
         migrations.AddIndex(model_name='highlight',index=models.Index(fields=['user','book','page'],name='reader_highlight_lookup_idx')),
     ]
