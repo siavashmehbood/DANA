@@ -500,3 +500,23 @@ class ProfileAccessAwareActivityTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('profile'))
         self.assertFalse(any(row['book'].pk==book.pk for row in response.context['recent_progress']))
+
+    def test_expired_private_progress_does_not_inflate_in_progress_count(self):
+        user=User.objects.create_user(username='profile-expired-metric',password='pass12345')
+        author=Author.objects.create(name='Expired Metric Author')
+        book=Book.objects.create(name='Expired Metric',slug='expired-metric',author=author,status='published',visibility='private')
+        Entitlement.objects.create(user=user,book=book,expires_at=timezone.now()-timedelta(minutes=1))
+        ReadingProgress.objects.create(user=user,book=book,progress=40,current_page=4)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.context['in_progress_count'],0)
+
+    def test_audio_only_active_progress_counts_as_in_progress(self):
+        from reader.models import AudioProgress
+        user=User.objects.create_user(username='profile-audio-metric',password='pass12345')
+        author=Author.objects.create(name='Audio Metric Author')
+        book=Book.objects.create(name='Audio Metric',slug='audio-metric',author=author,status='published',visibility='public',price=0,audio=SimpleUploadedFile('metric.mp3',b'ID3',content_type='audio/mpeg'))
+        AudioProgress.objects.create(user=user,book=book,position_seconds=45,duration_seconds=300)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.context['in_progress_count'],1)
