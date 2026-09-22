@@ -370,8 +370,11 @@ class BookValidationTests(TestCase):
 
 
     def test_unknown_protected_media_kind_is_not_disclosed(self):
-        self.client.force_login(self.user)
-        response=self.client.get(reverse('book_secure_file',args=[self.book.pk,'unknown']))
+        user=User.objects.create_user(username='unknown-media-user',password='pass12345')
+        author=Author.objects.create(name='Unknown Media Author')
+        book=Book.objects.create(name='Unknown Media Book',slug='unknown-media-book',author=author,status='published',visibility='private')
+        self.client.force_login(user)
+        response=self.client.get(reverse('book_secure_file',args=[book.pk,'unknown']))
         self.assertEqual(response.status_code,404)
 
 
