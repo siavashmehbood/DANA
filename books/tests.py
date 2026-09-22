@@ -227,6 +227,7 @@ class SubscriptionBookAccessTests(TestCase):
         self.assertEqual(response['X-Content-Type-Options'],'nosniff')
         self.assertEqual(response['Cross-Origin-Resource-Policy'],'same-origin')
         self.assertEqual(response['Referrer-Policy'],'no-referrer')
+        self.assertIn("default-src 'none'",response['Content-Security-Policy'])
 
 
     def test_paid_public_book_detail_requires_purchase(self):
