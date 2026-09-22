@@ -7,7 +7,7 @@ from django.urls import reverse
 from accounts.models import User
 from books.models import Author, Book
 from shop.models import Entitlement, Subscription, SubscriptionPlan, SubscriptionPlan, Subscription
-from reader.models import Review, ReadingProgress
+from reader.models import Review, ReadingProgress, AudioProgress
 
 class ProtectedMediaTests(TestCase):
     def setUp(self):
@@ -333,3 +333,26 @@ class RetiredPlanPdfAccessTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('protected_book_pdf',args=[book.pk]))
         self.assertEqual(response.status_code,403)
+
+
+class AudioHomeIntegrationTests(TestCase):
+    def test_home_surfaces_continue_listening(self):
+        user=User.objects.create_user(username='audio-home',password='pass12345')
+        author=Author.objects.create(name='Audio Home Author')
+        book=Book.objects.create(name='Audio Home Book',slug='audio-home-book',author=author,status='published',visibility='public',price=0,audio=SimpleUploadedFile('home.mp3',b'ID3home',content_type='audio/mpeg'))
+        AudioProgress.objects.create(user=user,book=book,position_seconds=42,duration_seconds=200)
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        self.assertIn(book,[item.book for item in response.context['continue_listening']])
+
+    def test_active_reading_category_influences_recommendations(self):
+        from books.models import Category
+        category=Category.objects.create(name='Reading interest',slug='reading-interest')
+        author=Author.objects.create(name='Reading Interest Author')
+        current=Book.objects.create(name='Current interest',slug='current-interest',author=author,category=category,status='published')
+        candidate=Book.objects.create(name='Next interest',slug='next-interest',author=author,category=category,status='published')
+        user=User.objects.create_user(username='interest-user',password='pass12345')
+        ReadingProgress.objects.create(user=user,book=current,progress=30)
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        self.assertIn(candidate,list(response.context['recommendations']))
