@@ -12,7 +12,7 @@ from django.db.models import Q
 from articles.models import Article
 from books.models import Book
 from shop.models import CartItem, Entitlement, Referral, Subscription
-from reader.models import ReadingProgress
+from reader.models import ReadingProgress, ReadingGoal
 from .models import User, OTPCode, Device, UserSession
 
 def _phone(value):
@@ -87,6 +87,15 @@ def dashboard(request):
 
 @login_required
 def profile(request):
+    if request.method=='POST' and request.POST.get('form')=='goal':
+        try:
+            weekly_minutes=int(request.POST.get('weekly_minutes',120)); weekly_books=int(request.POST.get('weekly_books',1))
+        except (TypeError,ValueError):
+            messages.error(request,'هدف مطالعه معتبر نیست.'); return redirect('profile')
+        if not 1 <= weekly_minutes <= 10080 or not 1 <= weekly_books <= 100:
+            messages.error(request,'هدف مطالعه خارج از محدوده مجاز است.'); return redirect('profile')
+        ReadingGoal.objects.update_or_create(user=request.user,defaults={'weekly_minutes':weekly_minutes,'weekly_books':weekly_books})
+        messages.success(request,'هدف مطالعه ذخیره شد.'); return redirect('profile')
     if request.method=='POST':
         request.user.first_name=request.POST.get('first_name','').strip(); request.user.last_name=request.POST.get('last_name','').strip(); request.user.email=request.POST.get('email','').strip(); avatar=request.FILES.get('avatar')
         if avatar:
@@ -99,7 +108,10 @@ def profile(request):
             request.user.set_password(new_password); update_session_auth_hash(request,request.user)
         request.user.save(); messages.success(request,'پروفایل به‌روز شد.')
     sessions=UserSession.objects.filter(user=request.user).select_related('device').order_by('-last_seen')
-    return render(request,'profile.html',{'login_sessions':sessions})
+    goal,_=ReadingGoal.objects.get_or_create(user=request.user)
+    week_start=timezone.now()-timedelta(days=7)
+    weekly_seconds=sum(ReadingProgress.objects.filter(user=request.user,updated_at__gte=week_start).values_list('seconds',flat=True))
+    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':weekly_seconds//60})
 
 @login_required
 def logout_others(request):
