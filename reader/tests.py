@@ -281,3 +281,14 @@ class SubscriptionReaderAccessTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('reader',args=[book.pk]))
         self.assertEqual(response.status_code,403)
+
+
+    def test_subscription_access_is_not_reported_as_owned(self):
+        plan=SubscriptionPlan.objects.create(name='Not owned',slug='not-owned',price=0,duration_days=7,grants_catalog_access=True)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.book.visibility='private'
+        self.book.subscription_included=True
+        self.book.save(update_fields=['visibility','subscription_included'])
+        response=self.client.get(reverse('reader',args=[self.book.pk]))
+        self.assertEqual(response.status_code,200)
+        self.assertFalse(response.context['owned'])
