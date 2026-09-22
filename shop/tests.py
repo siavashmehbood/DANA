@@ -215,3 +215,11 @@ class ShopFlowTests(TestCase):
         self.client.login(username='buyer',password='pass12345')
         response=self.client.get(reverse('subscriptions'))
         self.assertIsNone(response.context['current_subscription'])
+
+
+    def test_free_plan_cannot_queue_duplicate_future_renewals(self):
+        plan=SubscriptionPlan.objects.create(name='Queue Safe',slug='queue-safe',price=0,duration_days=7)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()+timedelta(days=2),expires_at=timezone.now()+timedelta(days=9))
+        self.client.login(username='buyer',password='pass12345')
+        self.client.post(reverse('subscribe',args=[plan.slug]))
+        self.assertEqual(Subscription.objects.filter(user=self.user,plan=plan).count(),1)
