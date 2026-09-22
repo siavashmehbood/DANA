@@ -270,3 +270,14 @@ class SubscriptionReaderAccessTests(TestCase):
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
         response=self.client.get(reverse('reader',args=[self.book.pk]))
         self.assertEqual(response.status_code,200)
+
+
+    def test_subscription_cannot_open_non_catalog_private_book(self):
+        user=User.objects.create_user(username='scoped-sub-reader',password='pass12345')
+        author=Author.objects.create(name='Scoped Reader Author')
+        book=Book.objects.create(name='Not In Catalog',slug='not-in-catalog',author=author,status='published',visibility='private',subscription_included=False)
+        plan=SubscriptionPlan.objects.create(name='Scoped Reader Plan',slug='scoped-reader-plan',price=0,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        self.client.force_login(user)
+        response=self.client.get(reverse('reader',args=[book.pk]))
+        self.assertEqual(response.status_code,403)
