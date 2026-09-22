@@ -340,3 +340,14 @@ class BookValidationTests(TestCase):
         book=Book(name='Past scheduled',slug='past-scheduled-validation',author=self.author,status='scheduled',publish_at=timezone.now()-timedelta(minutes=1))
         with self.assertRaises(ValidationError):
             book.full_clean()
+
+
+    def test_public_catalog_hides_private_and_password_books(self):
+        author=Author.objects.create(name='Visibility Author')
+        Book.objects.create(name='Public Catalog Book',slug='public-catalog-book',author=author,status='published',visibility='public')
+        Book.objects.create(name='Private Catalog Book',slug='private-catalog-book',author=author,status='published',visibility='private')
+        Book.objects.create(name='Password Catalog Book',slug='password-catalog-book',author=author,status='published',visibility='password',access_password='secret')
+        response=self.client.get(reverse('books'))
+        self.assertContains(response,'Public Catalog Book')
+        self.assertNotContains(response,'Private Catalog Book')
+        self.assertNotContains(response,'Password Catalog Book')
