@@ -8,7 +8,14 @@ from articles.models import Article
 class ReadingProgress(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); progress=models.DecimalField(max_digits=5,decimal_places=2,default=0); current_page=models.PositiveIntegerField(default=0); current_chapter=models.ForeignKey(Chapter,null=True,blank=True,on_delete=models.SET_NULL); seconds=models.PositiveIntegerField(default=0); audio_seconds=models.PositiveIntegerField(default=0); updated_at=models.DateTimeField(auto_now=True)
     class Meta: unique_together=('user','book')
-class Bookmark(models.Model): user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); page=models.PositiveIntegerField(); title=models.CharField(max_length=150,blank=True); created_at=models.DateTimeField(auto_now_add=True)
+class Bookmark(models.Model):
+    user=models.ForeignKey(User,on_delete=models.CASCADE)
+    book=models.ForeignKey(Book,on_delete=models.CASCADE)
+    page=models.PositiveIntegerField()
+    title=models.CharField(max_length=150,blank=True)
+    created_at=models.DateTimeField(auto_now_add=True)
+    class Meta:
+        constraints=[models.UniqueConstraint(fields=['user','book','page'],name='unique_bookmark_page')]
 class Note(models.Model): user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); page=models.PositiveIntegerField(); text=models.TextField(); created_at=models.DateTimeField(auto_now_add=True)
 class ProblemReport(models.Model): user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); text=models.TextField(); status=models.CharField(max_length=20,default='open'); created_at=models.DateTimeField(auto_now_add=True)
 class Review(models.Model):
