@@ -298,3 +298,9 @@ class ShopFlowTests(TestCase):
         response=self._subscribe(second)
         self.assertEqual(response.status_code,302)
         self.assertFalse(Subscription.objects.filter(user=self.user,plan=second).exists())
+
+
+    def test_disabled_plan_makes_subscription_inactive(self):
+        plan=SubscriptionPlan.objects.create(name='Disabled active state',slug='disabled-active-state',price=0,duration_days=30,active=False)
+        sub=Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=1))
+        self.assertFalse(sub.is_active)
