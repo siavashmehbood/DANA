@@ -175,3 +175,11 @@ class SubscriptionReaderAccessTests(TestCase):
         response=self.client.post(reverse('reader_delete_note',args=[self.book.pk,item.pk]))
         self.assertEqual(response.status_code,404)
         self.assertTrue(Note.objects.filter(pk=item.pk).exists())
+
+
+    def test_reader_can_search_own_notes(self):
+        Note.objects.create(user=self.user,book=self.book,page=1,text='یادداشت مهم')
+        Note.objects.create(user=self.user,book=self.book,page=2,text='متن دیگر')
+        response=self.client.get(reverse('reader',args=[self.book.pk]),{'note_q':'مهم'})
+        self.assertContains(response,'یادداشت مهم')
+        self.assertNotContains(response,'متن دیگر')
