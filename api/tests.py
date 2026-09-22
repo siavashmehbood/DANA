@@ -55,3 +55,11 @@ class EventApiTests(TestCase):
         response = self.client.post(self.url, data=json.dumps({'name': 'book_viewed'}), content_type='application/json')
         self.assertEqual(response.status_code, 200)
         self.assertTrue(Event.objects.get().session_key)
+
+
+    def test_event_attribution_does_not_log_user_out(self):
+        self.client.post(self.url, data=json.dumps({'name': 'book_viewed'}), content_type='application/json')
+        response = self.client.post(self.url, data=json.dumps({'name': 'article_viewed'}), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Event.objects.count(), 2)
+        self.assertTrue(all(event.user_id == self.user.id for event in Event.objects.all()))
