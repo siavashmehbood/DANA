@@ -49,6 +49,18 @@ class DiscoveryTests(TestCase):
         self.assertContains(response,'کتاب یک')
 
 
+    def test_search_matches_category_name(self):
+        category=Category.objects.create(name='روان شناسی',slug='psychology')
+        Book.objects.create(name='Mind',slug='mind-category-search',author=self.author,category=category,status='published')
+        response=self.client.get(reverse('books'),{'q':'روان شناسی'})
+        self.assertContains(response,'Mind')
+
+    def test_search_matches_zwnj_and_arabic_diacritics(self):
+        Book.objects.create(name='روان‌شناسی کاربردی',slug='zwnj-search',author=self.author,status='published')
+        response=self.client.get(reverse('books'),{'q':'رَوان شناسي'})
+        self.assertContains(response,'روان‌شناسی کاربردی')
+
+
 class CatalogPaginationTests(TestCase):
     def test_catalog_paginates_without_losing_results(self):
         author=Author.objects.create(name='Catalog Author')
