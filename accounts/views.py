@@ -184,7 +184,8 @@ def library(request):
     rows=[]
     for book in books:
         has_audio=bool(book.audio) or any(ch.audio for ch in book.chapters.all())
-        rows.append({'book':book,'progress':pmap.get(book.id),'audio_progress':amap.get(book.id),'has_audio':has_audio,'source':'purchased' if book.id in entitled_ids else 'subscription'})
+        has_text=bool(book.pdf) or any(bool(ch.text and ch.text.strip()) for ch in book.chapters.all())
+        rows.append({'book':book,'progress':pmap.get(book.id),'audio_progress':amap.get(book.id),'has_audio':has_audio,'has_text':has_text,'source':'purchased' if book.id in entitled_ids else 'subscription'})
     state=request.GET.get('state','all')
     kind=request.GET.get('kind','all')
     source=request.GET.get('source','all')
@@ -201,7 +202,7 @@ def library(request):
     elif state=='completed': rows=[row for row in rows if effective_progress(row) >= 100]
     elif state=='unread': rows=[row for row in rows if effective_progress(row) <= 0 and not (row['audio_progress'] and row['audio_progress'].position_seconds > 0)]
     if kind=='audio': rows=[row for row in rows if row['book'].audio or any(ch.audio for ch in row['book'].chapters.all())]
-    elif kind=='text': rows=[row for row in rows if row['book'].pdf or any(ch.text for ch in row['book'].chapters.all())]
+    elif kind=='text': rows=[row for row in rows if row['has_text']]
     if source!='all': rows=[row for row in rows if row['source']==source]
     if sort=='title': rows.sort(key=lambda row: row['book'].name)
     elif sort=='progress': rows.sort(key=effective_progress,reverse=True)
