@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.db import models, transaction
 from books.models import Book
 from shop.models import Entitlement, Subscription
-from .models import ReadingProgress, Bookmark, Note, SavedWord, Review
+from .models import ReadingProgress, Bookmark, Highlight, Note, SavedWord, Review
 from gamification.services import record_study_activity
 
 
@@ -30,11 +30,12 @@ def reader(request, pk):
     note_query=request.GET.get('note_q','').strip()[:200]
     bookmarks = Bookmark.objects.filter(user=request.user, book=book)
     notes = Note.objects.filter(user=request.user, book=book)
+    highlights = Highlight.objects.filter(user=request.user, book=book).order_by('-created_at')[:500]
     if bookmark_query: bookmarks=bookmarks.filter(title__icontains=bookmark_query)
     if note_query: notes=notes.filter(text__icontains=note_query)
     bookmarks=bookmarks.order_by('page')[:500]
     notes=notes.order_by('-created_at')[:500]
-    return render(request, 'reader/reader.html', {'book': book, 'owned': owned, 'accessible': accessible, 'saved': saved, 'bookmarks': bookmarks, 'notes': notes, 'bookmark_query':bookmark_query, 'note_query':note_query})
+    return render(request, 'reader/reader.html', {'book': book, 'owned': owned, 'accessible': accessible, 'saved': saved, 'bookmarks': bookmarks, 'notes': notes, 'bookmark_query':bookmark_query, 'note_query':note_query, 'highlights':highlights})
 
 
 @login_required
@@ -83,6 +84,19 @@ def bookmark(request, pk):
     if not created and title and item.title != title:
         item.title=title; item.save(update_fields=['title'])
     return JsonResponse({'ok':True,'created':created,'id':item.id,'page':item.page,'title':item.title})
+
+
+@login_required
+@require_POST
+def highlight(request, pk):
+    book=get_object_or_404(Book,pk=pk)
+    if not book.is_published or not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
+    try: page=min(1000000,max(0,int(request.POST.get('page',0))))
+    except (TypeError,ValueError): return JsonResponse({'error':'Invalid page'},status=400)
+    text=request.POST.get('text','').strip()[:5000]
+    if not text: return JsonResponse({'error':'Highlight is empty'},status=400)
+    item=Highlight.objects.create(user=request.user,book=book,page=page,text=text)
+    return JsonResponse({'ok':True,'id':item.id,'page':item.page,'text':item.text})
 
 
 @login_required
