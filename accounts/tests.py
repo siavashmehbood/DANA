@@ -245,6 +245,23 @@ class ReadingProfileTests(TestCase):
         self.assertContains(response,'روزهای پیوسته')
 
 
+
+
+    def test_profile_exposes_goal_percent_and_in_progress_count(self):
+        from reader.models import ReadingProgress
+        from books.models import Author, Book
+        user=User.objects.create_user(username='profile-metrics',password='pass12345')
+        author=Author.objects.create(name='Metrics Author')
+        book=Book.objects.create(name='Metrics Reading',slug='metrics-reading',author=author,status='published')
+        ReadingProgress.objects.create(user=user,book=book,progress=35,seconds=60)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.context['in_progress_count'],1)
+        self.assertGreaterEqual(response.context['weekly_goal_percent'],0)
+        self.assertLessEqual(response.context['weekly_goal_percent'],100)
+        self.assertContains(response,'در حال مطالعه')
+
+
 class AudioLibraryStateTests(TestCase):
     def setUp(self):
         from books.models import Author, Book
