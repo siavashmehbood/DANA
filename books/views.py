@@ -24,7 +24,7 @@ def listing(request):
     if sort not in {'new','price_low','price_high','popular','rating','name'}: sort='new'
     if kind not in {'all','audio','text'}: kind='all'
     if price not in {'all','free','paid'}: price='all'
-    books=_published_books().select_related('author','category')
+    books=_published_books().exclude(visibility='private').select_related('author','category')
 
     def apply_filters(qs):
         if cat: qs=qs.filter(category__slug=cat)
@@ -85,9 +85,12 @@ def _has_book_access(user, book):
 
 def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
+    if book.visibility == 'private' and not _has_book_access(request.user,book):
+        from django.http import Http404
+        raise Http404
     approved_reviews=book.review_set.filter(approved=True).select_related('user').order_by('-created_at')[:8]
     review_stats=book.review_set.filter(approved=True).aggregate(avg=Avg('rating'),count=Count('id'))
-    related=_published_books().filter(category=book.category).exclude(pk=book.pk).select_related('author','category')[:4] if book.category else Book.objects.none()
+    related=_published_books().exclude(visibility='private').filter(category=book.category).exclude(pk=book.pk).select_related('author','category')[:4] if book.category else Book.objects.none()
     has_access = _has_book_access(request.user, book)
     saved_audio_seconds=0
     if request.user.is_authenticated and has_access:
