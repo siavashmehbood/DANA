@@ -2,6 +2,7 @@ from django.contrib import admin
 from unfold.admin import ModelAdmin
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import Max
 
 from .models import Article, ArticleCategory, ArticleSource, ArticleTranslationVersion
 from .translation import extract_pdf_text, translate_article
@@ -63,16 +64,23 @@ def rollback_translation(modeladmin, request, queryset):
             continue
         with transaction.atomic():
             locked = Article.objects.select_for_update().get(pk=article.pk)
+            next_version = (locked.translation_versions.aggregate(max_version=Max('version'))['max_version'] or 0) + 1
             locked.title_fa = version.title_fa
             locked.abstract_fa = version.abstract_fa
             locked.full_text_fa = version.content_fa
             locked.translation_hash = version.source_hash
-            locked.translation_version = version.version
+            locked.translation_version = next_version
             locked.translation_quality = version.quality_score
             locked.translation_status = 'reviewed'
             locked.translation_error = ''
             locked.translated_at = timezone.now()
             locked.save()
+            ArticleTranslationVersion.objects.create(
+                article=locked, version=next_version, title_fa=version.title_fa,
+                abstract_fa=version.abstract_fa, content_fa=version.content_fa,
+                provider='rollback', quality_score=version.quality_score,
+                source_hash=version.source_hash, is_valid=True, created_by=request.user,
+            )
         restored += 1
     modeladmin.message_user(request, f'{restored} مقاله به ترجمه سالم قبلی بازگردانده شد.')
 
