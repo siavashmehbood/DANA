@@ -140,6 +140,10 @@ def secure_file(request, pk, kind, chapter_id=None):
     response = FileResponse(field.open('rb'), content_type=content_type)
     extension=field.name.rsplit('.',1)[-1].lower() if '.' in field.name else 'bin'
     response['Content-Disposition'] = f'inline; filename="book-{book.pk}-{kind}.{extension}"'
+    try:
+        response['Content-Length'] = str(field.size)
+    except (OSError, ValueError):
+        pass
     response['Cache-Control'] = 'private, no-store'
     response['Vary'] = 'Cookie'
     response['X-Content-Type-Options'] = 'nosniff'
