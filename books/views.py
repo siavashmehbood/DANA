@@ -111,7 +111,7 @@ def detail(request,slug):
 
 def secure_file(request, pk, kind, chapter_id=None):
     if kind not in {'pdf','audio','chapter_audio'}:
-        return HttpResponseForbidden('نوع فایل معتبر نیست.')
+        raise Http404
     if kind == 'chapter_audio' and chapter_id is None:
         raise Http404
     book = get_object_or_404(_published_books(), pk=pk)
