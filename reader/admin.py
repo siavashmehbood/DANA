@@ -30,4 +30,9 @@ class ReviewAdmin(ModelAdmin):
             )
 
 
-admin.site.register([ReadingProgress, ReadingGoal, Bookmark, Highlight, Note, ProblemReport])
+@admin.register(ReadingGoal)
+class ReadingGoalAdmin(ModelAdmin):
+    list_display=('user','weekly_minutes','weekly_books','updated_at')
+    search_fields=('user__username','user__phone')
+
+admin.site.register([ReadingProgress, Bookmark, Highlight, Note, ProblemReport])
