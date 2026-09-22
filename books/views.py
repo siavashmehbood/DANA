@@ -140,7 +140,7 @@ def detail(request,slug):
         if latest_audio and latest_audio.position_seconds > 0 and (not progress_obj or latest_audio.updated_at > progress_obj.updated_at):
             continue_kind='audio'
         elif progress_obj and progress_obj.progress > 0:
-            continue_kind='text'
+            continue_kind='text' if has_text or not has_audio else 'audio'
     response=render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count'],'approved_reviews':approved_reviews,'saved_progress':saved_progress,'saved_audio_seconds':saved_audio_seconds,'continue_kind':continue_kind,'has_audio':has_audio,'has_text':has_text})
     if request.user.is_authenticated or book.visibility != 'public':
         response['Cache-Control']='private, no-store'
