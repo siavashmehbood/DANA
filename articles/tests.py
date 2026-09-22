@@ -280,3 +280,14 @@ class ResearchLibrarySearchTests(TestCase):
         self.assertEqual(len(response.context['items']),30)
         second=self.client.get(reverse('article_library'),{'page':2})
         self.assertEqual(len(second.context['items']),1)
+
+
+    def test_library_hides_unpublished_articles_and_annotations(self):
+        user=User.objects.create_user(username='private-researcher',password='pass12345')
+        article=Article.objects.create(title='Hidden research',slug='hidden-research',published=False,abstract='متن')
+        ArticleLibraryItem.objects.create(user=user,article=article)
+        ArticleAnnotation.objects.create(user=user,article=article,selected_text='secret')
+        self.client.force_login(user)
+        response=self.client.get(reverse('article_library'))
+        self.assertNotContains(response,'Hidden research')
+        self.assertNotContains(response,'secret')
