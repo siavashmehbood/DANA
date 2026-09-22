@@ -181,3 +181,12 @@ class ShopFlowTests(TestCase):
         self.client.login(username='buyer',password='pass123')
         self.client.post(reverse('subscribe',args=[plan.slug]))
         self.assertFalse(Subscription.objects.filter(user=self.user,plan=plan).exists())
+
+
+    def test_reactivating_same_free_plan_extends_from_current_expiry(self):
+        plan=SubscriptionPlan.objects.create(name='Free Extend',slug='free-extend',price=0,duration_days=7)
+        current=Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        self.client.post(reverse('subscribe',args=[plan.slug]))
+        newest=Subscription.objects.filter(user=self.user,plan=plan).order_by('-created_at').first()
+        self.assertGreaterEqual(newest.starts_at,current.expires_at)
