@@ -312,3 +312,14 @@ class RetiredPlanPdfAccessTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('protected_book_pdf',args=[book.pk]))
         self.assertEqual(response.status_code,200)
+
+
+    def test_unpublished_pdf_returns_404_even_with_entitlement(self):
+        user=User.objects.create_user(username='draft-pdf-user',password='pass12345')
+        author=Author.objects.create(name='Draft PDF Author')
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        book=Book.objects.create(name='Draft PDF',slug='draft-protected-pdf',author=author,status='draft',price=100,pdf=SimpleUploadedFile('draft.pdf',b'%PDF-1.4 test',content_type='application/pdf'))
+        Entitlement.objects.create(user=user,book=book,source='admin')
+        self.client.force_login(user)
+        response=self.client.get(reverse('protected_book_pdf',args=[book.pk]))
+        self.assertEqual(response.status_code,404)
