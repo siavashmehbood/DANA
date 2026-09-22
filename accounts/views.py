@@ -124,12 +124,12 @@ def profile(request):
     sessions=UserSession.objects.filter(user=request.user).select_related('device').order_by('-last_seen')
     goal,_=ReadingGoal.objects.get_or_create(user=request.user)
     week_start=timezone.now()-timedelta(days=7)
-    weekly_seconds=sum(ReadingProgress.objects.filter(user=request.user,updated_at__gte=week_start).values_list('seconds',flat=True))
+    weekly_seconds=ReadingProgress.objects.filter(user=request.user,updated_at__gte=week_start).aggregate(total=Sum('seconds'))['total'] or 0
     weekly_audio_seconds=AudioProgress.objects.filter(user=request.user,updated_at__gte=week_start).aggregate(total=Sum('position_seconds'))['total'] or 0
     completed_reading_ids=set(ReadingProgress.objects.filter(user=request.user,progress__gte=100).values_list('book_id',flat=True))
     completed_audio_ids=set(AudioProgress.objects.filter(user=request.user,completed=True).values_list('book_id',flat=True))
     completed_books=len(completed_reading_ids|completed_audio_ids)
-    total_reading_seconds=sum(ReadingProgress.objects.filter(user=request.user).values_list('seconds',flat=True))
+    total_reading_seconds=ReadingProgress.objects.filter(user=request.user).aggregate(total=Sum('seconds'))['total'] or 0
     total_audio_seconds=AudioProgress.objects.filter(user=request.user).aggregate(total=Sum('position_seconds'))['total'] or 0
     active_subscription=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True).select_related('plan').first()
     streak=UserStreak.objects.filter(user=request.user).first()
