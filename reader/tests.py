@@ -534,3 +534,24 @@ class AudioProgressMonotonicTests(TestCase):
         self.client.post(url,{'chapter_id':self.chapter.pk,'position':'10','duration':'100'})
         self.assertTrue(AudioProgress.objects.get(user=self.user,book=self.book,chapter=self.chapter).completed)
 
+
+
+class AudioResumeCursorTests(TestCase):
+    def setUp(self):
+        from accounts.models import User
+        from books.models import Author, Book
+        from shop.models import Entitlement
+        self.user=User.objects.create_user(username='audio-cursor',password='pass12345')
+        author=Author.objects.create(name='Audio Cursor Author')
+        self.book=Book.objects.create(name='Audio Cursor Book',slug='audio-cursor-book',author=author,status='published')
+        Entitlement.objects.create(user=self.user,book=self.book)
+        self.client.force_login(self.user)
+
+    def test_backward_seek_becomes_saved_resume_position(self):
+        from .models import AudioProgress
+        progress=AudioProgress.objects.create(user=self.user,book=self.book,position_seconds=120,duration_seconds=300)
+        response=self.client.post(reverse('audio_progress',args=[self.book.pk]),{'position':'45','duration':'300'})
+        self.assertEqual(response.status_code,200)
+        progress.refresh_from_db()
+        self.assertEqual(progress.position_seconds,45)
+        self.assertFalse(progress.completed)
