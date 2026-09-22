@@ -242,3 +242,11 @@ class ArticleDiscoveryInputTests(TestCase):
         response=self.client.get(reverse('articles'),{'sort':'invalid'})
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.context['selected_sort'],'top')
+
+
+class ArticleRenderingSecurityTests(TestCase):
+    def test_full_text_html_is_escaped(self):
+        article=Article.objects.create(title='Unsafe HTML',slug='unsafe-html',published=True,full_text='<script>alert(1)</script>')
+        response=self.client.get(reverse('article_detail',args=[article.slug]),{'lang':'en'})
+        self.assertNotContains(response,'<script>alert(1)</script>',html=False)
+        self.assertContains(response,'&lt;script&gt;alert(1)&lt;/script&gt;',html=False)
