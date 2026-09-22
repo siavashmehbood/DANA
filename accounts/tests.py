@@ -68,3 +68,15 @@ class LibraryFilterTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.context['state'],'all')
         self.assertEqual(response.context['kind'],'all')
+
+
+    def test_library_hides_draft_entitlement(self):
+        from books.models import Author, Book
+        from shop.models import Entitlement
+        user=User.objects.create_user(username='library-draft',password='pass12345')
+        author=Author.objects.create(name='Draft Author')
+        draft=Book.objects.create(name='Draft owned',slug='draft-owned',author=author,status='draft')
+        Entitlement.objects.create(user=user,book=draft)
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertNotContains(response,'Draft owned')
