@@ -208,7 +208,11 @@ def library(request):
     for book in books:
         has_audio=bool(book.audio) or any(ch.audio for ch in book.chapters.all())
         has_text=bool(book.pdf) or any(bool(ch.text and ch.text.strip()) for ch in book.chapters.all())
-        rows.append({'book':book,'progress':pmap.get(book.id),'audio_progress':amap.get(book.id),'has_audio':has_audio,'has_text':has_text,'source':'purchased' if book.id in entitled_ids else 'subscription'})
+        progress=pmap.get(book.id); audio_progress=amap.get(book.id)
+        latest_kind=None
+        if progress or audio_progress:
+            latest_kind='audio' if audio_progress and (not progress or audio_progress.updated_at > progress.updated_at) else 'text'
+        rows.append({'book':book,'progress':progress,'audio_progress':audio_progress,'latest_kind':latest_kind,'has_audio':has_audio,'has_text':has_text,'source':'purchased' if book.id in entitled_ids else 'subscription'})
     state=request.GET.get('state','all')
     kind=request.GET.get('kind','all')
     source=request.GET.get('source','all')
