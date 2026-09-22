@@ -181,7 +181,7 @@ def translate_article(article, full_text=False, force=False, provider='mymemory+
             if not source or not translated: return False
             persian = len(re.findall(r'[\u0600-\u06FF]', translated))
             letters = len(re.findall(r'[A-Za-z\u0600-\u06FF]', translated))
-            return letters > 0 and persian / letters >= 0.20 and len(translated.strip()) >= min(8, max(3, len(source.strip()) // 8))
+            return letters > 0 and persian / letters >= 0.50 and len(translated.strip()) >= min(8, max(3, len(source.strip()) // 8))
         if not quality_ok(article.title, title_fa):
             raise ValueError('Translation quality validation failed for title')
         if full_text and source_text and not content_fa.strip():
