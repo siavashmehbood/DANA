@@ -12,7 +12,7 @@ from django.utils import timezone
 
 
 def home(request):
-    base = Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now())).select_related('author', 'category')
+    base = Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now())).exclude(visibility='private').select_related('author', 'category')
     featured = base.order_by('-created_at')[:6]
     newest = base.order_by('-created_at')[:8]
     popular = base.annotate(approved_reviews=Count('review', filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
@@ -81,7 +81,7 @@ def robots_txt(request):
 def sitemap_xml(request):
     base=request.build_absolute_uri('/').rstrip('/')
     urls=[base+'/',base+'/books/',base+'/articles/',base+'/shop/subscriptions/']
-    urls += [base+'/books/'+slug+'/' for slug in Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now())).values_list('slug',flat=True)[:5000]]
+    urls += [base+'/books/'+slug+'/' for slug in Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now())).exclude(visibility='private').values_list('slug',flat=True)[:5000]]
     urls += [base+'/articles/'+slug+'/' for slug in Article.objects.filter(published=True).values_list('slug',flat=True)[:5000]]
     body='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(f'<url><loc>{escape(url)}</loc></url>' for url in urls) + '</urlset>'
     return HttpResponse(body, content_type='application/xml')
