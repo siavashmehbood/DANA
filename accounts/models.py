@@ -15,8 +15,6 @@ class User(AbstractUser):
     referral_code=models.CharField(max_length=12,unique=True,blank=True)
     is_deactivated=models.BooleanField(default=False)
     terms_accepted_at=models.DateTimeField(null=True,blank=True)
-    class Meta:
-        constraints=[models.CheckConstraint(condition=models.Q(wallet_balance__gte=0),name='account_wallet_nonnegative')]
     def save(self,*a,**kw):
         if not self.referral_code:self.referral_code=secrets.token_urlsafe(7)[:12].upper()
         if not self.username:self.username=self.phone or f'user_{secrets.token_hex(4)}'
