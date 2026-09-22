@@ -207,7 +207,6 @@ class ShopFlowTests(TestCase):
         self._subscribe(plan)
         original_expiry=current.expires_at
         renewed=Subscription.objects.get(pk=current.pk)
-        renewed.refresh_from_db()
         self.assertEqual(renewed.starts_at,current.starts_at)
         self.assertGreater(renewed.expires_at,original_expiry)
 
