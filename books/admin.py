@@ -41,7 +41,7 @@ class BookAdmin(ModelAdmin):
 
     @admin.action(description='انتشار کتاب‌های انتخاب‌شده')
     def publish_selected(self, request, queryset):
-        valid=queryset.exclude(visibility='password',access_password='').exclude(status='scheduled',publish_at__isnull=True)
+        valid=queryset.exclude(visibility='password',access_password='')
         updated=valid.update(status='published', publish_at=None)
         skipped=queryset.count()-updated
         if skipped:
