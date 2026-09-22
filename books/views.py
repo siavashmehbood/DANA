@@ -103,9 +103,11 @@ def detail(request,slug):
     if request.user.is_authenticated and has_access:
         saved_audio_seconds=ReadingProgress.objects.filter(user=request.user,book=book).values_list('audio_seconds',flat=True).first() or 0
     response=render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count'],'approved_reviews':approved_reviews,'saved_audio_seconds':saved_audio_seconds})
-    if request.user.is_authenticated:
+    if request.user.is_authenticated or book.visibility != 'public':
         response['Cache-Control']='private, no-store'
         response['Vary']='Cookie'
+    if book.visibility != 'public':
+        response['X-Robots-Tag']='noindex, nofollow'
     return response
 
 
