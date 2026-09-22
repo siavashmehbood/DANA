@@ -191,3 +191,18 @@ class DashboardSubscriptionTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('library'))
         self.assertNotContains(response,'Excluded Private')
+
+
+class LoginRedirectTests(TestCase):
+    def setUp(self):
+        self.user=User.objects.create_user(username='next-user',password='pass12345')
+
+    def test_password_login_returns_to_safe_local_destination(self):
+        response=self.client.post(reverse('login'),{'login_method':'password','username':'next-user','password':'pass12345','next':'/shop/subscriptions/'})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,'/shop/subscriptions/')
+
+    def test_password_login_rejects_external_destination(self):
+        response=self.client.post(reverse('login'),{'login_method':'password','username':'next-user','password':'pass12345','next':'https://evil.example/'})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,'/')
