@@ -194,7 +194,7 @@ class RecommendationTests(TestCase):
         self.assertEqual(response['Referrer-Policy'],'same-origin')
 
 
-    def test_subscription_accessible_book_is_not_recommended(self):
+    def test_subscription_accessible_unengaged_book_can_be_recommended(self):
         from books.models import Category
         category=Category.objects.create(name='Sub rec',slug='sub-rec')
         author=Author.objects.create(name='Sub Rec Author')
@@ -207,7 +207,7 @@ class RecommendationTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('home'))
         recs=list(response.context['recommendations'])
-        self.assertNotIn(accessible,recs)
+        self.assertIn(accessible,recs)
         self.assertIn(candidate,recs)
 
 
