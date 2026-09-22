@@ -454,3 +454,15 @@ class ShopFlowTests(TestCase):
         rows=WalletTransaction.objects.filter(user=self.user,reason='Subscription purchase')
         self.assertEqual(rows.count(),2)
         self.assertEqual(rows.values('reference').distinct().count(),2)
+
+
+    def test_subscription_activation_nonce_is_single_use_even_on_failed_purchase(self):
+        plan=SubscriptionPlan.objects.create(name='Too expensive',slug='too-expensive',price=999999,duration_days=30)
+        self.client.login(username='buyer',password='pass12345')
+        self.client.get(reverse('subscriptions'))
+        key=self.client.session['subscription_activation_key']
+        first=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key})
+        self.assertEqual(first.status_code,302)
+        second=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key},follow=True)
+        self.assertContains(second,'درخواست فعال‌سازی نامعتبر یا تکراری است')
+        self.assertFalse(Subscription.objects.filter(user=self.user,plan=plan).exists())
