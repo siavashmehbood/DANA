@@ -221,6 +221,9 @@ def report_problem(request, pk):
     if not book.is_published or not _has_access(request.user,book):
         return HttpResponseForbidden('برای گزارش مشکل باید به کتاب دسترسی داشته باشید.')
     text=request.POST.get('text','').strip()[:4000]
+    recent=ProblemReport.objects.filter(user=request.user,created_at__gte=timezone.now()-timezone.timedelta(hours=1)).count()
+    if recent >= 10:
+        return JsonResponse({'error':'تعداد گزارش‌ها زیاد است؛ کمی بعد دوباره تلاش کنید.'},status=429)
     if not text:
         return JsonResponse({'error':'شرح مشکل خالی است.'},status=400)
     ProblemReport.objects.create(user=request.user,book=book,text=text)
