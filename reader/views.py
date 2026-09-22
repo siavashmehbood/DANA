@@ -23,8 +23,8 @@ def _has_access(user, book):
 def reader(request, pk):
     book = get_object_or_404(Book, pk=pk)
     if not book.is_published: return HttpResponseForbidden('کتاب هنوز منتشر نشده است.')
-    owned = _has_access(request.user, book) and book.visibility != 'public'
     accessible = _has_access(request.user, book)
+    owned = accessible and book.visibility != 'public'
     saved = ReadingProgress.objects.filter(user=request.user, book=book).select_related('current_chapter').first()
     bookmark_query=request.GET.get('bookmark_q','').strip()[:150]
     note_query=request.GET.get('note_q','').strip()[:200]
