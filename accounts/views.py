@@ -93,12 +93,23 @@ def dashboard(request):
     if subscription:
         valid_book_ids += list(Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),subscription_included=True).values_list('id',flat=True))
     valid_book_ids=list(set(valid_book_ids))
-    progress=list(ReadingProgress.objects.filter(user=user,book_id__in=valid_book_ids).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author').prefetch_related('book__chapters').order_by('-updated_at')[:4])
+    text_progress=list(ReadingProgress.objects.filter(user=user,book_id__in=valid_book_ids,progress__gt=0).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author').prefetch_related('book__chapters').order_by('-updated_at')[:8])
+    audio_progress=list(AudioProgress.objects.filter(user=user,book_id__in=valid_book_ids,position_seconds__gt=0).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author').prefetch_related('book__chapters').order_by('-updated_at')[:8])
+    recent_by_book={}
+    for item in text_progress:
+        recent_by_book[item.book_id]={'progress':item,'audio_progress':None,'book':item.book,'updated_at':item.updated_at,'kind':'text'}
+    for item in audio_progress:
+        row=recent_by_book.get(item.book_id)
+        if not row or item.updated_at > row['updated_at']:
+            recent_by_book[item.book_id]={'progress':row['progress'] if row else None,'audio_progress':item,'book':item.book,'updated_at':item.updated_at,'kind':'audio'}
+        elif row:
+            row['audio_progress']=item
     progress_rows=[]
-    for item in progress:
-        has_text=bool(item.book.pdf) or any(bool(ch.text and ch.text.strip()) for ch in item.book.chapters.all())
-        has_audio=bool(item.book.audio) or any(bool(ch.audio) for ch in item.book.chapters.all())
-        progress_rows.append({'progress':item,'book':item.book,'has_text':has_text,'has_audio':has_audio})
+    for row in sorted(recent_by_book.values(),key=lambda value:value['updated_at'],reverse=True)[:4]:
+        book=row['book']
+        row['has_text']=bool(book.pdf) or any(bool(ch.text and ch.text.strip()) for ch in book.chapters.all())
+        row['has_audio']=bool(book.audio) or any(bool(ch.audio) for ch in book.chapters.all())
+        progress_rows.append(row)
     latest_text=ReadingProgress.objects.filter(user=user,book_id__in=valid_book_ids,progress__gt=0,progress__lt=100).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book').order_by('-updated_at').first()
     latest_audio=AudioProgress.objects.filter(user=user,book_id__in=valid_book_ids,position_seconds__gt=0,completed=False).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book').order_by('-updated_at').first()
     continue_item=None
