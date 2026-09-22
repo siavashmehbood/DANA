@@ -44,7 +44,9 @@ def progress(request, pk):
             chapter = book.chapters.get(pk=chapter_id)
         except (ValueError, TypeError, book.chapters.model.DoesNotExist):
             return JsonResponse({'error':'Invalid chapter'},status=400)
-    saved,_=ReadingProgress.objects.get_or_create(user=request.user,book=book); saved.progress=value; saved.current_page=page; saved.seconds=seconds; saved.audio_seconds=audio_seconds
+    saved,_=ReadingProgress.objects.get_or_create(user=request.user,book=book)
+    saved.progress=value; saved.current_page=page
+    saved.seconds=max(saved.seconds,seconds); saved.audio_seconds=max(saved.audio_seconds,audio_seconds)
     if chapter is not None: saved.current_chapter = chapter
     saved.save()
     if seconds or audio_seconds:
