@@ -136,7 +136,8 @@ def profile(request):
     badges=UserBadge.objects.filter(user=request.user,badge__active=True).select_related('badge').order_by('-earned_at')[:8]
     missions=UserMission.objects.filter(user=request.user,mission__active=True).select_related('mission').order_by('-completed_at','-id')[:6]
     recent_progress=ReadingProgress.objects.filter(user=request.user).select_related('book__author').order_by('-updated_at')[:6]
-    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':(weekly_seconds+weekly_audio_seconds)//60,'completed_books':completed_books,'total_reading_minutes':total_reading_seconds//60,'total_audio_minutes':total_audio_seconds//60,'streak':streak,'badges':badges,'missions':missions,'recent_progress':recent_progress,'active_subscription':active_subscription})
+    recent_audio=AudioProgress.objects.filter(user=request.user).select_related('book__author','chapter').order_by('-updated_at')[:6]
+    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':(weekly_seconds+weekly_audio_seconds)//60,'completed_books':completed_books,'total_reading_minutes':total_reading_seconds//60,'total_audio_minutes':total_audio_seconds//60,'streak':streak,'badges':badges,'missions':missions,'recent_progress':recent_progress,'recent_audio':recent_audio,'active_subscription':active_subscription})
 
 @login_required
 def logout_others(request):
