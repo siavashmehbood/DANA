@@ -189,6 +189,7 @@ def vocabulary(request):
     response=render(request,'reader/vocabulary.html',{'words':words[:500],'query':query})
     response['Cache-Control']='private, no-store'
     response['X-Robots-Tag']='noindex, nofollow'
+    response['Referrer-Policy']='same-origin'
     return response
 
 
