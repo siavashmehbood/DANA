@@ -398,3 +398,13 @@ class RetiredSubscriptionPlanAccessTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('reader',args=[book.pk]))
         self.assertEqual(response.status_code,200)
+
+
+class PasswordBookAccessTests(TestCase):
+    def test_password_book_is_not_opened_without_unlock_flow(self):
+        user=User.objects.create_user(username='password-reader',password='pass12345')
+        author=Author.objects.create(name='Password Reader Author')
+        book=Book.objects.create(name='Locked Book',slug='locked-book',author=author,status='published',visibility='password',access_password='secret',price=0)
+        self.client.force_login(user)
+        response=self.client.get(reverse('reader',args=[book.pk]))
+        self.assertEqual(response.status_code,403)
