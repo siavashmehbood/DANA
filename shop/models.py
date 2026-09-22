@@ -129,7 +129,7 @@ class Subscription(models.Model):
 
     @property
     def is_active(self):
-        return self.status == 'active' and self.plan.active and self.starts_at <= timezone.now() < self.expires_at
+        return self.status == 'active' and self.starts_at <= timezone.now() < self.expires_at
 
     class Meta:
         indexes = [models.Index(fields=['user','status','expires_at'], name='shop_sub_user_status_idx')]
