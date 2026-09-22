@@ -163,7 +163,8 @@ def research_library(request):
         'read': ArticleLibraryItem.objects.filter(user=request.user, status='read').count(),
         'favorites': ArticleLibraryItem.objects.filter(user=request.user, favorite=True).count(),
     }
-    return render(request, 'articles/library.html', {'items': items[:100], 'annotations': annotations[:40], 'stats': stats, 'status': status, 'favorite': favorite, 'query': q})
+    page_obj = Paginator(items, 30).get_page(request.GET.get('page', 1))
+    return render(request, 'articles/library.html', {'items': page_obj.object_list, 'page_obj': page_obj, 'annotations': annotations[:40], 'stats': stats, 'status': status, 'favorite': favorite, 'query': q})
 
 
 @login_required
