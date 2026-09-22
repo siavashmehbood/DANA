@@ -222,3 +222,11 @@ class SubscriptionReaderAccessTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertFalse(response.json()['created'])
         self.assertEqual(Note.objects.filter(user=self.user,book=self.book,page=6,text='یادداشت تکراری').count(),1)
+
+
+    def test_reader_can_search_highlights(self):
+        Highlight.objects.create(user=self.user,book=self.book,page=1,text='عبارت مهم')
+        Highlight.objects.create(user=self.user,book=self.book,page=2,text='عبارت دیگر')
+        response=self.client.get(reverse('reader',args=[self.book.pk]),{'highlight_q':'مهم'})
+        self.assertContains(response,'عبارت مهم')
+        self.assertNotContains(response,'عبارت دیگر')
