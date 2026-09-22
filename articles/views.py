@@ -148,7 +148,8 @@ def research_library(request):
     items = ArticleLibraryItem.objects.filter(user=request.user).select_related('article', 'article__category')
     status = request.GET.get('status', '').strip()
     favorite = request.GET.get('favorite') == '1'
-    q = request.GET.get('q', '').strip()
+    q = request.GET.get('q', '').strip()[:200]
+    q = ' '.join(q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split())
     if status in dict(ArticleLibraryItem.STATUS_CHOICES):
         items = items.filter(status=status)
     if favorite:
