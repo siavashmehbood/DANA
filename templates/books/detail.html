@@ -32,14 +32,14 @@ const title=document.getElementById('audio-title');
 const timeLabel=document.getElementById('audio-time');
 const fmt=s=>{s=Math.max(0,Math.floor(s||0));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
 if(audio){
- const progressUrl='{% url 'reader_progress' book.pk %}'; const csrfToken='{{ csrf_token }}'; const resumeAt=Number('{{ saved_audio_seconds|default:0 }}')||0; let sleepTimer=null; let lastSaved=0;
- audio.addEventListener('loadedmetadata',()=>{if(resumeAt>0&&resumeAt<audio.duration)audio.currentTime=resumeAt;timeLabel.textContent=fmt(audio.currentTime)+' / '+fmt(audio.duration)});
+ const progressUrl='{% url 'reader_progress' book.pk %}'; const csrfToken='{{ csrf_token }}'; const resumeAt=Number('{{ saved_audio_seconds|default:0 }}')||0; let sleepTimer=null; let lastSaved=0; let resumed=false;
+ audio.addEventListener('loadedmetadata',()=>{if(!resumed&&resumeAt>0&&resumeAt<audio.duration){audio.currentTime=resumeAt;resumed=true}timeLabel.textContent=fmt(audio.currentTime)+' / '+fmt(audio.duration)});
  audio.addEventListener('timeupdate',()=>{timeLabel.textContent=fmt(audio.currentTime)+' / '+fmt(audio.duration);if(Math.abs(audio.currentTime-lastSaved)>=15){lastSaved=audio.currentTime;fetch(progressUrl,{method:'POST',headers:{'X-CSRFToken':csrfToken,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({audio_seconds:String(Math.floor(audio.currentTime))})}).catch(()=>{})}});
  document.querySelector('[data-audio-back]')?.addEventListener('click',()=>audio.currentTime=Math.max(0,audio.currentTime-15));
  document.querySelector('[data-audio-forward]')?.addEventListener('click',()=>audio.currentTime=Math.min(audio.duration||Infinity,audio.currentTime+15));
  document.querySelector('[data-audio-speed]')?.addEventListener('change',e=>audio.playbackRate=Number(e.target.value)||1);
  document.querySelector('[data-sleep]')?.addEventListener('change',e=>{if(sleepTimer)clearTimeout(sleepTimer);const minutes=Number(e.target.value)||0;if(minutes)sleepTimer=setTimeout(()=>audio.pause(),minutes*60000)});
- document.querySelectorAll('.audio-chapter').forEach(btn=>btn.addEventListener('click',()=>{audio.src=btn.dataset.audio;title.textContent=btn.dataset.title;audio.play().catch(()=>{});}));
+ document.querySelectorAll('.audio-chapter').forEach(btn=>btn.addEventListener('click',()=>{resumed=true;audio.src=btn.dataset.audio;title.textContent=btn.dataset.title;audio.play().catch(()=>{});}));
 }
 </script>
 {% endif %}
