@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 from django.utils import timezone
 from django.db import models, transaction
 from books.models import Book
@@ -20,6 +21,7 @@ def _has_access(user, book):
 
 
 @login_required
+@never_cache
 def reader(request, pk):
     book = get_object_or_404(Book, pk=pk)
     if not book.is_published: return HttpResponseForbidden('کتاب هنوز منتشر نشده است.')
@@ -162,6 +164,7 @@ def save_word(request, slug):
 
 
 @login_required
+@never_cache
 def vocabulary(request):
     query=request.GET.get('q','').strip()[:180]
     words=SavedWord.objects.filter(user=request.user).select_related('article')
