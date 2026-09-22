@@ -77,6 +77,8 @@ def listing(request):
 def _has_book_access(user, book):
     if not user.is_authenticated:
         return False
+    if book.visibility == 'password':
+        return False
     if book.visibility == 'public' and book.price == 0:
         return True
     if Entitlement.objects.filter(user=user,book=book).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).exists():
@@ -84,12 +86,12 @@ def _has_book_access(user, book):
     now=timezone.now()
     if not book.subscription_included:
         return False
-    return Subscription.objects.filter(user=user,status='active',starts_at__lte=now,expires_at__gt=now,plan__active=True,plan__grants_catalog_access=True).exists()
+    return Subscription.objects.filter(user=user,status='active',starts_at__lte=now,expires_at__gt=now,plan__grants_catalog_access=True).exists()
 
 
 def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
-    if book.visibility == 'private' and not book.subscription_included and not _has_book_access(request.user,book):
+    if book.visibility != 'public' and not _has_book_access(request.user,book):
         from django.http import Http404
         raise Http404
     approved_reviews=book.review_set.filter(approved=True).select_related('user').order_by('-created_at')[:8]
