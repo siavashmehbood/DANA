@@ -48,7 +48,7 @@ def progress(request, pk):
     added_study_time = seconds > saved.seconds or audio_seconds > saved.audio_seconds
     saved.progress=max(saved.progress,value); saved.current_page=max(saved.current_page,page)
     saved.seconds=max(saved.seconds,seconds); saved.audio_seconds=max(saved.audio_seconds,audio_seconds)
-    if chapter is not None: saved.current_chapter = chapter
+    if chapter is not None and (saved.current_chapter_id is None or chapter.order >= saved.current_chapter.order): saved.current_chapter = chapter
     saved.save()
     if added_study_time:
         record_study_activity(request.user)
