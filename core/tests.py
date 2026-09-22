@@ -234,3 +234,10 @@ class HomePrivacyTests(TestCase):
         self.assertIn('private',response['Cache-Control'])
         self.assertIn('no-store',response['Cache-Control'])
         self.assertIn('Cookie',response['Vary'])
+
+
+    def test_service_worker_does_not_precache_personalized_home(self):
+        response=self.client.get('/sw.js')
+        body=response.content.decode()
+        self.assertIn("CORE=['/books/','/articles/']",body)
+        self.assertNotIn("CORE=['/','/books/'",body)
