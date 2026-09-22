@@ -151,7 +151,7 @@ def secure_file(request, pk, kind, chapter_id=None):
     response['X-Content-Type-Options'] = 'nosniff'
     response['Cross-Origin-Resource-Policy'] = 'same-origin'
     response['X-Robots-Tag'] = 'noindex, nofollow'
-    response['Referrer-Policy'] = 'same-origin'
+    response['Referrer-Policy'] = 'no-referrer'
     if kind == 'pdf':
         response['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'self'; sandbox"
     return response
