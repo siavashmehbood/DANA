@@ -89,7 +89,7 @@ def dashboard(request):
     owned=Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).select_related('book__author').order_by('-granted_at')
     valid_book_ids=list(owned.values_list('book_id',flat=True))
     owned_count=len(set(valid_book_ids))
-    subscription=Subscription.objects.filter(user=user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True,plan__grants_catalog_access=True).select_related('plan').first()
+    subscription=Subscription.objects.filter(user=user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__grants_catalog_access=True).select_related('plan').first()
     if subscription:
         valid_book_ids += list(Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),subscription_included=True).values_list('id',flat=True))
     valid_book_ids=list(set(valid_book_ids))
@@ -131,7 +131,7 @@ def profile(request):
     completed_books=len(completed_reading_ids|completed_audio_ids)
     total_reading_seconds=ReadingProgress.objects.filter(user=request.user).aggregate(total=Sum('seconds'))['total'] or 0
     total_audio_seconds=AudioProgress.objects.filter(user=request.user).aggregate(total=Sum('position_seconds'))['total'] or 0
-    active_subscription=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True).select_related('plan').first()
+    active_subscription=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now()).select_related('plan').first()
     streak=UserStreak.objects.filter(user=request.user).first()
     badges=UserBadge.objects.filter(user=request.user,badge__active=True).select_related('badge').order_by('-earned_at')[:8]
     missions=UserMission.objects.filter(user=request.user,mission__active=True).select_related('mission').order_by('-completed_at','-id')[:6]
