@@ -6,7 +6,7 @@ from datetime import timedelta
 from django.urls import reverse
 from accounts.models import User
 from books.models import Author, Book
-from shop.models import Entitlement
+from shop.models import Entitlement, SubscriptionPlan, Subscription
 from reader.models import Review
 
 class ProtectedMediaTests(TestCase):
@@ -121,3 +121,11 @@ class RecommendationTests(TestCase):
         categories=list(response.context['categories'])
         self.assertIn(active,categories)
         self.assertNotIn(future_only,categories)
+
+
+    def test_subscription_catalog_plan_allows_legacy_protected_pdf(self):
+        plan=SubscriptionPlan.objects.create(name='Legacy PDF',slug='legacy-pdf',price=0,duration_days=7,grants_catalog_access=True)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='reader',password='pass12345')
+        response=self.client.get(self.url)
+        self.assertEqual(response.status_code,200)
