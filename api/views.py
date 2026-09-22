@@ -37,7 +37,11 @@ def event(request):
     metadata = data.get('metadata', {})
     if not isinstance(metadata, dict):
         return JsonResponse({'ok': False, 'error': 'metadata_object_required'}, status=400)
-    if len(json.dumps(metadata, ensure_ascii=False)) > 10000:
+    try:
+        metadata_json = json.dumps(metadata, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'invalid_metadata'}, status=400)
+    if len(metadata_json) > 10000:
         return JsonResponse({'ok': False, 'error': 'metadata_too_large'}, status=400)
     if not request.session.session_key:
         request.session.create()
