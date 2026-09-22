@@ -99,10 +99,11 @@ def detail(request,slug):
     review_stats=book.review_set.filter(approved=True).aggregate(avg=Avg('rating'),count=Count('id'))
     related=_published_books().filter(visibility='public',category=book.category).exclude(pk=book.pk).select_related('author','category')[:4] if book.category else Book.objects.none()
     has_access = _has_book_access(request.user, book)
+    has_audio = bool(book.audio) or any(ch.audio for ch in book.chapters.all())
     saved_audio_seconds=0
     if request.user.is_authenticated and has_access:
         saved_audio_seconds=ReadingProgress.objects.filter(user=request.user,book=book).values_list('audio_seconds',flat=True).first() or 0
-    response=render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count'],'approved_reviews':approved_reviews,'saved_audio_seconds':saved_audio_seconds})
+    response=render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count'],'approved_reviews':approved_reviews,'saved_audio_seconds':saved_audio_seconds,'has_audio':has_audio})
     if request.user.is_authenticated or book.visibility != 'public':
         response['Cache-Control']='private, no-store'
         response['Vary']='Cookie'
