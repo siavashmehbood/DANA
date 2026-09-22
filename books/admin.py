@@ -18,7 +18,7 @@ class BookAdmin(ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     list_per_page = 25
     autocomplete_fields = ('author', 'category', 'level')
-    list_editable = ('status',)
+    list_editable = ('status', 'subscription_included')
     inlines = (ChapterInline,)
     fieldsets = (
         ('مشخصات کتاب', {'fields': ('name', 'slug', 'author', 'category', 'level', 'cover', 'summary', 'description')}),
