@@ -99,3 +99,12 @@ class RecommendationTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('home'))
         self.assertIn(candidate,list(response.context['recommendations']))
+
+
+    def test_new_user_gets_cold_start_recommendations(self):
+        author=Author.objects.create(name='Cold Author')
+        book=Book.objects.create(name='Cold Candidate',slug='cold-candidate',author=author,status='published')
+        user=User.objects.create_user(username='cold-user',password='pass12345')
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        self.assertIn(book,list(response.context['recommendations']))
