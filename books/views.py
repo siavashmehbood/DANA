@@ -104,4 +104,6 @@ def secure_file(request, pk, kind, chapter_id=None):
         return HttpResponseForbidden('فایل موجود نیست.')
     response = FileResponse(field.open('rb'), content_type='application/pdf' if kind == 'pdf' else 'audio/mpeg')
     response['Content-Disposition'] = f'inline; filename="{field.name.rsplit("/", 1)[-1]}"'
+    response['Cache-Control'] = 'private, no-store'
+    response['X-Content-Type-Options'] = 'nosniff'
     return response
