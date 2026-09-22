@@ -135,7 +135,7 @@ class RecommendationTests(TestCase):
 
 
     def test_service_worker_does_not_cache_private_reader_routes(self):
-        response=self.client.get('/service-worker.js')
+        response=self.client.get(reverse('service_worker'))
         body=response.content.decode()
         self.assertIn("url.pathname.startsWith('/static/')||CORE.includes(url.pathname)",body)
         self.assertNotIn("c.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request).then",body)
