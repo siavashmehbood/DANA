@@ -218,3 +218,9 @@ class RecommendationTests(TestCase):
         Entitlement.objects.create(user=user,book=book,source='admin')
         self.client.force_login(user)
         self.assertEqual(self.client.get(reverse('protected_book_pdf',args=[book.pk])).status_code,404)
+
+
+    def test_service_worker_has_update_cache_headers(self):
+        response=self.client.get(reverse('service_worker'))
+        self.assertEqual(response['Cache-Control'],'no-cache')
+        self.assertEqual(response['Service-Worker-Allowed'],'/')
