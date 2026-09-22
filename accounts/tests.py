@@ -10,6 +10,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from .models import OTPCode, User
 from shop.models import Referral, Entitlement, SubscriptionPlan, Subscription
 from books.models import Author, Book, Category
+from reader.models import ReadingProgress
 
 
 class AccountFlowTests(TestCase):
