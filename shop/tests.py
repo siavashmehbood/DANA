@@ -524,3 +524,19 @@ class BankCheckoutIdempotencyProductTests(TestCase):
         self.assertEqual(Order.objects.filter(user=self.user,status='pending').count(),1)
         self.assertEqual(Payment.objects.filter(user=self.user,provider='zarinpal',status='pending').count(),1)
         self.assertEqual(gateway.request.call_count,1)
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_bank_checkout_does_not_reuse_pending_order_for_different_coupon_context(self, gateway_factory):
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.side_effect=[Mock(ok=True,authority='AUTH-ONE',url='https://gateway.example/pay/one',message=''),Mock(ok=True,authority='AUTH-TWO',url='https://gateway.example/pay/two',message='')]
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        coupon=Coupon.objects.create(code='BANK10',percent=10,capacity=5,active=True)
+        session=self.client.session
+        session['checkout_coupon']=coupon.code
+        session.save()
+        self.client.post(reverse('bank_checkout'))
+        self.assertEqual(Order.objects.filter(user=self.user,status='pending').count(),2)
+        self.assertEqual(Payment.objects.filter(user=self.user,provider='zarinpal',status='pending').count(),2)
+        self.assertEqual(gateway.request.call_count,2)
