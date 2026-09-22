@@ -14,6 +14,8 @@ class Book(models.Model):
             raise ValidationError({'access_password':'برای کتاب رمزدار، رمز دسترسی الزامی است.'})
         if self.status == 'scheduled' and not self.publish_at:
             raise ValidationError({'publish_at':'برای انتشار زمان‌بندی‌شده، زمان انتشار الزامی است.'})
+        if self.status == 'scheduled' and self.publish_at and self.publish_at <= timezone.now():
+            raise ValidationError({'publish_at':'زمان انتشار زمان‌بندی‌شده باید در آینده باشد.'})
         if self.status != 'scheduled' and self.publish_at:
             raise ValidationError({'publish_at':'زمان انتشار فقط برای وضعیت زمان‌بندی‌شده مجاز است.'})
         if self.visibility != 'password' and self.access_password:
