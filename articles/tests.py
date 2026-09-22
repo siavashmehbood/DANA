@@ -258,3 +258,13 @@ class ArticleSlugTests(TestCase):
         second=Article.objects.create(title='عنوان تکراری')
         self.assertNotEqual(first.slug,second.slug)
         self.assertTrue(second.slug.startswith(first.slug))
+
+
+class ResearchLibrarySearchTests(TestCase):
+    def test_library_search_normalizes_persian_letters(self):
+        user=User.objects.create_user(username='researcher',password='pass12345')
+        article=Article.objects.create(title='کتاب پژوهشی',published=True,abstract='متن')
+        ArticleLibraryItem.objects.create(user=user,article=article)
+        self.client.force_login(user)
+        response=self.client.get(reverse('article_library'),{'q':'كتاب'})
+        self.assertContains(response,'کتاب پژوهشی')
