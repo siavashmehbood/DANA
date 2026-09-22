@@ -183,6 +183,19 @@ class DashboardSubscriptionTests(TestCase):
         response=self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['books_count'],1)
 
+    def test_dashboard_routes_audio_only_progress_to_audio_player(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from reader.models import ReadingProgress
+        user=User.objects.create_user(username='dashboard-audio',password='pass12345')
+        author=Author.objects.create(name='Dashboard Audio Author')
+        book=Book.objects.create(name='Dashboard Audio',slug='dashboard-audio',author=author,status='published',audio=SimpleUploadedFile('audio.mp3',b'audio',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=book)
+        ReadingProgress.objects.create(user=user,book=book,progress=25)
+        self.client.force_login(user)
+        response=self.client.get(reverse('dashboard'))
+        self.assertContains(response,reverse('audio_player',args=[book.id]))
+        self.assertNotContains(response,reverse('reader',args=[book.id]))
+
 
     def test_subscription_library_excludes_non_catalog_books(self):
         user=User.objects.create_user(username='catalog-scope',password='pass12345')
