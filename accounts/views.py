@@ -17,6 +17,7 @@ from articles.models import Article
 from books.models import Book
 from shop.models import CartItem, Entitlement, Referral, Subscription
 from reader.models import ReadingProgress, AudioProgress, ReadingGoal
+from gamification.models import UserBadge, UserMission, UserStreak
 from .models import User, OTPCode, Device, UserSession
 
 def _phone(value):
@@ -128,7 +129,11 @@ def profile(request):
     completed_books=ReadingProgress.objects.filter(user=request.user,progress__gte=100).count()
     total_reading_seconds=sum(ReadingProgress.objects.filter(user=request.user).values_list('seconds',flat=True))
     total_audio_seconds=sum(ReadingProgress.objects.filter(user=request.user).values_list('audio_seconds',flat=True))
-    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':(weekly_seconds+weekly_audio_seconds)//60,'completed_books':completed_books,'total_reading_minutes':total_reading_seconds//60,'total_audio_minutes':total_audio_seconds//60})
+    streak=UserStreak.objects.filter(user=request.user).first()
+    badges=UserBadge.objects.filter(user=request.user,badge__active=True).select_related('badge').order_by('-earned_at')[:8]
+    missions=UserMission.objects.filter(user=request.user,mission__active=True).select_related('mission').order_by('-completed_at','-id')[:6]
+    recent_progress=ReadingProgress.objects.filter(user=request.user).select_related('book__author').order_by('-updated_at')[:6]
+    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':(weekly_seconds+weekly_audio_seconds)//60,'completed_books':completed_books,'total_reading_minutes':total_reading_seconds//60,'total_audio_minutes':total_audio_seconds//60,'streak':streak,'badges':badges,'missions':missions,'recent_progress':recent_progress})
 
 @login_required
 def logout_others(request):
