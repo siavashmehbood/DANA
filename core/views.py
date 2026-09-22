@@ -40,7 +40,9 @@ def home(request):
         if latest_listening and (not latest_reading or latest_listening.updated_at > latest_reading.updated_at):
             continue_item={'book':latest_listening.book,'kind':'audio'}
         elif latest_reading:
-            continue_item={'book':latest_reading.book,'kind':'text'}
+            has_text=bool(latest_reading.book.pdf) or latest_reading.book.chapters.exclude(text='').exists()
+            has_audio=bool(latest_reading.book.audio) or latest_reading.book.chapters.exclude(audio='').exists()
+            continue_item={'book':latest_reading.book,'kind':'text' if has_text or not has_audio else 'audio'}
         owned_categories=Entitlement.objects.filter(user=request.user,book__category__isnull=False).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book__category_id',flat=True)
         owned_ids=set(Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True))
         # Subscription access is not ownership. Keep unengaged catalog titles
