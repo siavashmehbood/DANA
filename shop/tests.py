@@ -302,10 +302,10 @@ class ShopFlowTests(TestCase):
         self.assertFalse(Subscription.objects.filter(user=self.user,plan=second).exists())
 
 
-    def test_disabled_plan_makes_subscription_inactive(self):
+    def test_retired_plan_does_not_revoke_existing_subscription(self):
         plan=SubscriptionPlan.objects.create(name='Disabled active state',slug='disabled-active-state',price=0,duration_days=30,active=False)
         sub=Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=1))
-        self.assertFalse(sub.is_active)
+        self.assertTrue(sub.is_active)
 
 
     def test_bank_callback_cannot_use_another_users_authority(self):
