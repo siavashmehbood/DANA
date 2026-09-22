@@ -25,7 +25,7 @@ class ProtectedMediaTests(TestCase):
         other=Book.objects.create(name='Other',slug='other',author=self.book.author,status='published',visibility='public')
         self.client.force_login(self.user)
         url=reverse('chapter_secure_audio',args=[other.pk,self.chapter.pk])
-        self.assertEqual(self.client.get(url).status_code,403)
+        self.assertEqual(self.client.get(url).status_code,404)
 
 
 class DiscoveryTests(TestCase):
