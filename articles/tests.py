@@ -268,3 +268,15 @@ class ResearchLibrarySearchTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('article_library'),{'q':'كتاب'})
         self.assertContains(response,'کتاب پژوهشی')
+
+
+    def test_research_library_is_paginated(self):
+        user=User.objects.create_user(username='library-pages',password='pass12345')
+        for i in range(31):
+            article=Article.objects.create(title=f'Article {i}',slug=f'article-lib-{i}',published=True,abstract='متن')
+            ArticleLibraryItem.objects.create(user=user,article=article)
+        self.client.force_login(user)
+        response=self.client.get(reverse('article_library'))
+        self.assertEqual(len(response.context['items']),30)
+        second=self.client.get(reverse('article_library'),{'page':2})
+        self.assertEqual(len(second.context['items']),1)
