@@ -373,3 +373,14 @@ class ShopFlowTests(TestCase):
         self.client.get(reverse('subscriptions'))
         second=self.client.session['subscription_activation_key']
         self.assertNotEqual(first,second)
+
+
+    def test_subscription_catalog_disables_switch_while_membership_active(self):
+        current_plan=SubscriptionPlan.objects.create(name='Current UI',slug='current-ui',price=0,duration_days=7)
+        other_plan=SubscriptionPlan.objects.create(name='Other UI',slug='other-ui',price=0,duration_days=7)
+        Subscription.objects.create(user=self.user,plan=current_plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        response=self.client.get(reverse('subscriptions'))
+        self.assertContains(response,'پس از پایان اشتراک فعلی')
+        self.assertContains(response,reverse('subscribe',args=[current_plan.slug]))
+        self.assertNotContains(response,reverse('subscribe',args=[other_plan.slug]))
