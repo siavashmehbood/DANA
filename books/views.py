@@ -131,7 +131,9 @@ def secure_file(request, pk, kind, chapter_id=None):
         return response
     if kind == 'chapter_audio':
         chapter = book.chapters.filter(pk=chapter_id).first()
-        field = chapter.audio if chapter else None
+        if chapter is None:
+            raise Http404
+        field = chapter.audio
     else:
         field = {'pdf': book.pdf, 'audio': book.audio}.get(kind)
     if not field:
