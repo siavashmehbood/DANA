@@ -557,6 +557,17 @@ class GuestCartHandoffTests(TestCase):
         self.assertTrue(CartItem.objects.filter(user=user,book=self.book).exists())
         self.assertNotIn('pending_cart_book_id',self.client.session)
 
+    def test_guest_add_to_cart_survives_real_password_login_redirect(self):
+        response=self.client.post(reverse('cart'),{'book_id':self.book.pk})
+        self.assertRedirects(response,reverse('login')+'?next='+reverse('cart'),fetch_redirect_response=False)
+        user=User.objects.create_user(username='guest-real-login',password='pass12345')
+        response=self.client.post(reverse('login'),{'username':'guest-real-login','password':'pass12345','login_method':'password','next':reverse('cart')})
+        self.assertRedirects(response,reverse('cart'),fetch_redirect_response=False)
+        response=self.client.get(reverse('cart'))
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(CartItem.objects.filter(user=user,book=self.book).exists())
+        self.assertNotIn('pending_cart_book_id',self.client.session)
+
 
 class BankCheckoutEntryPointTests(TestCase):
     def test_checkout_uses_post_for_bank_payment_action(self):
