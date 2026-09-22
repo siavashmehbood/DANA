@@ -33,7 +33,8 @@ class AccountFlowTests(TestCase):
 
         response = self.client.post(reverse('otp'), {'code': '12345'})
 
-        self.assertRedirects(response, reverse('home'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/')
         invitee = User.objects.get(phone='+989121234567')
         self.assertTrue(Referral.objects.filter(inviter=inviter, invitee=invitee).exists())
 
