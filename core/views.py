@@ -20,6 +20,7 @@ def home(request):
     audio_books = base.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct().order_by('-created_at')[:8]
     public_book_filter=(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())) & ~Q(book__visibility='private')
     categories = Category.objects.annotate(book_count=Count('book',filter=public_book_filter)).filter(book_count__gt=0).order_by('-book_count','name')[:10]
+    urls=list(dict.fromkeys(urls))
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
     article_base = Article.objects.filter(published=True).filter(readable).select_related('category')
     continue_reading=[]
@@ -112,10 +113,10 @@ def robots_txt(request):
 def sitemap_xml(request):
     base=request.build_absolute_uri('/').rstrip('/')
     urls=[base+'/',base+'/books/',base+'/articles/',base+'/shop/subscriptions/']
-    urls=list(dict.fromkeys(urls))
-    urls += [base+'/books/'+slug+'/' for slug in Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public').values_list('slug',flat=True)[:5000]]
+    urls += [base+'/books/+slug+'/' for slug in Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public').values_list('slug',flat=True)[:5000]]
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
     urls += [base+'/articles/'+slug+'/' for slug in Article.objects.filter(published=True).filter(readable).values_list('slug',flat=True)[:5000]]
+    urls=list(dict.fromkeys(urls))
     body='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(f'<url><loc>{escape(url)}</loc></url>' for url in urls) + '</urlset>'
     response=HttpResponse(body, content_type='application/xml')
     response['Cache-Control']='public, max-age=900'
