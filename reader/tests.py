@@ -119,3 +119,11 @@ class StudyFlowTests(TestCase):
         saved=ReadingProgress.objects.get(user=self.user,book=self.book)
         self.assertEqual(saved.seconds,300)
         self.assertEqual(saved.audio_seconds,120)
+
+
+    def test_replayed_progress_does_not_award_extra_study_activity(self):
+        url=reverse('reader_progress',args=[self.book.pk])
+        self.client.post(url,{'progress':'20','seconds':'120'})
+        ledger_count=PointLedger.objects.filter(user=self.user).count()
+        self.client.post(url,{'progress':'25','seconds':'120'})
+        self.assertEqual(PointLedger.objects.filter(user=self.user).count(),ledger_count)
