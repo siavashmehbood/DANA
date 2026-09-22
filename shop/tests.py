@@ -315,3 +315,17 @@ class ShopFlowTests(TestCase):
         self.assertEqual(response.status_code,302)
         order.refresh_from_db()
         self.assertEqual(order.status,'pending')
+
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.payment.requests.post')
+    def test_cancelled_bank_payment_releases_coupon_reservation(self, post):
+        response_data=Mock(); response_data.raise_for_status.return_value=None; response_data.json.return_value={'data':{'code':100,'authority':'COUPON-AUTH'}}
+        post.return_value=response_data
+        coupon=Coupon.objects.create(code='BANK10',percent=10,capacity=1)
+        CartItem.objects.create(user=self.user,book=self.book)
+        session=self.client.session; session['checkout_coupon']='BANK10'; session.save()
+        self.client.post(reverse('bank_checkout'))
+        coupon.refresh_from_db(); self.assertEqual(coupon.used,1)
+        self.client.get(reverse('payment_callback'),{'Authority':'COUPON-AUTH','Status':'NOK'})
+        coupon.refresh_from_db(); self.assertEqual(coupon.used,0)
