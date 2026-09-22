@@ -160,7 +160,7 @@ def payment_callback(request):
         _release_coupon_reservation(payment)
         payment.order.status = 'cancelled'
         payment.order.save(update_fields=['status'])
-        messages.warning(request, 'پرداخت توسط کاربر لغو شد.')
+        messages.warning(request, 'پرداخت لغو شد؛ سبد خرید شما حفظ شده و می‌توانید دوباره تلاش کنید.')
         return redirect('checkout')
 
     if payment.status != 'pending':
@@ -187,5 +187,5 @@ def payment_callback(request):
     _release_coupon_reservation(payment)
     payment.order.status = 'cancelled'
     payment.order.save(update_fields=['status'])
-    messages.error(request, result.message or 'پرداخت تأیید نشد.')
+    messages.error(request, (result.message or 'پرداخت تأیید نشد.') + ' سبد خرید شما حفظ شده است؛ در صورت کسر وجه، پیش از پرداخت دوباره وضعیت سفارش را بررسی کنید.')
     return redirect('checkout')
