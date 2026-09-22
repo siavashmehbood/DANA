@@ -7,7 +7,7 @@ from django.urls import reverse
 from accounts.models import User
 from books.models import Author, Book
 from shop.models import Entitlement, SubscriptionPlan, Subscription
-from reader.models import Review
+from reader.models import Review, ReadingProgress
 
 class ProtectedMediaTests(TestCase):
     def setUp(self):
