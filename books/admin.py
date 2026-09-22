@@ -17,7 +17,7 @@ class BookAdmin(ModelAdmin):
     list_display = ('name', 'author', 'category', 'price', 'old_price', 'status', 'visibility', 'featured', 'subscription_included', 'publish_at', 'has_pdf', 'has_audio')
     date_hierarchy = 'created_at'
     list_filter = ('status', 'visibility', 'featured', 'subscription_included', 'category', 'level')
-    search_fields = ('name', 'author__name', 'summary', 'description')
+    search_fields = ('name', 'slug', 'author__name', 'summary', 'description')
     prepopulated_fields = {'slug': ('name',)}
     list_per_page = 25
     autocomplete_fields = ('author', 'category', 'level')
@@ -90,6 +90,7 @@ class ChapterAdmin(ModelAdmin):
     list_filter = ('book',)
     search_fields = ('title', 'book__name')
     ordering = ('book', 'order')
+    list_per_page = 50
     autocomplete_fields = ('book',)
 
     @admin.display(boolean=True, description='فایل صوتی')
