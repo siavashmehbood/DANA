@@ -1,6 +1,9 @@
 import hashlib
 import re
 import time
+import ipaddress
+import socket
+from urllib.parse import urlparse
 
 import pymupdf
 import requests
@@ -32,11 +35,33 @@ ROUGH_TERMS = {
 }
 
 
+def _safe_remote_url(url):
+    parsed=urlparse(url or '')
+    if parsed.scheme not in {'http','https'} or not parsed.hostname:
+        return False
+    if parsed.hostname.lower() in {'localhost','localhost.localdomain'}:
+        return False
+    try:
+        addresses={info[4][0] for info in socket.getaddrinfo(parsed.hostname,parsed.port or (443 if parsed.scheme=='https' else 80),type=socket.SOCK_STREAM)}
+        for address in addresses:
+            ip=ipaddress.ip_address(address)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+                return False
+    except (socket.gaierror,ValueError):
+        return False
+    return True
+
+
 def download_article_pdf(article, max_bytes=20 * 1024 * 1024):
     if article.pdf or not article.pdf_url:
         return False
+    if not _safe_remote_url(article.pdf_url):
+        raise ValueError('Unsafe PDF URL')
     response = requests.get(article.pdf_url, timeout=20, headers={'User-Agent': 'DANA/2.0'}, stream=True)
     response.raise_for_status()
+    if not _safe_remote_url(response.url):
+        response.close()
+        raise ValueError('Unsafe PDF redirect target')
     content = bytearray()
     for chunk in response.iter_content(chunk_size=64 * 1024):
         if not chunk:
