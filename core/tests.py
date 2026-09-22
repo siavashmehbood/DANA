@@ -278,3 +278,10 @@ class BaseMetadataTests(TestCase):
         Book.objects.create(name='Protected',slug='protected-seo',author=author,status='published',visibility='password',access_password='secret')
         response=self.client.get('/sitemap.xml')
         self.assertNotContains(response,'protected-seo')
+
+
+    def test_sitemap_contains_valid_book_path(self):
+        author=Author.objects.create(name='Sitemap Author')
+        Book.objects.create(name='Sitemap Book',slug='sitemap-book',author=author,status='published',visibility='public')
+        response=self.client.get('/sitemap.xml')
+        self.assertContains(response,'/books/sitemap-book/')
