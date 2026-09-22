@@ -533,3 +533,16 @@ class DashboardFreePublicResumeTests(TestCase):
         self.assertEqual(response.context['continue_item']['book'],book)
         self.assertEqual(response.context['continue_item']['kind'],'text')
         self.assertContains(response,reverse('reader',args=[book.id]))
+
+
+class ProfileAccessAwareLifetimeStatsTests(TestCase):
+    def test_expired_private_book_does_not_inflate_completed_or_reading_time(self):
+        user=User.objects.create_user(username='profile-expired-lifetime',password='pass12345')
+        author=Author.objects.create(name='Expired Lifetime Author')
+        book=Book.objects.create(name='Expired Lifetime',slug='expired-lifetime',author=author,status='published',visibility='private')
+        Entitlement.objects.create(user=user,book=book,expires_at=timezone.now()-timedelta(minutes=1))
+        ReadingProgress.objects.create(user=user,book=book,progress=100,seconds=3600)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.context['completed_books'],0)
+        self.assertEqual(response.context['total_reading_minutes'],0)
