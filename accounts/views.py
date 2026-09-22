@@ -162,13 +162,13 @@ def logout_view(request):
 @never_cache
 def library(request):
     user=request.user
-    now=timezone.now()
-    owned=list(Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author','book__category').prefetch_related('book__chapters').order_by('-granted_at'))
-    active_subscription=Subscription.objects.filter(user=user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__grants_catalog_access=True).select_related('plan').first()
+    now=now
+    owned=list(Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=now)).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=now)).select_related('book__author','book__category').prefetch_related('book__chapters').order_by('-granted_at'))
+    active_subscription=Subscription.objects.filter(user=user,status='active',starts_at__lte=now,expires_at__gt=now,plan__grants_catalog_access=True).select_related('plan').first()
     entitled_ids={item.book_id for item in owned}
     books=[item.book for item in owned]
     if active_subscription:
-        subscription_books=Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),subscription_included=True).exclude(pk__in=entitled_ids).select_related('author','category').prefetch_related('chapters').order_by('-created_at')[:500]
+        subscription_books=Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=now),subscription_included=True).exclude(pk__in=entitled_ids).select_related('author','category').prefetch_related('chapters').order_by('-created_at')[:500]
         books.extend(subscription_books)
     book_ids=[book.id for book in books]
     pmap={p.book_id:p for p in ReadingProgress.objects.filter(user=user,book_id__in=book_ids)}
@@ -211,7 +211,7 @@ def library(request):
     if not active_subscription:
         recommendation_base=recommendation_base.filter(Q(subscription_included=False)|Q(price=0,visibility='public'))
     if preferred_categories:
-        recommended_books=recommendation_base.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public',category_id__in=preferred_categories).exclude(pk__in=excluded_recommendation_ids).select_related('author','category').annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:6]
+        recommended_books=recommendation_base.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=now),visibility='public',category_id__in=preferred_categories).exclude(pk__in=excluded_recommendation_ids).select_related('author','category').annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:6]
     else:
-        recommended_books=recommendation_base.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public').exclude(pk__in=excluded_recommendation_ids).select_related('author','category').annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:6]
+        recommended_books=recommendation_base.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=now),visibility='public').exclude(pk__in=excluded_recommendation_ids).select_related('author','category').annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:6]
     return render(request,'library.html',{'library_rows':rows,'state':state,'kind':kind,'source':source,'sort':sort,'library_count':len(books),'visible_count':visible_count,'active_subscription':active_subscription,'recommended_books':recommended_books})
