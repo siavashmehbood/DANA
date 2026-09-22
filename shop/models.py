@@ -133,4 +133,4 @@ class Subscription(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=['user','status','expires_at'], name='shop_sub_user_status_idx')]
-        constraints = [models.CheckConstraint(condition=models.Q(expires_at__gt=models.F('starts_at')), name='subscription_expiry_after_start')]
+        constraints = [models.CheckConstraint(condition=models.Q(expires_at__gt=models.F('starts_at')), name='subscription_expiry_after_start'), models.UniqueConstraint(fields=['user'], condition=models.Q(status='active'), name='unique_active_subscription_per_user')]
