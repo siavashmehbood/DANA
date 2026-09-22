@@ -215,6 +215,9 @@ def subscribe(request, slug):
     with transaction.atomic():
         user=User.objects.select_for_update().get(pk=request.user.pk)
         plan=get_object_or_404(SubscriptionPlan,slug=slug,active=True)
+        if plan.price < 0 or plan.duration_days < 1:
+            messages.error(request,'تنظیمات این پلن معتبر نیست.')
+            return redirect('subscriptions')
         now=timezone.now()
         Subscription.objects.select_for_update().filter(user=user,status='active',expires_at__lte=now).update(status='expired')
         if Subscription.objects.select_for_update().filter(user=user,status='active',starts_at__gt=now,expires_at__gt=now).exists():
