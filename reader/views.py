@@ -101,6 +101,16 @@ def highlight(request, pk):
 
 @login_required
 @require_POST
+def delete_highlight(request, pk, highlight_id):
+    book=get_object_or_404(Book,pk=pk)
+    if not book.is_published or not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
+    item=get_object_or_404(Highlight,pk=highlight_id,user=request.user,book=book)
+    item.delete()
+    return JsonResponse({'ok':True})
+
+
+@login_required
+@require_POST
 def note(request, pk):
     book=get_object_or_404(Book,pk=pk)
     if not book.is_published or not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
