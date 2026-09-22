@@ -46,8 +46,8 @@ document.addEventListener('click',(event)=>{
  const csrf=()=>qs('[name=csrfmiddlewaretoken]')?.value||'';
  function toast(message,type='info'){
   let stack=qs('.toast-stack'); if(!stack){stack=document.createElement('div');stack.className='toast-stack';document.body.appendChild(stack)}
-  const item=document.createElement('div');item.className=`dana-toast ${type}`;item.setAttribute('role','status');item.innerHTML=`<span>${message}</span><button type="button" aria-label="بستن">×</button>`;stack.appendChild(item);
-  const close=()=>{item.style.opacity='0';item.style.transform='translateX(-12px)';setTimeout(()=>item.remove(),180)};item.querySelector('button').onclick=close;setTimeout(close,4200);
+  const item=document.createElement('div');item.className=`dana-toast ${type}`;item.setAttribute('role','status');const label=document.createElement('span');label.textContent=String(message);const dismiss=document.createElement('button');dismiss.type='button';dismiss.setAttribute('aria-label','بستن');dismiss.textContent='×';item.append(label,dismiss);stack.appendChild(item);
+  const close=()=>{item.style.opacity='0';item.style.transform='translateX(-12px)';setTimeout(()=>item.remove(),180)};dismiss.onclick=close;setTimeout(close,4200);
  }
  window.DANA={toast,csrf};
  function loading(button,on){if(!button)return;button.classList.toggle('is-loading',on);button.disabled=on}
