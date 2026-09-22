@@ -8,7 +8,7 @@ from django.http import FileResponse, HttpResponse, HttpResponseForbidden, Http4
 from django.utils import timezone
 from shop.models import Entitlement, Subscription
 from analytics.models import Event
-from reader.models import ReadingProgress
+from reader.models import ReadingProgress, AudioProgress
 from .models import Book,Category
 
 def _normalize_search_text(value):
