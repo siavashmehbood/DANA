@@ -93,8 +93,13 @@ def dashboard(request):
     if subscription:
         valid_book_ids += list(Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),subscription_included=True).values_list('id',flat=True))
     valid_book_ids=list(set(valid_book_ids))
-    progress=ReadingProgress.objects.filter(user=user,book_id__in=valid_book_ids).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author').order_by('-updated_at')
-    return render(request,'dashboard.html',{'books_count':len(valid_book_ids) if subscription else owned_count,'article_count':Article.objects.filter(published=True).count(),'vocabulary_count':user.saved_words.count(),'cart_count':CartItem.objects.filter(user=user).count(),'latest_articles':Article.objects.filter(published=True).order_by('-created_at')[:5],'owned_books':owned[:8],'reading_progress':progress[:4]})
+    progress=list(ReadingProgress.objects.filter(user=user,book_id__in=valid_book_ids).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author').prefetch_related('book__chapters').order_by('-updated_at')[:4])
+    progress_rows=[]
+    for item in progress:
+        has_text=bool(item.book.pdf) or any(bool(ch.text and ch.text.strip()) for ch in item.book.chapters.all())
+        has_audio=bool(item.book.audio) or any(bool(ch.audio) for ch in item.book.chapters.all())
+        progress_rows.append({'progress':item,'book':item.book,'has_text':has_text,'has_audio':has_audio})
+    return render(request,'dashboard.html',{'books_count':len(valid_book_ids) if subscription else owned_count,'article_count':Article.objects.filter(published=True).count(),'vocabulary_count':user.saved_words.count(),'cart_count':CartItem.objects.filter(user=user).count(),'latest_articles':Article.objects.filter(published=True).order_by('-created_at')[:5],'owned_books':owned[:8],'reading_progress':progress_rows})
 
 @login_required
 @never_cache
