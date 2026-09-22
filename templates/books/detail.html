@@ -11,7 +11,7 @@
       <h1>{{ book.name }}</h1><h3>{{ book.author.name }}</h3><p>{{ book.summary }}</p>
       <div class="book-specs"><span>📖 {{ book.chapters.count }} فصل</span>{% if book.level %}<span>🎯 {{ book.level.name }}</span>{% endif %}<span>⭐ تجربه مطالعه دیجیتال</span></div>
       <div class="price">{% if book.price %}{{ book.price }} تومان{% else %}رایگان{% endif %}</div>{% if review_count %}<div class="book-rating">★ {{ review_avg|floatformat:1 }} از ۵ <span>({{ review_count }} نظر تأییدشده)</span></div>{% else %}<div class="muted">هنوز امتیاز تأییدشده‌ای ثبت نشده است.</div>{% endif %}
-      <div class="book-actions">{% if has_access %}<a class="btn" href="{% url 'reader' book.id %}">شروع مطالعه</a>{% else %}<form method="post" action="{% url 'cart' %}">{% csrf_token %}<input type="hidden" name="book_id" value="{{ book.id }}"><button class="btn">افزودن به سبد</button></form>{% if user.is_authenticated %}<a class="btn secondary" href="{% url 'subscriptions' %}">بررسی اشتراک</a>{% else %}<a class="btn secondary" href="{% url 'login' %}?next={{request.path|urlencode}}">ورود</a>{% endif %}{% endif %}</div>
+      <div class="book-actions">{% if has_access %}<a class="btn" href="{% url 'reader' book.id %}">شروع مطالعه</a>{% else %}<form method="post" action="{% url 'cart' %}">{% csrf_token %}<input type="hidden" name="book_id" value="{{ book.id }}"><button class="btn">افزودن به سبد</button></form>{% if user.is_authenticated and book.subscription_included %}<a class="btn secondary" href="{% url 'subscriptions' %}">بررسی اشتراک</a>{% else %}<a class="btn secondary" href="{% url 'login' %}?next={{request.path|urlencode}}">ورود</a>{% endif %}{% endif %}</div>
     </div>
   </div>
 </section>
