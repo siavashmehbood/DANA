@@ -203,7 +203,7 @@ def library(request):
     excluded_recommendation_ids=set(book_ids)
     excluded_recommendation_ids.update(Entitlement.objects.filter(user=user).values_list('book_id',flat=True))
     if not preferred_categories:
-        preferred_categories=set(ReadingProgress.objects.filter(user=user,book__category__isnull=False).values_list('book__category_id',flat=True)[:20])
+        preferred_categories=set(ReadingProgress.objects.filter(user=user,book__category__isnull=False).exclude(book_id__in=excluded_recommendation_ids).values_list('book__category_id',flat=True)[:20])
     if preferred_categories:
         recommended_books=Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public',category_id__in=preferred_categories).exclude(pk__in=excluded_recommendation_ids).select_related('author','category').annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:6]
     else:
