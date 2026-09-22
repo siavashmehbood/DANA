@@ -459,3 +459,18 @@ class DashboardUnifiedActivityShelfTests(TestCase):
         self.assertEqual(response.context['reading_progress'][0]['kind'],'audio')
         self.assertContains(response,'ادامه شنیدن از 75 ثانیه')
         self.assertContains(response,reverse('audio_player',args=[book.id]))
+
+
+class LibraryRecentSortTests(TestCase):
+    def test_default_recent_sort_prefers_latest_activity_over_entitlement_order(self):
+        from reader.models import ReadingProgress
+        user=User.objects.create_user(username='library-recent-sort',password='pass12345')
+        author=Author.objects.create(name='Library Recent Sort Author')
+        active=Book.objects.create(name='Older Owned Active',slug='older-owned-active',author=author,status='published')
+        newer=Book.objects.create(name='Newer Owned Idle',slug='newer-owned-idle',author=author,status='published')
+        Entitlement.objects.create(user=user,book=active)
+        Entitlement.objects.create(user=user,book=newer)
+        ReadingProgress.objects.create(user=user,book=active,progress=20,current_page=2)
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertEqual(response.context['library_rows'][0]['book'],active)
