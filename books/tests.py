@@ -269,3 +269,14 @@ class BookMediaValidationTests(TestCase):
         book=Book(name='Unsafe Media',slug='unsafe-media',author=author,status='draft',pdf=SimpleUploadedFile('payload.exe',b'MZ'))
         with self.assertRaises(ValidationError):
             book.full_clean()
+
+
+class BookDetailPrivacyTests(TestCase):
+    def test_authenticated_book_detail_is_not_cacheable(self):
+        user=User.objects.create_user(username='detail-private',password='pass12345')
+        author=Author.objects.create(name='Detail Author')
+        book=Book.objects.create(name='Detail Book',slug='detail-private-book',author=author,status='published')
+        self.client.force_login(user)
+        response=self.client.get(reverse('book_detail',args=[book.slug]))
+        self.assertIn('private',response['Cache-Control'])
+        self.assertIn('Cookie',response['Vary'])
