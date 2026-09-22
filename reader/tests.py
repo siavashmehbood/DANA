@@ -136,3 +136,13 @@ class StudyFlowTests(TestCase):
         saved=ReadingProgress.objects.get(user=self.user,book=self.book)
         self.assertEqual(float(saved.progress),70.0)
         self.assertEqual(saved.current_page,70)
+
+
+    def test_stale_chapter_update_does_not_move_backwards(self):
+        first=Chapter.objects.create(book=self.book,title='One',order=1)
+        second=Chapter.objects.create(book=self.book,title='Two',order=2)
+        url=reverse('reader_progress',args=[self.book.pk])
+        self.client.post(url,{'progress':'60','chapter_id':second.pk})
+        self.client.post(url,{'progress':'20','chapter_id':first.pk})
+        saved=ReadingProgress.objects.get(user=self.user,book=self.book)
+        self.assertEqual(saved.current_chapter_id,second.pk)
