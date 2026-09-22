@@ -6,7 +6,7 @@
 <section class="section audio-shell" dir="rtl">
   <div class="audio-hero">
     <div>{% if book.cover %}<img class="audio-cover" src="{{book.cover.url}}" alt="جلد {{book.name}}">{% endif %}</div>
-    <div><span class="shelf-label">DANA AUDIOBOOK</span><h1>{{book.name}}</h1><p>{{book.author.name}}</p><a class="btn secondary" href="{% url 'reader' book.pk %}">نسخه متنی / Reader</a></div>
+    <div><span class="shelf-label">DANA AUDIOBOOK</span><h1>{{book.name}}</h1><p>{{book.author.name}}</p>{% if has_text %}<a class="btn secondary" href="{% url 'reader' book.pk %}">نسخه متنی / Reader</a>{% endif %}</div>
   </div>
   <div class="panel audio-player-panel">
     <div id="audio-title" aria-live="polite">آماده پخش</div><div id="audio-status" class="muted"></div><div id="audio-alert" class="sr-only" role="status" aria-live="polite"></div>
@@ -19,7 +19,7 @@
       <button type="button" id="audio-next" aria-label="فصل بعد">⏭</button>
     </div>
     <label class="audio-seek-label"><span id="audio-current">۰:۰۰</span><input id="audio-seek" type="range" min="0" max="100" value="0" step="0.1" aria-label="موقعیت پخش"><span id="audio-duration">۰:۰۰</span></label>
-    <div class="audio-options"><label>سرعت <select id="audio-speed"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>1.75</option><option>2</option></select></label><label>توقف خودکار <select id="sleep-timer"><option value="0">خاموش</option><option value="15">۱۵ دقیقه</option><option value="30">۳۰ دقیقه</option><option value="45">۴۵ دقیقه</option><option value="60">۶۰ دقیقه</option></select></label></div>
+    <div class="audio-options"><label for="audio-speed">سرعت</label><select id="audio-speed"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>1.75</option><option>2</option></select><label for="sleep-timer">توقف خودکار</label><select id="sleep-timer"><option value="0">خاموش</option><option value="15">۱۵ دقیقه</option><option value="30">۳۰ دقیقه</option><option value="45">۴۵ دقیقه</option><option value="60">۶۰ دقیقه</option></select></div>
   </div>
   <div class="panel"><h2>فصل‌ها</h2><div id="audio-chapters" class="audio-chapter-list">
     {% if has_book_audio %}<button type="button" class="audio-chapter" data-chapter="" data-src="{% url 'book_secure_file' book.pk 'audio' %}" data-title="نسخه کامل" data-position="{% if latest_audio and not latest_audio.chapter_id %}{{latest_audio.position_seconds}}{% else %}0{% endif %}"><b>نسخه کامل</b></button>{% endif %}
