@@ -226,12 +226,13 @@ class ShopFlowTests(TestCase):
         self.assertEqual(sub.status,'expired')
 
 
-    def test_disabled_plan_is_not_reported_as_current_subscription(self):
+    def test_retired_plan_remains_visible_for_existing_subscription(self):
         plan=SubscriptionPlan.objects.create(name='Disabled Current',slug='disabled-current',price=0,duration_days=7,active=False)
         Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
         self.client.login(username='buyer',password='pass12345')
         response=self.client.get(reverse('subscriptions'))
-        self.assertIsNone(response.context['current_subscription'])
+        self.assertIsNotNone(response.context['current_subscription'])
+        self.assertEqual(response.context['current_subscription'].plan_id,plan.id)
 
 
     def test_free_plan_cannot_queue_duplicate_future_renewals(self):
