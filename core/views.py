@@ -13,11 +13,11 @@ from django.utils import timezone
 
 def home(request):
     base = Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now())).exclude(visibility='private').select_related('author', 'category')
-    featured = base.order_by('-created_at')[:6]
-    newest = base.order_by('-created_at')[:8]
-    popular = base.annotate(approved_reviews=Count('review', filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
+    featured = base.filter(visibility='public').order_by('-created_at')[:6]
+    newest = base.filter(visibility='public').order_by('-created_at')[:8]
+    popular = base.filter(visibility='public').annotate(approved_reviews=Count('review', filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
     recommendations = base.none()
-    audio_books = base.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct().order_by('-created_at')[:8]
+    audio_books = base.filter(visibility='public').filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct().order_by('-created_at')[:8]
     public_book_filter=(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())) & ~Q(book__visibility='private')
     categories = Category.objects.annotate(book_count=Count('book',filter=public_book_filter)).filter(book_count__gt=0).order_by('-book_count','name')[:10]
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
