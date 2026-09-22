@@ -229,5 +229,5 @@ def subscriptions(request):
     if request.user.is_authenticated:
         now=timezone.now()
         Subscription.objects.filter(user=request.user,status='active',expires_at__lte=now).update(status='expired')
-        current=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=now,expires_at__gt=now).select_related('plan').order_by('-expires_at').first()
+        current=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=now,expires_at__gt=now,plan__active=True).select_related('plan').order_by('-expires_at').first()
     return render(request,'shop/subscriptions.html',{'plans':plans,'current_subscription':current})
