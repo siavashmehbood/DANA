@@ -305,3 +305,10 @@ class SubscriptionReaderAccessTests(TestCase):
         response=self.client.post(reverse('reader_progress',args=[self.book.pk]),{'progress':'10','page':'1'})
         self.assertEqual(response.status_code,200)
         self.assertEqual(response['Cache-Control'],'no-store')
+
+
+    def test_reader_access_denied_response_is_private(self):
+        private=Book.objects.create(name='Denied private',slug='denied-private',author=self.book.author,status='published',visibility='private')
+        response=self.client.get(reverse('reader',args=[private.pk]))
+        self.assertEqual(response.status_code,403)
+        self.assertEqual(response['Cache-Control'],'private, no-store')
