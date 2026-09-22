@@ -393,3 +393,12 @@ class ShopFlowTests(TestCase):
         self.client.login(username='buyer',password='pass12345')
         response=self.client.get(reverse('subscriptions'))
         self.assertContains(response,'پلن فعلی')
+
+
+    def test_anonymous_subscription_activation_redirects_to_login(self):
+        plan=SubscriptionPlan.objects.create(name='Login required',slug='login-required',price=0,duration_days=30)
+        self.client.logout()
+        response=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':'invalid'})
+        self.assertEqual(response.status_code,302)
+        self.assertIn('/accounts/login/',response.url)
+        self.assertFalse(Subscription.objects.filter(plan=plan).exists())
