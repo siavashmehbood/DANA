@@ -31,3 +31,10 @@ class EventApiTests(TestCase):
         response = self.client.post(self.url, data=json.dumps({'name': ''}), content_type='application/json')
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'invalid_name')
+
+
+    def test_event_rejects_unknown_client_event(self):
+        response = self.client.post(self.url, data=json.dumps({'name': 'made_up_metric'}), content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'unsupported_event')
+        self.assertFalse(Event.objects.exists())
