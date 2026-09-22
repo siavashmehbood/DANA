@@ -234,3 +234,12 @@ class SubscriptionBookAccessTests(TestCase):
         response=self.client.get(reverse('book_detail',args=[book.slug]))
         self.assertFalse(response.context['has_access'])
         self.assertContains(response,'افزودن به سبد')
+
+
+    def test_private_book_is_hidden_from_public_catalog_and_detail(self):
+        author=Author.objects.create(name='Hidden Author')
+        private=Book.objects.create(name='Hidden Book',slug='hidden-book',author=author,status='published',visibility='private')
+        listing=self.client.get(reverse('books'))
+        self.assertNotContains(listing,'Hidden Book')
+        detail=self.client.get(reverse('book_detail',args=[private.slug]))
+        self.assertEqual(detail.status_code,404)
