@@ -65,3 +65,20 @@ progress{width:100%;min-height:12px;accent-color:var(--dana-accent)}
 /* Commerce completion: keep checkout/subscription actions usable on narrow RTL screens */
 .steps{list-style:none;margin:0;padding:0}.steps li{color:var(--dana-muted)}.steps li[aria-current="step"]{color:var(--dana-text);font-weight:800}
 @media(max-width:650px){.checkout-layout{grid-template-columns:1fr!important}.checkout-form,.cart-summary{min-width:0}.checkout-pay{width:100%;text-align:center}.coupon-row{display:grid!important;grid-template-columns:1fr!important;gap:8px}.coupon-row input,.coupon-row .btn{width:100%;min-width:0}.steps{display:grid!important;grid-template-columns:1fr!important;gap:6px}.steps li{padding:8px 10px;border-inline-start:3px solid var(--dana-line)}.steps li[aria-current="step"]{border-inline-start-color:var(--dana-accent)}.wallet-row{align-items:flex-start!important;gap:8px;flex-wrap:wrap}.wallet-row>strong{margin-inline-start:auto}.section>.grid>.card form .btn,.section>.grid>.card>a.btn{width:100%;text-align:center}}
+
+/* Release candidate mobile navigation: keep primary actions reachable without horizontal page overflow */
+@media(max-width:900px){
+  .main-nav{display:grid!important;grid-template-columns:auto 1fr auto!important;gap:8px!important;padding-inline:8px}
+  .main-nav .brand{grid-column:1!important}
+  .header-auth{grid-column:2!important;justify-self:end}
+  .header-more{grid-column:3!important}
+  .header-search{grid-column:1/-1!important;grid-row:2!important;width:100%;max-width:none!important;min-width:0}
+  .header-links{grid-column:1/-1!important;grid-row:3!important;width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin;padding-bottom:4px}
+  .header-links a{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center}
+  .header-more summary,.auth-action{min-height:44px;display:inline-flex;align-items:center}
+}
+@media(max-width:420px){
+  .main-nav{grid-template-columns:auto 1fr auto!important}
+  .brand{font-size:20px!important}
+  .auth-action,.header-more summary{padding-inline:8px!important;font-size:12px!important}
+}
