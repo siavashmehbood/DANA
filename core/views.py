@@ -26,6 +26,7 @@ def home(request):
     article_base = Article.objects.filter(published=True).filter(readable).select_related('category')
     continue_reading=[]
     continue_listening=[]
+    continue_item=None
     if request.user.is_authenticated:
         valid_books=Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True)
         subscription_access=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__grants_catalog_access=True).exists()
@@ -34,6 +35,12 @@ def home(request):
             readable_progress |= Q(book__subscription_included=True)
         continue_reading=ReadingProgress.objects.filter(readable_progress,user=request.user,progress__gt=0,progress__lt=100).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author').order_by('-updated_at')[:6]
         continue_listening=AudioProgress.objects.filter(readable_progress,user=request.user,position_seconds__gt=0,completed=False).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author','chapter').order_by('-updated_at')[:6]
+        latest_reading=continue_reading[0] if continue_reading else None
+        latest_listening=continue_listening[0] if continue_listening else None
+        if latest_listening and (not latest_reading or latest_listening.updated_at > latest_reading.updated_at):
+            continue_item={'book':latest_listening.book,'kind':'audio'}
+        elif latest_reading:
+            continue_item={'book':latest_reading.book,'kind':'text'}
         owned_categories=Entitlement.objects.filter(user=request.user,book__category__isnull=False).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book__category_id',flat=True)
         owned_ids=set(Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True))
         # Subscription access is not ownership. Keep unengaged catalog titles
@@ -50,7 +57,7 @@ def home(request):
             recommendations=base.exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
     response=render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
         'latest_articles': article_base.order_by('-created_at')[:8], 'featured_articles': article_base.filter(featured=True)[:4],
-        'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading, 'continue_listening':continue_listening, 'audio_books': audio_books, 'recommendations': recommendations})
+        'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading, 'continue_listening':continue_listening, 'continue_item':continue_item, 'audio_books': audio_books, 'recommendations': recommendations})
     if request.user.is_authenticated:
         response['Cache-Control']='private, no-store'
         response['Vary']='Cookie'
