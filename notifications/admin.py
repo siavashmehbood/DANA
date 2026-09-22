@@ -16,6 +16,7 @@ class PushSubscriptionAdmin(ModelAdmin):
     readonly_fields=('endpoint','p256dh','auth','created_at')
     list_per_page=50
     def has_add_permission(self,request): return False
+    def has_delete_permission(self,request,obj=None): return False
 @admin.register(EmailLog)
 class EmailLogAdmin(ModelAdmin):
     list_display=('email','subject','status','created_at')
