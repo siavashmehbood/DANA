@@ -91,6 +91,26 @@ def note(request, pk):
 
 @login_required
 @require_POST
+def delete_bookmark(request, pk, bookmark_id):
+    book=get_object_or_404(Book,pk=pk)
+    if not book.is_published or not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
+    item=get_object_or_404(Bookmark,pk=bookmark_id,user=request.user,book=book)
+    item.delete()
+    return JsonResponse({'ok':True})
+
+
+@login_required
+@require_POST
+def delete_note(request, pk, note_id):
+    book=get_object_or_404(Book,pk=pk)
+    if not book.is_published or not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
+    item=get_object_or_404(Note,pk=note_id,user=request.user,book=book)
+    item.delete()
+    return JsonResponse({'ok':True})
+
+
+@login_required
+@require_POST
 def save_word(request, slug):
     from articles.models import Article
     import re
