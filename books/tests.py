@@ -319,3 +319,10 @@ class BookValidationTests(TestCase):
         book=Book(name='Price',slug='price-validation',author=self.author,price=100,old_price=50)
         with self.assertRaises(ValidationError):
             book.full_clean()
+
+
+    def test_non_password_book_rejects_access_password(self):
+        from django.core.exceptions import ValidationError
+        book=Book(name='Public password',slug='public-password-validation',author=self.author,visibility='public',access_password='secret')
+        with self.assertRaises(ValidationError):
+            book.full_clean()
