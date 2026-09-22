@@ -101,6 +101,8 @@ class ChapterAdmin(ModelAdmin):
 @admin.register(MediaAsset)
 class MediaAssetAdmin(ModelAdmin):
     list_display = ('title', 'kind', 'created_at')
+    date_hierarchy = 'created_at'
     list_filter = ('kind', 'created_at')
     search_fields = ('title', 'kind')
     readonly_fields = ('created_at',)
+    list_per_page = 50
