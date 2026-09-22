@@ -72,8 +72,10 @@ class AudioProgressAdmin(ModelAdmin):
     list_display=('user','book','chapter','position_seconds','duration_seconds','completed','updated_at')
     list_filter=('completed','updated_at')
     search_fields=('user__username','user__phone','book__name','chapter__title')
-    autocomplete_fields=('user','book','chapter')
-    readonly_fields=('updated_at',)
+    readonly_fields=('user','book','chapter','position_seconds','duration_seconds','completed','updated_at')
+    date_hierarchy='updated_at'
+    def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
 
 @admin.register(ProblemReport)
 class ProblemReportAdmin(ModelAdmin):
