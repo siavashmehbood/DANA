@@ -19,7 +19,7 @@ class AudioProgress(models.Model):
     completed=models.BooleanField(default=False)
     updated_at=models.DateTimeField(auto_now=True)
     class Meta:
-        constraints=[models.UniqueConstraint(fields=['user','book','chapter'],name='unique_audio_progress_chapter')]
+        constraints=[models.UniqueConstraint(fields=['user','book','chapter'],name='unique_audio_progress_chapter'),models.UniqueConstraint(fields=['user','book'],condition=models.Q(chapter__isnull=True),name='unique_audio_progress_book')]
         indexes=[models.Index(fields=['user','book','-updated_at'],name='reader_audio_recent_idx')]
 
 class Bookmark(models.Model):
