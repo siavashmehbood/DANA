@@ -140,3 +140,24 @@ class RecommendationTests(TestCase):
         self.assertIn("url.pathname.startsWith('/static/')||CORE.includes(url.pathname)",body)
         self.assertNotIn("c.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request).then",body)
         self.assertNotIn("caches.match('/')",body)
+
+
+    def test_home_continue_reading_includes_free_public_book(self):
+        user=User.objects.create_user(username='free-home-reader',password='pass12345')
+        author=Author.objects.create(name='Free Home Author')
+        book=Book.objects.create(name='Free Home Book',slug='free-home-book',author=author,status='published',visibility='public',price=0)
+        ReadingProgress.objects.create(user=user,book=book,progress=25,current_page=4)
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        self.assertIn(book,[item.book for item in response.context['continue_reading']])
+
+    def test_home_continue_reading_includes_subscription_book(self):
+        user=User.objects.create_user(username='sub-home-reader',password='pass12345')
+        author=Author.objects.create(name='Sub Home Author')
+        book=Book.objects.create(name='Sub Home Book',slug='sub-home-book',author=author,status='published',visibility='private',subscription_included=True)
+        plan=SubscriptionPlan.objects.create(name='Home Catalog',slug='home-catalog',price=0,duration_days=7,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        ReadingProgress.objects.create(user=user,book=book,progress=30,current_page=5)
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        self.assertIn(book,[item.book for item in response.context['continue_reading']])
