@@ -288,7 +288,15 @@ def audio_progress(request, pk):
     if chapter is None and not book.audio:
         return JsonResponse({'error':'Audio unavailable'},status=400)
     completed=bool(duration and position >= max(0,duration-5))
-    item,_=AudioProgress.objects.update_or_create(user=request.user,book=book,chapter=chapter,defaults={'position_seconds':position,'duration_seconds':duration,'completed':completed})
+    with transaction.atomic():
+        item=AudioProgress.objects.select_for_update().filter(user=request.user,book=book,chapter=chapter).first()
+        if item is None:
+            item=AudioProgress.objects.create(user=request.user,book=book,chapter=chapter,position_seconds=position,duration_seconds=duration,completed=completed)
+        else:
+            item.position_seconds=max(item.position_seconds,position)
+            item.duration_seconds=max(item.duration_seconds,duration)
+            item.completed=item.completed or completed
+            item.save(update_fields=['position_seconds','duration_seconds','completed','updated_at'])
     aggregate=ReadingProgress.objects.filter(user=request.user,book=book).first()
     listened=AudioProgress.objects.filter(user=request.user,book=book).aggregate(total=models.Sum('position_seconds'))['total'] or 0
     audio_complete=completed and chapter is None
