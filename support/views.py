@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from django.views.decorators.cache import never_cache
+from django.utils import timezone
 from .models import Ticket, TicketMessage
 
 @login_required
@@ -12,6 +13,9 @@ def tickets(request):
     if request.method == 'POST':
         subject = request.POST.get('subject','').strip()[:250]
         body = request.POST.get('body','').strip()[:10000]
+        if Ticket.objects.filter(user=request.user,status__in=['open','waiting','in_progress']).count() >= 10:
+            messages.error(request, 'تعداد درخواست‌های باز شما زیاد است؛ ابتدا درخواست‌های قبلی را پیگیری کنید.')
+            return redirect('tickets')
         if not subject or not body:
             messages.error(request, 'موضوع و متن درخواست پشتیبانی الزامی است.')
             return redirect('tickets')
@@ -34,6 +38,10 @@ def reply_ticket(request, pk):
         messages.error(request, 'این درخواست بسته یا حل شده است.')
         return redirect('tickets')
     body = request.POST.get('body','').strip()[:10000]
+    recent=TicketMessage.objects.filter(user=request.user,created_at__gte=timezone.now()-timezone.timedelta(hours=1)).count()
+    if recent >= 30:
+        messages.error(request, 'تعداد پاسخ‌ها زیاد است؛ کمی بعد دوباره تلاش کنید.')
+        return redirect('tickets')
     if not body:
         messages.error(request, 'متن پاسخ نمی‌تواند خالی باشد.')
         return redirect('tickets')
