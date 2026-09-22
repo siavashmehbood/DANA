@@ -236,3 +236,14 @@ class SubscriptionReaderAccessTests(TestCase):
         response=self.client.get(reverse('reader',args=[self.book.pk]))
         self.assertIn('no-cache',response.get('Cache-Control',''))
         self.assertIn('private',response.get('Cache-Control',''))
+
+
+    def test_inactive_subscription_plan_cannot_open_private_reader(self):
+        user=User.objects.create_user(username='inactive-plan-reader',password='pass12345')
+        author=Author.objects.create(name='Inactive Plan Author')
+        book=Book.objects.create(name='Inactive Plan Book',slug='inactive-plan-book',author=author,status='published',visibility='private')
+        plan=SubscriptionPlan.objects.create(name='Inactive Catalog',slug='inactive-catalog',price=100,duration_days=30,grants_catalog_access=True,active=False)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        self.client.login(username='inactive-plan-reader',password='pass12345')
+        response=self.client.get(reverse('reader',args=[book.pk]))
+        self.assertFalse(response.context['accessible'])
