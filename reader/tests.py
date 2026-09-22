@@ -3,7 +3,7 @@ from accounts.models import User
 from books.models import Author, Book, Chapter
 from gamification.models import PointLedger, UserStreak
 from shop.models import Entitlement, SubscriptionPlan, Subscription
-from .models import ReadingProgress, Review, Bookmark, Highlight, Note
+from .models import ReadingProgress, Review, Bookmark, Highlight, Note, ProblemReport
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
@@ -324,3 +324,20 @@ class SubscriptionReaderAccessTests(TestCase):
         self.assertIn('no-store',response['Cache-Control'])
         self.assertEqual(response['X-Robots-Tag'],'noindex, nofollow')
         self.assertEqual(response['Referrer-Policy'],'same-origin')
+
+
+class ReaderProblemReportTests(TestCase):
+    def setUp(self):
+        self.user=User.objects.create_user(username='report-reader',password='pass12345')
+        author=Author.objects.create(name='Report Author')
+        self.book=Book.objects.create(name='Report Book',slug='report-book',author=author,price=0,status='published',visibility='public')
+        self.client.force_login(self.user)
+
+    def test_accessible_reader_can_report_problem(self):
+        response=self.client.post(reverse('reader_report_problem',args=[self.book.pk]),{'text':'فایل صوتی مشکل دارد'})
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(ProblemReport.objects.filter(user=self.user,book=self.book).exists())
+
+    def test_empty_problem_report_is_rejected(self):
+        response=self.client.post(reverse('reader_report_problem',args=[self.book.pk]),{'text':'   '})
+        self.assertEqual(response.status_code,400)
