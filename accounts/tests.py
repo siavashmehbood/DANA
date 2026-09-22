@@ -222,3 +222,22 @@ class LibraryRecommendationTests(TestCase):
         response=self.client.get(reverse('library'))
         self.assertIn(candidate,list(response.context['recommended_books']))
         self.assertNotIn(owned,list(response.context['recommended_books']))
+
+
+class ReadingProfileTests(TestCase):
+    def test_profile_uses_real_streak_badges_and_recent_progress(self):
+        from gamification.models import UserStreak, Badge, UserBadge
+        from reader.models import ReadingProgress
+        from books.models import Author, Book
+        user=User.objects.create_user(username='reading-profile',password='pass12345')
+        author=Author.objects.create(name='Profile Author')
+        book=Book.objects.create(name='Profile Reading',slug='profile-reading',author=author,status='published')
+        ReadingProgress.objects.create(user=user,book=book,progress=35)
+        UserStreak.objects.create(user=user,current_days=4,longest_days=7)
+        badge=Badge.objects.create(name='Reader Badge',active=True)
+        UserBadge.objects.create(user=user,badge=badge)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertContains(response,'Profile Reading')
+        self.assertContains(response,'Reader Badge')
+        self.assertContains(response,'روزهای پیوسته')
