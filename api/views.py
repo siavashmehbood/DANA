@@ -41,6 +41,8 @@ def event(request):
         metadata_json = json.dumps(metadata, ensure_ascii=False)
     except (TypeError, ValueError):
         return JsonResponse({'ok': False, 'error': 'invalid_metadata'}, status=400)
+    if len(metadata) > 50:
+        return JsonResponse({'ok': False, 'error': 'metadata_too_many_fields'}, status=400)
     if any(len(str(k)) > 100 or len(str(v)) > 2000 for k, v in metadata.items()):
         return JsonResponse({'ok': False, 'error': 'metadata_field_too_large'}, status=400)
     if len(metadata_json) > 10000:
