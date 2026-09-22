@@ -22,3 +22,12 @@ class NotificationTests(TestCase):
         self.mine.refresh_from_db(); self.theirs.refresh_from_db()
         self.assertIsNotNone(self.mine.read_at)
         self.assertIsNone(self.theirs.read_at)
+
+    def test_notifications_are_paginated_and_unread_count_is_global(self):
+        for i in range(35):
+            Notification.objects.create(user=self.user,title=f'N {i}',body='Body')
+        response=self.client.get(reverse('notifications'))
+        self.assertEqual(len(response.context['items']),30)
+        self.assertEqual(response.context['unread_count'],36)
+        second=self.client.get(reverse('notifications')+'?page=2')
+        self.assertEqual(len(second.context['items']),6)
