@@ -1,5 +1,6 @@
 ﻿{% extends 'base.html' %}
 {% block title %}کتابخانه من | دانا{% endblock %}
+{% block description %}کتاب‌های خریداری‌شده و اشتراکی، پیشرفت مطالعه و ادامه خواندن در کتابخانه شخصی دانا.{% endblock %}
 {% block content %}
 <section class="section personal-library">
   <div class="library-hero"><div><span class="shelf-label">DANA MY LIBRARY</span><h1>کتابخانه من</h1><p>کتاب‌های خریداری‌شده و اشتراکی‌ات اینجا هستند؛ از آخرین نقطه ادامه بده.</p>{% if active_subscription %}<p class="muted">اشتراک فعال: {{active_subscription.plan.name}} · تا {{active_subscription.expires_at|date:"Y/m/d"}}</p>{% endif %}</div><a class="btn" href="{% url 'books' %}">پیدا کردن کتاب جدید</a></div>
