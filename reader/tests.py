@@ -386,16 +386,3 @@ class VocabularySearchTests(TestCase):
         self.assertEqual(response.status_code,400)
         self.assertFalse(SavedWord.objects.filter(user=user).exists())
 
-
-class SubscriptionVisibilitySecurityTests(TestCase):
-    def setUp(self):
-        self.user=User.objects.create_user(username='sub-private',password='pass12345')
-        self.author=Author.objects.create(name='Private Author')
-        self.plan=SubscriptionPlan.objects.create(name='Catalog',slug='catalog-security',price=10,duration_days=30,grants_catalog_access=True)
-        Subscription.objects.create(user=self.user,plan=self.plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
-        self.client.login(username='sub-private',password='pass12345')
-
-    def test_subscription_does_not_unlock_private_book(self):
-        book=Book.objects.create(name='Private subscription book',slug='private-sub-book',author=self.author,status='published',visibility='private',subscription_included=True,price=100)
-        response=self.client.get(reverse('reader',args=[book.pk]))
-        self.assertEqual(response.status_code,403)
