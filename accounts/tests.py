@@ -138,3 +138,21 @@ class WalletIntegrityTests(TestCase):
         user=User(username='negative-wallet',wallet_balance=-1)
         with self.assertRaises(ValidationError):
             user.full_clean()
+
+
+class PasswordChangeSecurityTests(TestCase):
+    def setUp(self):
+        self.user=User.objects.create_user(username='password-user',password='old-pass-123')
+        self.client.login(username='password-user',password='old-pass-123')
+
+    def test_password_change_requires_current_password(self):
+        response=self.client.post(reverse('profile'),{'new_password':'new-pass-456'})
+        self.assertEqual(response.status_code,302)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('old-pass-123'))
+
+    def test_password_change_accepts_correct_current_password(self):
+        response=self.client.post(reverse('profile'),{'current_password':'old-pass-123','new_password':'new-pass-456'})
+        self.assertEqual(response.status_code,200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('new-pass-456'))
