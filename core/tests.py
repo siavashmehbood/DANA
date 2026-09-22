@@ -6,7 +6,7 @@ from datetime import timedelta
 from django.urls import reverse
 from accounts.models import User
 from books.models import Author, Book
-from shop.models import Entitlement, Subscription, SubscriptionPlan, SubscriptionPlan, Subscription
+from shop.models import Entitlement, Subscription, SubscriptionPlan
 from reader.models import Review, ReadingProgress, AudioProgress
 
 class ProtectedMediaTests(TestCase):
