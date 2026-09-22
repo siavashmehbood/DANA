@@ -392,3 +392,14 @@ class BookValidationTests(TestCase):
         response=self.client.get(reverse('book_detail',args=[book.slug]))
         self.assertEqual(response.headers.get('X-Robots-Tag'),'noindex, nofollow')
         self.assertIn('no-store',response.headers.get('Cache-Control',''))
+
+
+    def test_successful_search_records_success_outcome(self):
+        author=Author.objects.create(name='Success Author')
+        Book.objects.create(name='یافتنی',slug='search-success',author=author,status='published')
+        self.client.get(reverse('books'),{'q':'یافتنی'})
+        self.assertTrue(Event.objects.filter(name='search_success').exists())
+
+    def test_zero_result_search_does_not_record_success_outcome(self):
+        self.client.get(reverse('books'),{'q':'هیچنتیجهایوجودندارد'})
+        self.assertFalse(Event.objects.filter(name='search_success').exists())
