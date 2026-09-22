@@ -46,7 +46,8 @@ def admin_logout(request):
 @login_required
 def protected_book_pdf(request, pk):
     book = get_object_or_404(Book, pk=pk)
-    if book.visibility != 'public':
+    free_public = book.visibility == 'public' and book.price == 0
+    if not free_public:
         entitled=Entitlement.objects.filter(user=request.user, book=book).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).exists()
         subscribed=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True,plan__grants_catalog_access=True).exists()
         if not entitled and not subscribed:
