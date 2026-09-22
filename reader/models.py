@@ -19,6 +19,15 @@ class Bookmark(models.Model):
     class Meta:
         constraints=[models.UniqueConstraint(fields=['user','book','page'],name='unique_bookmark_page')]
         indexes=[models.Index(fields=['user','book','page'],name='reader_bookmark_lookup_idx')]
+class Highlight(models.Model):
+    user=models.ForeignKey(User,on_delete=models.CASCADE)
+    book=models.ForeignKey(Book,on_delete=models.CASCADE)
+    page=models.PositiveIntegerField()
+    text=models.TextField()
+    created_at=models.DateTimeField(auto_now_add=True)
+    class Meta:
+        indexes=[models.Index(fields=['user','book','page'],name='reader_highlight_lookup_idx')]
+
 class Note(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE)
     book=models.ForeignKey(Book,on_delete=models.CASCADE)
