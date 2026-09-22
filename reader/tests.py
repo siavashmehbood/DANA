@@ -3,10 +3,11 @@ from accounts.models import User
 from books.models import Author, Book, Chapter
 from gamification.models import PointLedger, UserStreak
 from shop.models import Entitlement, Subscription, SubscriptionPlan, SubscriptionPlan, Subscription
-from .models import ReadingProgress, Review, Bookmark, Highlight, Note, ProblemReport, SavedWord
+from .models import ReadingProgress, AudioProgress, Review, Bookmark, Highlight, Note, ProblemReport, SavedWord
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 
 class StudyFlowTests(TestCase):
@@ -408,3 +409,45 @@ class PasswordBookAccessTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('reader',args=[book.pk]))
         self.assertEqual(response.status_code,403)
+
+
+class AudiobookExperienceTests(TestCase):
+    def setUp(self):
+        self.user=User.objects.create_user(username='audio-user',password='pass12345')
+        author=Author.objects.create(name='Audio Author')
+        self.book=Book.objects.create(name='Audio Book',slug='audio-book',author=author,status='published',visibility='private',audio=SimpleUploadedFile('book.mp3',b'ID3audio',content_type='audio/mpeg'))
+        self.chapter=Chapter.objects.create(book=self.book,title='فصل یک',order=1,audio=SimpleUploadedFile('chapter.mp3',b'ID3chapter',content_type='audio/mpeg'))
+        self.client.force_login(self.user)
+
+    def test_audio_player_requires_entitlement(self):
+        self.assertEqual(self.client.get(reverse('audio_player',args=[self.book.pk])).status_code,403)
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        self.assertEqual(self.client.get(reverse('audio_player',args=[self.book.pk])).status_code,200)
+
+    def test_secure_audio_denies_cross_book_access(self):
+        other=Book.objects.create(name='Other Audio',slug='other-audio',author=self.book.author,status='published',visibility='private')
+        foreign=Chapter.objects.create(book=other,title='Foreign',order=1,audio=SimpleUploadedFile('foreign.mp3',b'ID3foreign',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        response=self.client.get(reverse('protected_chapter_audio',args=[self.book.pk,foreign.pk]))
+        self.assertEqual(response.status_code,404)
+
+    def test_audio_progress_persists_per_chapter(self):
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        response=self.client.post(reverse('audio_progress',args=[self.book.pk]),{'chapter_id':self.chapter.pk,'position':'75','duration':'300'})
+        self.assertEqual(response.status_code,200)
+        item=AudioProgress.objects.get(user=self.user,book=self.book,chapter=self.chapter)
+        self.assertEqual(item.position_seconds,75)
+        self.assertFalse(item.completed)
+
+    def test_expired_entitlement_cannot_save_audio_progress(self):
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase',expires_at=timezone.now()-timedelta(seconds=1))
+        response=self.client.post(reverse('audio_progress',args=[self.book.pk]),{'chapter_id':self.chapter.pk,'position':'20','duration':'100'})
+        self.assertEqual(response.status_code,403)
+        self.assertFalse(AudioProgress.objects.filter(user=self.user,book=self.book).exists())
+
+    def test_audio_progress_rejects_chapter_from_other_book(self):
+        other=Book.objects.create(name='Other',slug='audio-other',author=self.book.author,status='published')
+        foreign=Chapter.objects.create(book=other,title='Other chapter',order=1)
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        response=self.client.post(reverse('audio_progress',args=[self.book.pk]),{'chapter_id':foreign.pk,'position':'10','duration':'100'})
+        self.assertEqual(response.status_code,400)
