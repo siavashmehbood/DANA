@@ -61,7 +61,7 @@ class Entitlement(models.Model):
 class WalletTransaction(models.Model):
     TYPES = [('credit', 'Credit'), ('debit', 'Debit'), ('refund', 'Refund'), ('reward', 'Reward')]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='wallet_transactions')
-    amount = models.DecimalField(max_digits=14, decimal_places=0)
+    amount = models.DecimalField(max_digits=14, decimal_places=0, validators=[MinValueValidator(0)])
     type = models.CharField(max_length=20, choices=TYPES)
     reason = models.CharField(max_length=250)
     order = models.ForeignKey(Order, null=True, blank=True, on_delete=models.SET_NULL)
