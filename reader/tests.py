@@ -230,3 +230,10 @@ class SubscriptionReaderAccessTests(TestCase):
         response=self.client.get(reverse('reader',args=[self.book.pk]),{'highlight_q':'مهم'})
         self.assertContains(response,'عبارت مهم')
         self.assertNotContains(response,'عبارت دیگر')
+
+
+    def test_reader_page_is_not_cacheable(self):
+        self.client.login(username=self.user.username,password='pass12345')
+        response=self.client.get(reverse('reader',args=[self.book.pk]))
+        self.assertIn('no-cache',response.get('Cache-Control',''))
+        self.assertIn('private',response.get('Cache-Control',''))
