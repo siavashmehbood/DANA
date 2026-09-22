@@ -2,7 +2,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 class Migration(migrations.Migration):
-    dependencies=[('accounts','0001_initial'),('books','0004_validate_prices')]
+    dependencies=[('accounts','0001_initial'),('books','0004_validate_prices'),('reader','0005_progress_constraints_indexes')]
     operations=[
         migrations.CreateModel(
             name='Highlight',
