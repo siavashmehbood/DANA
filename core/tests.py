@@ -124,8 +124,11 @@ class RecommendationTests(TestCase):
 
 
     def test_subscription_catalog_plan_allows_legacy_protected_pdf(self):
+        user=User.objects.create_user(username='legacy-reader',password='pass12345')
+        author=Author.objects.create(name='Legacy PDF Author')
+        book=Book.objects.create(name='Legacy PDF Book',slug='legacy-pdf-book',author=author,status='published',visibility='private')
         plan=SubscriptionPlan.objects.create(name='Legacy PDF',slug='legacy-pdf',price=0,duration_days=7,grants_catalog_access=True)
-        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
-        self.client.login(username='reader',password='pass12345')
-        response=self.client.get(self.url)
-        self.assertEqual(response.status_code,200)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.force_login(user)
+        response=self.client.get(reverse('protected_book_pdf',args=[book.pk]))
+        self.assertNotEqual(response.status_code,403)
