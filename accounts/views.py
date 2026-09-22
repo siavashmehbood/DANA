@@ -161,8 +161,12 @@ def profile(request):
     recent_audio=AudioProgress.objects.filter(user=request.user).select_related('book__author','chapter').order_by('-updated_at')[:6]
     in_progress_count=ReadingProgress.objects.filter(user=request.user,progress__gt=0,progress__lt=100).values('book_id').distinct().count()
     weekly_minutes_done=weekly_seconds//60
+    weekly_completed_ids=set(ReadingProgress.objects.filter(user=request.user,progress__gte=100,updated_at__gte=week_start).values_list('book_id',flat=True))
+    weekly_completed_ids.update(AudioProgress.objects.filter(user=request.user,completed=True,updated_at__gte=week_start).values_list('book_id',flat=True))
+    weekly_books_done=len(weekly_completed_ids)
     weekly_goal_percent=min(100,round((weekly_minutes_done/max(1,goal.weekly_minutes))*100))
-    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':weekly_minutes_done,'weekly_goal_percent':weekly_goal_percent,'completed_books':completed_books,'in_progress_count':in_progress_count,'total_reading_minutes':total_reading_seconds//60,'streak':streak,'badges':badges,'missions':missions,'recent_progress':recent_progress_rows,'recent_audio':recent_audio,'active_subscription':active_subscription})
+    weekly_books_goal_percent=min(100,round((weekly_books_done/max(1,goal.weekly_books))*100))
+    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':weekly_minutes_done,'weekly_goal_percent':weekly_goal_percent,'weekly_books_done':weekly_books_done,'weekly_books_goal_percent':weekly_books_goal_percent,'completed_books':completed_books,'in_progress_count':in_progress_count,'total_reading_minutes':total_reading_seconds//60,'streak':streak,'badges':badges,'missions':missions,'recent_progress':recent_progress_rows,'recent_audio':recent_audio,'active_subscription':active_subscription})
 
 @login_required
 def logout_others(request):
