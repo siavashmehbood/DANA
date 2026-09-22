@@ -327,3 +327,17 @@ class RecommendationColdStartTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('library'))
         self.assertTrue(any(item.pk == free.pk for item in response.context['recommended_books']))
+
+
+class ProfileTruthfulStatsTests(TestCase):
+    def test_profile_does_not_report_audio_cursor_as_listening_time(self):
+        user=User.objects.create_user(username='truthful-stats',password='pass12345')
+        author=Author.objects.create(name='Stats Author')
+        book=Book.objects.create(name='Stats Audio',slug='stats-audio',author=author,status='published')
+        AudioProgress.objects.create(user=user,book=book,position_seconds=3600,duration_seconds=7200)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.status_code,200)
+        self.assertNotIn('total_audio_minutes',response.context)
+        self.assertNotContains(response,'شنیدن<br>')
+        self.assertContains(response,'مطالعه متنی ثبت شده است')
