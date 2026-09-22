@@ -250,3 +250,12 @@ class SubscriptionBookAccessTests(TestCase):
         Book.objects.create(name='راز پنهان',slug='private-relaxed',author=author,status='published',visibility='private')
         response=self.client.get(reverse('books'),{'q':'راز ناشناخته'})
         self.assertNotContains(response,'راز پنهان')
+
+
+    def test_subscription_catalog_filter_only_shows_included_books(self):
+        author=Author.objects.create(name='Subscription Filter Author')
+        included=Book.objects.create(name='Included Filter',slug='included-filter',author=author,status='published',subscription_included=True)
+        Book.objects.create(name='Excluded Filter',slug='excluded-filter',author=author,status='published',subscription_included=False)
+        response=self.client.get(reverse('books'),{'access':'subscription'})
+        self.assertContains(response,included.name)
+        self.assertNotContains(response,'Excluded Filter')
