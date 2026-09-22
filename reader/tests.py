@@ -444,7 +444,7 @@ class AudiobookExperienceTests(TestCase):
     def test_expired_entitlement_cannot_save_audio_progress(self):
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase',expires_at=timezone.now()-timedelta(seconds=1))
         response=self.client.post(reverse('audio_progress',args=[self.book.pk]),{'chapter_id':self.chapter.pk,'position':'20','duration':'100'})
-        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.status_code,403)
         self.assertFalse(AudioProgress.objects.filter(user=self.user,book=self.book).exists())
 
     def test_audio_progress_rejects_chapter_from_other_book(self):
@@ -461,7 +461,7 @@ class AudiobookExperienceTests(TestCase):
         self.book.save(update_fields=['subscription_included'])
         Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=30),expires_at=timezone.now()-timedelta(seconds=1))
         response=self.client.get(reverse('book_secure_file',args=[self.book.pk,'audio']))
-        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.status_code,403)
 
     def test_whole_book_audio_progress_is_idempotent(self):
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
