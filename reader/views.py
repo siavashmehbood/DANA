@@ -59,8 +59,11 @@ def bookmark(request, pk):
     if request.method=='POST':
         try: page=min(1000000,max(0,int(request.POST.get('page',0))))
         except (TypeError,ValueError): return JsonResponse({'error':'Invalid page'},status=400)
-        item=Bookmark.objects.create(user=request.user,book=book,page=page,title=request.POST.get('title','')[:150])
-        return JsonResponse({'ok':True,'id':item.id,'page':item.page,'title':item.title})
+        title=request.POST.get('title','').strip()[:150]
+        item,created=Bookmark.objects.get_or_create(user=request.user,book=book,page=page,defaults={'title':title})
+        if not created and title and item.title != title:
+            item.title=title; item.save(update_fields=['title'])
+        return JsonResponse({'ok':True,'created':created,'id':item.id,'page':item.page,'title':item.title})
     return JsonResponse({'items':list(Bookmark.objects.filter(user=request.user,book=book).values('id','page','title'))})
 
 
