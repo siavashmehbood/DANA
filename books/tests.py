@@ -333,3 +333,10 @@ class BookValidationTests(TestCase):
         book=Book(name='Immediate',slug='immediate-validation',author=self.author,status='published',publish_at=timezone.now()+timedelta(days=1))
         with self.assertRaises(ValidationError):
             book.full_clean()
+
+
+    def test_scheduled_book_requires_future_time(self):
+        from django.core.exceptions import ValidationError
+        book=Book(name='Past scheduled',slug='past-scheduled-validation',author=self.author,status='scheduled',publish_at=timezone.now()-timedelta(minutes=1))
+        with self.assertRaises(ValidationError):
+            book.full_clean()
