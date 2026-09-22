@@ -301,19 +301,17 @@ def audio_progress(request, pk):
             item.completed=item.completed or completed
             item.save(update_fields=['position_seconds','duration_seconds','completed','updated_at'])
     aggregate=ReadingProgress.objects.filter(user=request.user,book=book).first()
-    listened=AudioProgress.objects.filter(user=request.user,book=book).aggregate(total=models.Sum('position_seconds'))['total'] or 0
-    previous_audio_seconds=aggregate.audio_seconds if aggregate else 0
+    # AudioProgress positions are resume cursors and may move backwards after a
+    # seek. They are not listening-duration telemetry, so do not aggregate them
+    # into ReadingProgress.audio_seconds or use them as a study-time signal.
     audio_complete=completed and chapter is None
     if chapter is not None and completed:
         audio_chapter_ids=list(book.chapters.exclude(audio='').values_list('id',flat=True))
         audio_complete=bool(audio_chapter_ids) and not AudioProgress.objects.filter(user=request.user,book=book,chapter_id__in=audio_chapter_ids,completed=False).exists() and AudioProgress.objects.filter(user=request.user,book=book,chapter_id__in=audio_chapter_ids,completed=True).count()==len(audio_chapter_ids)
     if aggregate is None:
-        aggregate=ReadingProgress.objects.create(user=request.user,book=book,audio_seconds=listened,current_chapter=chapter,progress=100 if audio_complete else 0)
+        aggregate=ReadingProgress.objects.create(user=request.user,book=book,current_chapter=chapter,progress=100 if audio_complete else 0)
     else:
-        aggregate.audio_seconds=max(aggregate.audio_seconds,listened)
         if chapter is not None: aggregate.current_chapter=chapter
         if audio_complete: aggregate.progress=100
-        aggregate.save(update_fields=['audio_seconds','current_chapter','progress','updated_at'])
-    if listened > previous_audio_seconds:
-        record_study_activity(request.user)
+        aggregate.save(update_fields=['current_chapter','progress','updated_at'])
     return JsonResponse({'ok':True,'position':item.position_seconds,'duration':item.duration_seconds,'completed':item.completed})
