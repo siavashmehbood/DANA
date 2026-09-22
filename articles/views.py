@@ -82,8 +82,9 @@ def detail(request, slug):
     if mode not in {'en', 'fa', 'both'}:
         mode = 'fa'
     search = request.GET.get('find', '').strip()[:200]
-    article.reader_full_text = linebreaks(article.full_text or '')
-    article.reader_full_text_fa = linebreaks(article.full_text_fa or '')
+    can_show_full_text = not article.source_id or article.source.allow_full_republish
+    article.reader_full_text = linebreaks(article.full_text or '') if can_show_full_text else ''
+    article.reader_full_text_fa = linebreaks(article.full_text_fa or '') if can_show_full_text else ''
     if mode == 'fa' and not (article.full_text_fa or article.abstract_fa):
         mode = 'en'
     related = Article.objects.filter(published=True).exclude(pk=article.pk)
@@ -98,7 +99,7 @@ def detail(request, slug):
     return render(request, 'articles/detail.html', {
         'article': article, 'related_articles': related,
         'language_mode': mode, 'reader_search': search,
-        'library_item': library_item, 'annotations': annotations,
+        'library_item': library_item, 'annotations': annotations, 'can_show_full_text': can_show_full_text,
     })
 
 
