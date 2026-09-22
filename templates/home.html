@@ -7,7 +7,7 @@
   <div class="hero-copy"><span class="home-kicker">DANA BOOKS • پیشنهاد ویژه امروز</span>
     <h1>کتابی که دنبالش هستی،<br><strong>همین‌جاست.</strong></h1>
     <p>کتاب‌های محبوب، تازه منتشرشده و صوتی را پیدا کن؛ بخر، ذخیره کن و مطالعه را ادامه بده.</p>
-    <div class="hero-actions"><a href="/books/" class="btn home-buy">خرید کتاب‌ها</a><a href="#new-books" class="btn home-more">کشف کتاب‌ها</a></div>
+    <div class="hero-actions"><a href="/books/" class="btn home-buy">کشف و خرید کتاب</a><a href="{% url 'subscriptions' %}" class="btn home-more">دیدن اشتراک دانا</a><a href="#new-books" class="btn home-more">تازه‌ها</a></div>
     <div class="hero-trust"><span>✓ پرداخت امن</span><span>✓ دسترسی مطابق خرید یا اشتراک</span><span>✓ نسخه دیجیتال و صوتی</span></div>
   </div>
   <div class="hero-books">{% for b in featured|slice:":3" %}<a class="hero-book" href="/books/{{b.slug}}/">{% if b.cover %}<img src="{{b.cover.url}}" alt="{{b.name}}">{% else %}<div class="hero-cover">دانا</div>{% endif %}<span>{{b.name}}</span></a>{% empty %}<div class="hero-cover hero-cover-main">DANA</div>{% endfor %}</div>
