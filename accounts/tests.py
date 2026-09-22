@@ -520,3 +520,16 @@ class ProfileAccessAwareActivityTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('profile'))
         self.assertEqual(response.context['in_progress_count'],1)
+
+
+class DashboardFreePublicResumeTests(TestCase):
+    def test_free_public_book_progress_is_resumable_without_entitlement(self):
+        user=User.objects.create_user(username='dash-free-resume',password='pass12345')
+        author=Author.objects.create(name='Dash Free Author')
+        book=Book.objects.create(name='Dash Free Resume',slug='dash-free-resume',author=author,status='published',visibility='public',price=0,pdf=SimpleUploadedFile('free.pdf',b'%PDF-1.4',content_type='application/pdf'))
+        ReadingProgress.objects.create(user=user,book=book,progress=35,current_page=3)
+        self.client.force_login(user)
+        response=self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['continue_item']['book'],book)
+        self.assertEqual(response.context['continue_item']['kind'],'text')
+        self.assertContains(response,reverse('reader',args=[book.id]))
