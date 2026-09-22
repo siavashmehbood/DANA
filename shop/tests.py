@@ -481,3 +481,14 @@ class ShopFlowTests(TestCase):
         refs=list(WalletTransaction.objects.filter(user=self.user,reason='Subscription purchase').values_list('reference',flat=True))
         self.assertEqual(len(refs),2)
         self.assertEqual(len(set(refs)),2)
+
+
+    def test_subscription_activation_token_is_single_use(self):
+        plan=SubscriptionPlan.objects.create(name='Single Use',slug='single-use',price=0,duration_days=7)
+        self.client.get(reverse('subscriptions'))
+        key=self.client.session['subscription_activation_key']
+        first=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key})
+        second=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key})
+        self.assertEqual(first.status_code,302)
+        self.assertEqual(second.status_code,302)
+        self.assertEqual(Subscription.objects.filter(user=self.user,plan=plan).count(),1)
