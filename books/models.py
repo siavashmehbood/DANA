@@ -29,6 +29,8 @@ class Book(models.Model):
         if self.old_price and self.old_price < self.price:
             raise ValidationError({'old_price':'قیمت قبلی نمی‌تواند کمتر از قیمت فعلی باشد.'})
 
+    def __str__(self): return self.name
+
     @property
     def is_published(self): return self.status=='published' or (self.status=='scheduled' and self.publish_at and self.publish_at<=timezone.now())
     def save(self,*args,**kwargs):
@@ -41,7 +43,10 @@ class Book(models.Model):
         super().save(*args,**kwargs)
 class Chapter(models.Model):
     book=models.ForeignKey(Book,on_delete=models.CASCADE,related_name='chapters'); title=models.CharField(max_length=250); order=models.PositiveIntegerField(); text=models.TextField(blank=True); audio=models.FileField(upload_to='chapters/audio/',blank=True,null=True,validators=[FileExtensionValidator(['mp3','m4a','aac','ogg','wav'])]); duration=models.PositiveIntegerField(default=0)
+    def __str__(self): return f'{self.book} — {self.title}'
     class Meta:
         ordering=['order']
         constraints=[models.UniqueConstraint(fields=['book','order'],name='unique_chapter_order_per_book')]
-class MediaAsset(models.Model): title=models.CharField(max_length=200); file=models.FileField(upload_to='media/',validators=[FileExtensionValidator(['pdf','mp3','m4a','aac','ogg','wav','jpg','jpeg','png','webp'])]); kind=models.CharField(max_length=30,default='file'); created_at=models.DateTimeField(auto_now_add=True)
+class MediaAsset(models.Model):
+    title=models.CharField(max_length=200); file=models.FileField(upload_to='media/',validators=[FileExtensionValidator(['pdf','mp3','m4a','aac','ogg','wav','jpg','jpeg','png','webp'])]); kind=models.CharField(max_length=30,default='file'); created_at=models.DateTimeField(auto_now_add=True)
+    def __str__(self): return self.title
