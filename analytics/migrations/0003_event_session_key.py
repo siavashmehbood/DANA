@@ -6,6 +6,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='session_key',
-            field=models.CharField(blank=True,db_index=True,max_length=64),
+            field=models.CharField(blank=True,db_index=True,editable=False,max_length=64),
         ),
     ]
