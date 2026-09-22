@@ -466,3 +466,15 @@ class BookDetailLatestActivityTests(TestCase):
         response=self.client.get(reverse('book_detail',args=[book.slug]))
         self.assertEqual(response.context['continue_kind'],'audio')
         self.assertContains(response,'ادامه آخرین فعالیت: شنیدن')
+
+
+    def test_audio_only_legacy_progress_routes_detail_to_audio(self):
+        from reader.models import ReadingProgress
+        user=User.objects.create_user(username='detail-audio-legacy',password='pass12345')
+        author=Author.objects.create(name='Detail Audio Legacy Author')
+        book=Book.objects.create(name='Detail Audio Legacy',slug='detail-audio-legacy',author=author,status='published',visibility='public',price=0,audio=SimpleUploadedFile('legacy-detail.mp3',b'ID3legacy',content_type='audio/mpeg'))
+        ReadingProgress.objects.create(user=user,book=book,progress=20,current_page=1)
+        self.client.force_login(user)
+        response=self.client.get(reverse('book_detail',args=[book.slug]))
+        self.assertEqual(response.context['continue_kind'],'audio')
+        self.assertContains(response,'ادامه آخرین فعالیت: شنیدن')
