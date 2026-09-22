@@ -13,6 +13,8 @@ class SupportFlowTests(TestCase):
         response=self.client.post(reverse('ticket_reply',args=[self.ticket.pk]),{'body':'More details'})
         self.assertEqual(response.status_code,302)
         self.assertTrue(TicketMessage.objects.filter(ticket=self.ticket,user=self.owner,body='More details').exists())
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.status,'open')
     def test_other_user_cannot_reply(self):
         self.client.force_login(self.other)
         response=self.client.post(reverse('ticket_reply',args=[self.ticket.pk]),{'body':'intrusion'})
