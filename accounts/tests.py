@@ -428,3 +428,19 @@ class WeeklyBookGoalTests(TestCase):
         response=self.client.get(reverse('profile'))
         self.assertEqual(response.context['weekly_books_done'],1)
         self.assertEqual(response.context['weekly_books_goal_percent'],50)
+
+
+class LibraryLatestActivityTests(TestCase):
+    def test_library_marks_newer_audio_as_primary_resume_action(self):
+        from reader.models import AudioProgress, ReadingProgress
+        user=User.objects.create_user(username='library-latest',password='pass12345')
+        author=Author.objects.create(name='Library Latest Author')
+        book=Book.objects.create(name='Hybrid Book',slug='hybrid-latest',author=author,status='published',pdf=SimpleUploadedFile('hybrid.pdf',b'%PDF-1.4',content_type='application/pdf'),audio=SimpleUploadedFile('hybrid.mp3',b'ID3',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=book)
+        ReadingProgress.objects.create(user=user,book=book,progress=30,current_page=3)
+        AudioProgress.objects.create(user=user,book=book,position_seconds=120,duration_seconds=600)
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        row=response.context['library_rows'][0]
+        self.assertEqual(row['latest_kind'],'audio')
+        self.assertContains(response,'ادامه آخرین فعالیت: شنیدن')
