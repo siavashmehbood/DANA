@@ -405,3 +405,15 @@ class HomeLatestActivityTests(TestCase):
         self.assertEqual(response.context['continue_item']['book'],audio_book)
         self.assertEqual(response.context['continue_item']['kind'],'audio')
         self.assertContains(response,reverse('audio_player',args=[audio_book.id]))
+
+
+class HomeAudioOnlyLegacyResumeTests(TestCase):
+    def test_audio_only_book_with_legacy_reading_progress_routes_to_audio_player(self):
+        user=User.objects.create_user(username='home-audio-legacy',password='pass12345')
+        author=Author.objects.create(name='Home Audio Legacy Author')
+        book=Book.objects.create(name='Home Audio Legacy',slug='home-audio-legacy',author=author,status='published',visibility='public',price=0,audio=SimpleUploadedFile('legacy.mp3',b'ID3legacy',content_type='audio/mpeg'))
+        ReadingProgress.objects.create(user=user,book=book,progress=20,current_page=1)
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        self.assertEqual(response.context['continue_item']['kind'],'audio')
+        self.assertContains(response,reverse('audio_player',args=[book.id]))
