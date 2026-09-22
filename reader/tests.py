@@ -313,3 +313,11 @@ class SubscriptionReaderAccessTests(TestCase):
         response=self.client.get(reverse('reader',args=[private.pk]))
         self.assertEqual(response.status_code,403)
         self.assertEqual(response['Cache-Control'],'private, no-store')
+
+
+    def test_vocabulary_response_is_private_and_noindex(self):
+        response=self.client.get(reverse('reader_vocabulary'))
+        self.assertEqual(response.status_code,200)
+        self.assertIn('private',response['Cache-Control'])
+        self.assertIn('no-store',response['Cache-Control'])
+        self.assertEqual(response['X-Robots-Tag'],'noindex, nofollow')
