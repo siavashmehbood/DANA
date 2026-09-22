@@ -291,3 +291,10 @@ class ResearchLibrarySearchTests(TestCase):
         response=self.client.get(reverse('article_library'))
         self.assertNotContains(response,'Hidden research')
         self.assertNotContains(response,'secret')
+
+
+class UnicodeArticleRouteTests(TestCase):
+    def test_unicode_slug_detail_route_resolves(self):
+        article=Article.objects.create(title='مقاله فارسی',published=True,abstract='متن')
+        response=self.client.get(reverse('article_detail',args=[article.slug]))
+        self.assertEqual(response.status_code,200)
