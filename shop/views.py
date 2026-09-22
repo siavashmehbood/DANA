@@ -228,10 +228,6 @@ def subscribe(request, slug):
             messages.error(request,'موجودی کیف پول برای فعال‌سازی این اشتراک کافی نیست.')
             return redirect('subscriptions')
         current=active_now
-        if current and current.expires_at <= now:
-            current.status='expired'
-            current.save(update_fields=['status'])
-            current=None
         if current and current.plan_id == plan.id:
             current.expires_at=current.expires_at+timezone.timedelta(days=plan.duration_days)
             current.save(update_fields=['expires_at'])
