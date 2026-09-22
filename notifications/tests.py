@@ -31,3 +31,11 @@ class NotificationTests(TestCase):
         self.assertEqual(response.context['unread_count'],36)
         second=self.client.get(reverse('notifications')+'?page=2')
         self.assertEqual(len(second.context['items']),6)
+
+    def test_mark_read_preserves_current_page(self):
+        response=self.client.post(reverse('notification_mark_read',args=[self.mine.pk]),{'page':'2'})
+        self.assertRedirects(response,reverse('notifications')+'?page=2',fetch_redirect_response=False)
+
+    def test_invalid_page_falls_back_to_first_page(self):
+        response=self.client.get(reverse('notifications')+'?page=invalid')
+        self.assertEqual(response.context['page_obj'].number,1)
