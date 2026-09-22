@@ -16,7 +16,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from articles.models import Article
 from books.models import Book
 from shop.models import CartItem, Entitlement, Referral, Subscription
-from reader.models import ReadingProgress, ReadingActivity, AudioProgress, ReadingGoal
+from reader.models import ReadingProgress, ReadingActivity, ListeningActivity, AudioProgress, ReadingGoal
 from gamification.models import UserBadge, UserMission, UserStreak
 from .models import User, OTPCode, Device, UserSession
 
@@ -131,7 +131,9 @@ def profile(request):
     week_start=timezone.now()-timedelta(days=7)
     # Weekly study time is event-based. ReadingProgress.seconds is a cumulative
     # lifetime counter, so summing recently updated snapshots would overstate a week.
-    weekly_seconds=ReadingActivity.objects.filter(user=request.user,created_at__gte=week_start).aggregate(total=Sum('seconds'))['total'] or 0
+    reading_weekly_seconds=ReadingActivity.objects.filter(user=request.user,created_at__gte=week_start).aggregate(total=Sum('seconds'))['total'] or 0
+    listening_weekly_seconds=ListeningActivity.objects.filter(user=request.user,created_at__gte=week_start).aggregate(total=Sum('seconds'))['total'] or 0
+    weekly_seconds=reading_weekly_seconds+listening_weekly_seconds
     # AudioProgress stores a resume cursor, not listened-time telemetry. Never
     # present cursor positions as minutes listened or count them toward a time goal.
     completed_reading_ids=set(ReadingProgress.objects.filter(user=request.user,progress__gte=100).values_list('book_id',flat=True))
