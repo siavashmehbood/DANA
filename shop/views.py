@@ -220,7 +220,7 @@ def subscribe(request, slug):
 
         now=timezone.now()
         Subscription.objects.select_for_update().filter(user=user,status='active',expires_at__lte=now).update(status='expired')
-        queued=Subscription.objects.select_for_update().filter(user=user,status='active',starts_at__gt=now,expires_at__gt=now).exists()
+        queued=Subscription.objects.select_for_update().filter(user=user,status='active',starts_at__gt=now,expires_at__gt=now).first()
         if queued:
             messages.info(request,'یک تمدید اشتراک از قبل برای شما ثبت شده است.')
             return redirect('subscriptions')
