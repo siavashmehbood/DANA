@@ -51,7 +51,8 @@ def progress(request, pk):
     if chapter is not None and (saved.current_chapter_id is None or chapter.order >= saved.current_chapter.order):
         saved.current_chapter = chapter
     fields=['progress','current_page','seconds','audio_seconds','updated_at']
-    if chapter is not None and saved.current_chapter_id == chapter.id: fields.append('current_chapter')
+    if chapter is not None and saved.current_chapter_id == chapter.id:
+        fields.append('current_chapter')
     saved.save(update_fields=fields)
     if added_study_time:
         record_study_activity(request.user)
