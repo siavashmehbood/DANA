@@ -323,3 +323,13 @@ class RetiredPlanPdfAccessTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('protected_book_pdf',args=[book.pk]))
         self.assertEqual(response.status_code,404)
+
+
+    def test_password_book_pdf_cannot_bypass_reader_gate(self):
+        user=User.objects.create_user(username='password-pdf-user',password='pass12345')
+        author=Author.objects.create(name='Password Author')
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        book=Book.objects.create(name='Password PDF',slug='password-pdf',author=author,status='published',price=0,visibility='password',access_password='secret',pdf=SimpleUploadedFile('password.pdf',b'%PDF-1.4 test',content_type='application/pdf'))
+        self.client.force_login(user)
+        response=self.client.get(reverse('protected_book_pdf',args=[book.pk]))
+        self.assertEqual(response.status_code,403)
