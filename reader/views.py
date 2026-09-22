@@ -37,7 +37,10 @@ def reader(request, pk):
         return response
     accessible = _has_access(request.user, book)
     if not accessible:
-        response=HttpResponseForbidden('برای مطالعه این کتاب دسترسی فعال لازم است.')
+        # Reader links can outlive a subscription. Return the user to the product
+        # page where purchase/subscription recovery options are available instead
+        # of leaving them at a dead-end 403.
+        response=redirect('book_detail',slug=book.slug)
         response['Cache-Control']='private, no-store'
         return response
     owned = Entitlement.objects.filter(user=request.user,book=book).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).exists()
