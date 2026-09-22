@@ -176,11 +176,23 @@ class ShopFlowTests(TestCase):
         self.assertRedirects(response,reverse('subscriptions'))
         self.assertTrue(Subscription.objects.filter(user=self.user,plan=plan,status='active').exists())
 
-    def test_paid_subscription_cannot_be_activated_without_payment(self):
+    def test_paid_subscription_requires_sufficient_wallet_balance(self):
         plan=SubscriptionPlan.objects.create(name='Paid Catalog',slug='paid-catalog',price=100,duration_days=30)
-        self.client.login(username='buyer',password='pass123')
         self.client.post(reverse('subscribe',args=[plan.slug]))
         self.assertFalse(Subscription.objects.filter(user=self.user,plan=plan).exists())
+
+    def test_paid_subscription_debits_wallet_and_activates(self):
+        plan=SubscriptionPlan.objects.create(name='Wallet Plus',slug='wallet-plus',price=100,duration_days=30)
+        self.user.wallet_balance=Decimal('250')
+        self.user.save(update_fields=['wallet_balance'])
+        response=self.client.post(reverse('subscribe',args=[plan.slug]))
+        self.assertRedirects(response,reverse('subscriptions'))
+        self.user.refresh_from_db()
+        sub=Subscription.objects.get(user=self.user,plan=plan,status='active')
+        self.assertEqual(self.user.wallet_balance,Decimal('150'))
+        tx=WalletTransaction.objects.get(reference=f'subscription:{sub.pk}:debit')
+        self.assertEqual(tx.balance_before,Decimal('250'))
+        self.assertEqual(tx.balance_after,Decimal('150'))
 
 
     def test_reactivating_same_free_plan_extends_from_current_expiry(self):
