@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.urls import reverse
 from django.utils import timezone
 from django.conf import settings
@@ -116,3 +116,17 @@ class LibraryFilterTests(TestCase):
         response=self.client.get(reverse('library'),{'source':'subscription'})
         self.assertContains(response,'Subscription Only')
         self.assertNotContains(response,'Purchased Only')
+
+
+class SessionSecurityTests(TestCase):
+    def test_logout_others_invalidates_django_sessions(self):
+        user=User.objects.create_user(username='multi-session',password='pass12345')
+        first=Client()
+        second=Client()
+        first.post(reverse('login'),{'login_method':'password','username':'multi-session','password':'pass12345'})
+        second.post(reverse('login'),{'login_method':'password','username':'multi-session','password':'pass12345'})
+        self.assertEqual(first.get(reverse('profile')).status_code,200)
+        self.assertEqual(second.get(reverse('profile')).status_code,200)
+        first.post(reverse('logout_others'))
+        self.assertEqual(first.get(reverse('profile')).status_code,200)
+        self.assertEqual(second.get(reverse('profile')).status_code,302)
