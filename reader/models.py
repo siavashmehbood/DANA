@@ -7,7 +7,9 @@ from articles.models import Article
 
 class ReadingProgress(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); progress=models.DecimalField(max_digits=5,decimal_places=2,default=0); current_page=models.PositiveIntegerField(default=0); current_chapter=models.ForeignKey(Chapter,null=True,blank=True,on_delete=models.SET_NULL); seconds=models.PositiveIntegerField(default=0); audio_seconds=models.PositiveIntegerField(default=0); updated_at=models.DateTimeField(auto_now=True)
-    class Meta: unique_together=('user','book')
+    class Meta:
+        constraints=[models.UniqueConstraint(fields=['user','book'],name='unique_reading_progress')]
+        indexes=[models.Index(fields=['user','-updated_at'],name='reader_progress_recent_idx')]
 class Bookmark(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE)
     book=models.ForeignKey(Book,on_delete=models.CASCADE)
