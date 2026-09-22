@@ -290,3 +290,10 @@ class BaseMetadataTests(TestCase):
     def test_anonymous_home_renders_successfully(self):
         response=self.client.get('/')
         self.assertEqual(response.status_code,200)
+
+
+    def test_home_discovery_excludes_password_protected_books(self):
+        author=Author.objects.create(name='Home Protected')
+        Book.objects.create(name='Hidden Home Book',slug='hidden-home-book',author=author,status='published',visibility='password',access_password='secret')
+        response=self.client.get('/')
+        self.assertNotContains(response,'Hidden Home Book')
