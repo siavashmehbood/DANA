@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, F
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -29,6 +29,16 @@ def _coupon_discount(coupon, subtotal):
     return min(raw, subtotal)
 
 
+def _release_coupon_reservation(payment):
+    payload=payment.callback_payload or {}
+    code=payload.get('coupon_code','')
+    if not code or not payload.get('coupon_reserved'):
+        return
+    Coupon.objects.filter(code=code,used__gt=0).update(used=F('used')-1)
+    payment.callback_payload={**payload,'coupon_reserved':False}
+    payment.save(update_fields=['callback_payload'])
+
+
 def _tracking_code():
     for _ in range(50):
         code = f'{secrets.randbelow(1000000):06d}'
@@ -49,8 +59,8 @@ def finalize_bank_order(order, payment):
     for item in items:
         Entitlement.objects.get_or_create(user=order.user, book=item.book, defaults={'order': order, 'source': 'purchase'})
     coupon_code = (payment.callback_payload or {}).get('coupon_code', '')
-    if coupon_code:
-        Coupon.objects.select_for_update().filter(code=coupon_code, active=True).update(used=__import__('django.db.models', fromlist=['F']).F('used') + 1)
+    if coupon_code and not (payment.callback_payload or {}).get('coupon_reserved'):
+        Coupon.objects.select_for_update().filter(code=coupon_code, active=True).update(used=F('used') + 1)
     add_points(order.user, PointLedger.PURCHASE, purchase_points_for_amount(order.total), 'Purchase points', reference=f'order:{order.pk}')
     referral = Referral.objects.select_for_update().select_related('inviter').filter(invitee=order.user, rewarded=False).first()
     if referral:
@@ -106,12 +116,16 @@ def bank_checkout(request):
             total = subtotal - discount + tax
             order = Order.objects.create(user=user, subtotal=subtotal, discount=discount, tax=tax, total=total, status='pending', tracking_code=_tracking_code())
             OrderItem.objects.bulk_create([OrderItem(order=order, book=i.book, price=i.book.price) for i in locked_items])
-            payment = Payment.objects.create(user=user, order=order, provider='zarinpal', amount=total, status='pending', idempotency_key=f'bank:{order.pk}', callback_payload={'coupon_code': coupon.code if coupon else ''})
+            if coupon and discount > 0:
+                coupon.used=F('used')+1
+                coupon.save(update_fields=['used'])
+            payment = Payment.objects.create(user=user, order=order, provider='zarinpal', amount=total, status='pending', idempotency_key=f'bank:{order.pk}', callback_payload={'coupon_code': coupon.code if coupon else '', 'coupon_reserved': bool(coupon and discount > 0)})
             result = gateway().request(order, request)
             if not result.ok:
                 payment.status = 'failed'
                 payment.callback_payload = {**payment.callback_payload, 'error': result.message}
                 payment.save(update_fields=['status', 'callback_payload'])
+                _release_coupon_reservation(payment)
                 order.status = 'cancelled'
                 order.save(update_fields=['status'])
                 messages.error(request, result.message)
@@ -141,6 +155,7 @@ def payment_callback(request):
         payment.status = 'cancelled'
         payment.callback_payload = {**payment.callback_payload, 'callback_status': status}
         payment.save(update_fields=['status', 'callback_payload'])
+        _release_coupon_reservation(payment)
         payment.order.status = 'cancelled'
         payment.order.save(update_fields=['status'])
         messages.warning(request, 'پرداخت توسط کاربر لغو شد.')
@@ -162,6 +177,7 @@ def payment_callback(request):
     payment.status = 'failed'
     payment.callback_payload = {**payment.callback_payload, 'verify_error': result.message}
     payment.save(update_fields=['status', 'callback_payload'])
+    _release_coupon_reservation(payment)
     payment.order.status = 'cancelled'
     payment.order.save(update_fields=['status'])
     messages.error(request, result.message or 'پرداخت تأیید نشد.')
