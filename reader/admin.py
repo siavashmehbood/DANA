@@ -2,7 +2,7 @@ from django.contrib import admin
 from unfold.admin import ModelAdmin
 
 from gamification.services import add_points, study_points_for_score
-from .models import ReadingProgress, ReadingGoal, Bookmark, Highlight, Note, ProblemReport, Review
+from .models import ReadingProgress, AudioProgress, ReadingGoal, Bookmark, Highlight, Note, ProblemReport, Review
 
 
 @admin.register(Review)
@@ -36,6 +36,14 @@ class ReadingGoalAdmin(ModelAdmin):
     search_fields=('user__username','user__phone')
 
 admin.site.register([ReadingProgress, Bookmark, Highlight, Note])
+
+@admin.register(AudioProgress)
+class AudioProgressAdmin(ModelAdmin):
+    list_display=('user','book','chapter','position_seconds','duration_seconds','completed','updated_at')
+    list_filter=('completed','updated_at')
+    search_fields=('user__username','user__phone','book__name','chapter__title')
+    autocomplete_fields=('user','book','chapter')
+    readonly_fields=('updated_at',)
 
 @admin.register(ProblemReport)
 class ProblemReportAdmin(ModelAdmin):
