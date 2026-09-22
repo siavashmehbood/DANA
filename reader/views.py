@@ -84,10 +84,16 @@ def progress(request, pk):
         if saved is None:
             saved=ReadingProgress.objects.create(user=request.user,book=book)
         added_study_time = seconds > saved.seconds or audio_seconds > saved.audio_seconds
-        saved.progress=max(float(saved.progress),value); saved.current_page=max(saved.current_page,page)
+        saved.progress=max(float(saved.progress),value)
         saved.seconds=max(saved.seconds,seconds); saved.audio_seconds=max(saved.audio_seconds,audio_seconds)
-        if chapter is not None and (saved.current_chapter_id is None or chapter.order >= saved.current_chapter.order):
+        # Page/chapter are resume cursors, not achievements. Persist the reader's
+        # latest valid location so intentionally revisiting an earlier chapter is
+        # respected after refresh/login while overall completion stays monotonic.
+        if chapter is not None:
             saved.current_chapter = chapter
+            saved.current_page = page
+        else:
+            saved.current_page=max(saved.current_page,page)
         fields=['progress','current_page','seconds','audio_seconds','updated_at']
         if chapter is not None and saved.current_chapter_id == chapter.id:
             fields.append('current_chapter')
