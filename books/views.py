@@ -23,11 +23,9 @@ def listing(request):
     kind=request.GET.get('kind','all')
     price=request.GET.get('price','all')
     access=request.GET.get('access','all')
-    access=request.GET.get('access','all')
     if sort not in {'new','price_low','price_high','popular','rating','name'}: sort='new'
     if kind not in {'all','audio','text'}: kind='all'
     if price not in {'all','free','paid'}: price='all'
-    if access not in {'all','subscription'}: access='all'
     if access not in {'all','subscription'}: access='all'
     books=_published_books().filter(visibility='public').select_related('author','category')
 
@@ -35,7 +33,6 @@ def listing(request):
         if cat: qs=qs.filter(category__slug=cat)
         if kind=='audio': qs=qs.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct()
         elif kind=='text': qs=qs.filter(Q(pdf__gt='')|Q(chapters__text__gt='')).distinct()
-        if access=='subscription': qs=qs.filter(subscription_included=True)
         if access=='subscription': qs=qs.filter(subscription_included=True)
         if price=='free': qs=qs.filter(price=0)
         elif price=='paid': qs=qs.filter(price__gt=0)
