@@ -12,6 +12,7 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.db.models import Q
 from django.views.decorators.cache import never_cache
+from django.utils.http import url_has_allowed_host_and_scheme
 from articles.models import Article
 from books.models import Book
 from shop.models import CartItem, Entitlement, Referral, Subscription
@@ -35,6 +36,9 @@ def _rate_limited(key,limit,timeout):
     if count>=limit:return True
     cache.set(key,count+1,timeout=timeout); return False
 
+def _safe_next(request, value):
+    return value if value and url_has_allowed_host_and_scheme(value,allowed_hosts={request.get_host()},require_https=request.is_secure()) else '/'
+
 def login_view(request):
     if request.GET.get('ref') and not request.user.is_authenticated:
         code=request.GET.get('ref','').strip().upper()
@@ -44,17 +48,17 @@ def login_view(request):
         if method=='password':
             if _rate_limited(f'dana-login:{ip}',10,300): messages.error(request,'تعداد تلاش‌ها زیاد است؛ چند دقیقه بعد دوباره امتحان کنید.'); return redirect('login')
             username=request.POST.get('username','').strip(); password=request.POST.get('password',''); user=auth.authenticate(request,username=username,password=password)
-            if user is not None and user.is_active: auth.login(request,user); _session_record(request,user); return redirect('/')
+            if user is not None and user.is_active: auth.login(request,user); _session_record(request,user); return redirect(_safe_next(request,request.POST.get('next')))
             messages.error(request,'نام کاربری یا رمز عبور نادرست است.'); return render(request,'auth/login.html')
         phone=_phone(request.POST.get('phone'))
         if not phone: messages.error(request,'شماره موبایل معتبر نیست.'); return redirect('login')
         if not request.POST.get('terms'): messages.error(request,'پذیرش قوانین الزامی است.'); return redirect('login')
         if _rate_limited(f'dana-otp:{phone}:{ip}',5,3600): messages.error(request,'تعداد درخواست کد زیاد است؛ بعداً دوباره تلاش کنید.'); return redirect('login')
         if OTPCode.objects.filter(phone=phone,purpose='login',created_at__gt=timezone.now()-timedelta(seconds=30)).exists(): messages.error(request,'لطفاً کمی صبر کنید.'); return redirect('login')
-        code=f'{secrets.randbelow(100000):05d}'; OTPCode.objects.create(phone=phone,code=make_password(code),purpose='login',expires_at=timezone.now()+timedelta(minutes=2)); request.session['otp_phone']=phone
+        code=f'{secrets.randbelow(100000):05d}'; OTPCode.objects.create(phone=phone,code=make_password(code),purpose='login',expires_at=timezone.now()+timedelta(minutes=2)); request.session['otp_phone']=phone; request.session['login_next']=_safe_next(request,request.POST.get('next'))
         if settings.DEBUG: print(f'[DANA OTP] {phone}: {code}')
         return redirect('otp')
-    return render(request,'auth/login.html')
+    return render(request,'auth/login.html',{'next_url':_safe_next(request,request.GET.get('next'))})
 
 def otp(request):
     phone=request.session.get('otp_phone')
@@ -72,7 +76,7 @@ def otp(request):
             if created:
                 referral_code=request.session.pop('referral_code',''); inviter=User.objects.filter(referral_code=referral_code).exclude(pk=user.pk).first()
                 if inviter: Referral.objects.get_or_create(inviter=inviter,invitee=user)
-            auth.login(request,user); _session_record(request,user); request.session.pop('otp_phone',None); return redirect('/')
+            auth.login(request,user); _session_record(request,user); request.session.pop('otp_phone',None); return redirect(request.session.pop('login_next','/'))
         if row: row.attempts+=1; row.save(update_fields=['attempts'])
         messages.error(request,'کد واردشده صحیح نیست یا منقضی شده است.')
     return render(request,'auth/otp.html',{'phone':phone})
