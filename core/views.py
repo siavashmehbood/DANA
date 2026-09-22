@@ -18,7 +18,7 @@ def home(request):
     popular = base.annotate(approved_reviews=Count('review', filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
     recommendations = base.none()
     audio_books = base.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct().order_by('-created_at')[:8]
-    categories = Category.objects.all()[:10]
+    categories = Category.objects.annotate(book_count=Count('book',filter=Q(book__status='published'))).filter(book_count__gt=0).order_by('-book_count','name')[:10]
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
     article_base = Article.objects.filter(published=True).filter(readable).select_related('category')
     continue_reading=[]
