@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.db import models, transaction
 from books.models import Book
 from shop.models import Entitlement, Subscription
-from .models import ReadingProgress, ReadingActivity, AudioProgress, Bookmark, Highlight, Note, SavedWord, Review, ProblemReport
+from .models import ReadingProgress, ReadingActivity, ListeningActivity, AudioProgress, Bookmark, Highlight, Note, SavedWord, Review, ProblemReport
 from gamification.services import record_study_activity
 
 
@@ -291,6 +291,7 @@ def audio_progress(request, pk):
     try:
         position=max(0,min(31536000,int(float(request.POST.get('position',0)))))
         duration=max(0,min(31536000,int(float(request.POST.get('duration',0)))))
+        listened_delta=max(0,min(3600,int(float(request.POST.get('listened_delta',0)))))
     except (TypeError,ValueError):
         return JsonResponse({'error':'Invalid audio progress'},status=400)
     chapter=None
@@ -313,6 +314,10 @@ def audio_progress(request, pk):
             item.duration_seconds=max(item.duration_seconds,duration)
             item.completed=item.completed or completed
             item.save(update_fields=['position_seconds','duration_seconds','completed','updated_at'])
+        if listened_delta:
+            ListeningActivity.objects.create(user=request.user,book=book,seconds=listened_delta)
+    if listened_delta:
+        record_study_activity(request.user)
     aggregate=ReadingProgress.objects.filter(user=request.user,book=book).first()
     # AudioProgress positions are resume cursors and may move backwards after a
     # seek. They are not listening-duration telemetry, so do not aggregate them
