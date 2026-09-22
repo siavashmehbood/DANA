@@ -198,3 +198,12 @@ class ShopFlowTests(TestCase):
         self.client.login(username='buyer',password='pass12345')
         self.client.post(reverse('subscribe',args=[plan.slug]))
         self.assertEqual(Subscription.objects.filter(user=self.user,plan=plan,status='active').count(),1)
+
+
+    def test_subscription_page_marks_elapsed_active_rows_expired(self):
+        plan=SubscriptionPlan.objects.create(name='Elapsed',slug='elapsed',price=0,duration_days=1)
+        sub=Subscription.objects.create(user=self.user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=2),expires_at=timezone.now()-timedelta(days=1))
+        self.client.login(username='buyer',password='pass12345')
+        self.client.get(reverse('subscriptions'))
+        sub.refresh_from_db()
+        self.assertEqual(sub.status,'expired')
