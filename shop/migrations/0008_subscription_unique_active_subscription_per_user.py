@@ -5,6 +5,6 @@ class Migration(migrations.Migration):
     operations=[
         migrations.AddConstraint(
             model_name='subscription',
-            constraint=models.UniqueConstraint(fields=('user',),condition=models.Q(status='active'),name='unique_active_subscription_per_user'),
+            constraint=models.UniqueConstraint(condition=models.Q(('status', 'active')), fields=('user',), name='unique_active_subscription_per_user'),
         ),
     ]
