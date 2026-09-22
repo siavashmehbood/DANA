@@ -1,3 +1,4 @@
+from unittest.mock import patch
 from django.test import TestCase
 from django.urls import reverse
 from .models import Article, ArticleCategory, ArticleLibraryItem, ArticleAnnotation, ArticleTranslationVersion, ArticleSource
