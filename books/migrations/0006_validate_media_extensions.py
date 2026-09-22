@@ -17,6 +17,11 @@ class Migration(migrations.Migration):
             field=models.FileField(blank=True, null=True, upload_to='books/audio/', validators=[django.core.validators.FileExtensionValidator(['mp3','m4a','aac','ogg','wav'])]),
         ),
         migrations.AlterField(
+            model_name='mediaasset',
+            name='file',
+            field=models.FileField(upload_to='media/', validators=[django.core.validators.FileExtensionValidator(['pdf','mp3','m4a','aac','ogg','wav','jpg','jpeg','png','webp'])]),
+        ),
+        migrations.AlterField(
             model_name='chapter',
             name='audio',
             field=models.FileField(blank=True, null=True, upload_to='chapters/audio/', validators=[django.core.validators.FileExtensionValidator(['mp3','m4a','aac','ogg','wav'])]),
