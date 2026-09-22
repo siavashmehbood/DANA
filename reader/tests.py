@@ -341,3 +341,10 @@ class ReaderProblemReportTests(TestCase):
     def test_empty_problem_report_is_rejected(self):
         response=self.client.post(reverse('reader_report_problem',args=[self.book.pk]),{'text':'   '})
         self.assertEqual(response.status_code,400)
+
+
+    def test_problem_reports_are_rate_limited(self):
+        for i in range(10):
+            ProblemReport.objects.create(user=self.user,book=self.book,text=f'issue {i}')
+        response=self.client.post(reverse('reader_report_problem',args=[self.book.pk]),{'text':'one more'})
+        self.assertEqual(response.status_code,429)
