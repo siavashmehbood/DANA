@@ -61,7 +61,7 @@ def protected_book_pdf(request, pk):
     free_public = book.visibility == 'public' and book.price == 0
     if not free_public:
         entitled=Entitlement.objects.filter(user=request.user, book=book).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).exists()
-        subscribed=book.subscription_included and Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True,plan__grants_catalog_access=True).exists()
+        subscribed=book.visibility == 'public' and book.subscription_included and Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True,plan__grants_catalog_access=True).exists()
         if not entitled and not subscribed:
             return HttpResponse('Access denied', status=403)
     if not book.pdf or not book.is_published:
