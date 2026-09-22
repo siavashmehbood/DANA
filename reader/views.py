@@ -209,7 +209,9 @@ def vocabulary(request):
 @login_required
 @require_POST
 def delete_word(request, pk):
-    item=get_object_or_404(SavedWord,pk=pk,user=request.user); item.delete(); return redirect('reader_vocabulary')
+    item=get_object_or_404(SavedWord,pk=pk,user=request.user)
+    item.delete()
+    return redirect('reader_vocabulary')
 
 
 @login_required
