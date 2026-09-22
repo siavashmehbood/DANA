@@ -16,7 +16,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from articles.models import Article
 from books.models import Book
 from shop.models import CartItem, Entitlement, Referral, Subscription
-from reader.models import ReadingProgress, AudioProgress, ReadingGoal
+from reader.models import ReadingProgress, ReadingActivity, AudioProgress, ReadingGoal
 from gamification.models import UserBadge, UserMission, UserStreak
 from .models import User, OTPCode, Device, UserSession
 
@@ -129,10 +129,9 @@ def profile(request):
     sessions=UserSession.objects.filter(user=request.user).select_related('device').order_by('-last_seen')
     goal,_=ReadingGoal.objects.get_or_create(user=request.user)
     week_start=timezone.now()-timedelta(days=7)
-    # These counters are cumulative snapshots, not event deltas. Keep the profile
-    # conservative rather than inventing precision: cap the displayed weekly value
-    # to the configured weekly goal while preserving existing persisted counters.
-    weekly_seconds=ReadingProgress.objects.filter(user=request.user,updated_at__gte=week_start).aggregate(total=Sum('seconds'))['total'] or 0
+    # Weekly study time is event-based. ReadingProgress.seconds is a cumulative
+    # lifetime counter, so summing recently updated snapshots would overstate a week.
+    weekly_seconds=ReadingActivity.objects.filter(user=request.user,created_at__gte=week_start).aggregate(total=Sum('seconds'))['total'] or 0
     # AudioProgress stores a resume cursor, not listened-time telemetry. Never
     # present cursor positions as minutes listened or count them toward a time goal.
     completed_reading_ids=set(ReadingProgress.objects.filter(user=request.user,progress__gte=100).values_list('book_id',flat=True))
@@ -151,7 +150,7 @@ def profile(request):
         recent_progress_rows.append({'progress':item,'book':item.book,'has_text':has_text,'has_audio':has_audio})
     recent_audio=AudioProgress.objects.filter(user=request.user).select_related('book__author','chapter').order_by('-updated_at')[:6]
     in_progress_count=ReadingProgress.objects.filter(user=request.user,progress__gt=0,progress__lt=100).values('book_id').distinct().count()
-    weekly_minutes_done=min(goal.weekly_minutes,weekly_seconds//60)
+    weekly_minutes_done=weekly_seconds//60
     weekly_goal_percent=min(100,round((weekly_minutes_done/max(1,goal.weekly_minutes))*100))
     return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':weekly_minutes_done,'weekly_goal_percent':weekly_goal_percent,'completed_books':completed_books,'in_progress_count':in_progress_count,'total_reading_minutes':total_reading_seconds//60,'streak':streak,'badges':badges,'missions':missions,'recent_progress':recent_progress_rows,'recent_audio':recent_audio,'active_subscription':active_subscription})
 
