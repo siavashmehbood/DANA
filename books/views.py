@@ -131,4 +131,8 @@ def secure_file(request, pk, kind, chapter_id=None):
     response['Content-Disposition'] = f'inline; filename="book-{book.pk}-{kind}.{extension}"'
     response['Cache-Control'] = 'private, no-store'
     response['X-Content-Type-Options'] = 'nosniff'
+    response['X-Robots-Tag'] = 'noindex, nofollow'
+    response['Referrer-Policy'] = 'same-origin'
+    if kind == 'pdf':
+        response['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'self'; sandbox"
     return response
