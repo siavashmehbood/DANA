@@ -202,3 +202,9 @@ class SubscriptionBookAccessTests(TestCase):
         Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
         response=self.client.get(reverse('book_detail',args=[self.book.slug]))
         self.assertFalse(response.context['has_access'])
+
+
+    def test_private_book_detail_offers_subscription_when_locked(self):
+        response=self.client.get(reverse('book_detail',args=[self.book.slug]))
+        self.assertFalse(response.context['has_access'])
+        self.assertContains(response,reverse('subscriptions'))
