@@ -132,3 +132,11 @@ class RecommendationTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('protected_book_pdf',args=[book.pk]))
         self.assertNotEqual(response.status_code,403)
+
+
+    def test_service_worker_does_not_cache_private_reader_routes(self):
+        response=self.client.get('/service-worker.js')
+        body=response.content.decode()
+        self.assertIn("url.pathname.startsWith('/static/')||CORE.includes(url.pathname)",body)
+        self.assertNotIn("c.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request).then",body)
+        self.assertNotIn("caches.match('/')",body)
