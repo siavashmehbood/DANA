@@ -72,7 +72,7 @@ def note(request, pk):
     book=get_object_or_404(Book,pk=pk)
     if not book.is_published or not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
     if request.method=='POST':
-        try: page=max(0,int(request.POST.get('page',0)))
+        try: page=min(1000000,max(0,int(request.POST.get('page',0))))
         except (TypeError,ValueError): return JsonResponse({'error':'Invalid page'},status=400)
         text=request.POST.get('text','').strip()[:5000]
         if not text: return JsonResponse({'error':'Note is empty'},status=400)
