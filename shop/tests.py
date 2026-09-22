@@ -581,3 +581,21 @@ class BankCheckoutMethodSafetyTests(TestCase):
         response=self.client.get(reverse('bank_checkout'))
         self.assertRedirects(response,reverse('checkout'))
         self.assertEqual(Order.objects.filter(user=user).count(),before)
+
+
+class BankPaymentRecoveryUxTests(TestCase):
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_cancelled_bank_payment_preserves_cart_and_explains_retry(self, gateway_factory):
+        user=User.objects.create_user(username='bank-recovery',password='pass12345')
+        author=Author.objects.create(name='Bank Recovery Author')
+        book=Book.objects.create(name='Bank Recovery Book',slug='bank-recovery-book',author=author,status='published',price=Decimal('1000'))
+        CartItem.objects.create(user=user,book=book)
+        self.client.force_login(user)
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='RECOVERY-AUTH',url='https://gateway.example/pay',message='')
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        response=self.client.get(reverse('payment_callback'),{'Authority':'RECOVERY-AUTH','Status':'NOK'},follow=True)
+        self.assertTrue(CartItem.objects.filter(user=user,book=book).exists())
+        self.assertContains(response,'سبد خرید شما حفظ شده')
