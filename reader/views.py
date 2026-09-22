@@ -260,7 +260,7 @@ def audio_player(request, pk):
         raise Http404
     progress={p.chapter_id:p for p in AudioProgress.objects.filter(user=request.user,book=book)}
     latest=AudioProgress.objects.filter(user=request.user,book=book).order_by('-updated_at').first()
-    response=render(request,'reader/audio_player.html',{'book':book,'chapters':chapters,'audio_progress':progress,'latest_audio':latest,'has_book_audio':has_book_audio})
+    response=render(request,'reader/audio_player.html',{'book':book,'chapters':chapters,'audio_progress':progress,'latest_audio':latest,'latest_chapter_id':latest.chapter_id if latest else None,'has_book_audio':has_book_audio})
     response['Cache-Control']='private, no-store'
     response['X-Robots-Tag']='noindex, nofollow'
     response['Referrer-Policy']='same-origin'
