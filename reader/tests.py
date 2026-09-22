@@ -484,3 +484,27 @@ class AudiobookExperienceTests(TestCase):
         self.assertLess(float(ReadingProgress.objects.get(user=self.user,book=self.book).progress),100)
         self.client.post(url,{'chapter_id':second.pk,'position':'100','duration':'100'})
         self.assertEqual(float(ReadingProgress.objects.get(user=self.user,book=self.book).progress),100.0)
+
+
+class NativeChapterReaderTests(TestCase):
+    def test_reader_renders_chapter_text_when_pdf_missing(self):
+        user=User.objects.create_user(username='native-reader',password='pass12345')
+        author=Author.objects.create(name='Native Author')
+        book=Book.objects.create(name='Native Book',slug='native-book',author=author,status='published',visibility='public',price=0)
+        Chapter.objects.create(book=book,title='فصل متنی',order=1,text='این متن واقعی فصل است.')
+        self.client.force_login(user)
+        response=self.client.get(reverse('reader',args=[book.pk]))
+        self.assertContains(response,'فصل متنی')
+        self.assertContains(response,'این متن واقعی فصل است.')
+        self.assertContains(response,'فهرست فصل‌ها')
+
+    def test_reader_does_not_expose_empty_chapters_in_native_toc(self):
+        user=User.objects.create_user(username='native-empty',password='pass12345')
+        author=Author.objects.create(name='Native Empty Author')
+        book=Book.objects.create(name='Native Empty',slug='native-empty',author=author,status='published',visibility='public',price=0)
+        Chapter.objects.create(book=book,title='خالی',order=1,text='')
+        Chapter.objects.create(book=book,title='دارای متن',order=2,text='محتوا')
+        self.client.force_login(user)
+        response=self.client.get(reverse('reader',args=[book.pk]))
+        self.assertNotContains(response,'خالی')
+        self.assertContains(response,'دارای متن')
