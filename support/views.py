@@ -13,6 +13,9 @@ def tickets(request):
         if not subject or not body:
             messages.error(request, 'موضوع و متن درخواست پشتیبانی الزامی است.')
             return redirect('tickets')
+        if Ticket.objects.filter(user=request.user,subject=subject,status__in=['open','waiting','in_progress']).exists():
+            messages.error(request, 'یک درخواست باز با همین موضوع دارید.')
+            return redirect('tickets')
         Ticket.objects.create(user=request.user, subject=subject, body=body)
         messages.success(request, 'درخواست پشتیبانی ثبت شد.')
         return redirect('tickets')
