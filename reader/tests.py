@@ -3,7 +3,7 @@ from accounts.models import User
 from books.models import Author, Book, Chapter
 from gamification.models import PointLedger, UserStreak
 from shop.models import Entitlement, SubscriptionPlan, Subscription
-from .models import ReadingProgress, Review, Bookmark, Highlight, Note, ProblemReport
+from .models import ReadingProgress, Review, Bookmark, Highlight, Note, ProblemReport, SavedWord
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
@@ -348,3 +348,12 @@ class ReaderProblemReportTests(TestCase):
             ProblemReport.objects.create(user=self.user,book=self.book,text=f'issue {i}')
         response=self.client.post(reverse('reader_report_problem',args=[self.book.pk]),{'text':'one more'})
         self.assertEqual(response.status_code,429)
+
+
+class VocabularySearchTests(TestCase):
+    def test_vocabulary_search_normalizes_persian_letters(self):
+        user=User.objects.create_user(username='vocab-user',password='pass12345')
+        SavedWord.objects.create(user=user,word='کتاب',normalized_word='کتاب')
+        self.client.force_login(user)
+        response=self.client.get(reverse('reader_vocabulary'),{'q':'كتاب'})
+        self.assertContains(response,'کتاب')
