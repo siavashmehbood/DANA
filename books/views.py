@@ -2,7 +2,8 @@ from django.shortcuts import render,get_object_or_404
 from django.db.models import Q, Avg, Count
 from django.core.paginator import Paginator
 import mimetypes
-from django.http import FileResponse, HttpResponseForbidden, Http404
+import re
+from django.http import FileResponse, HttpResponse, HttpResponseForbidden, Http404
 from django.utils import timezone
 from shop.models import Entitlement, Subscription
 from analytics.models import Event
@@ -140,7 +141,20 @@ def secure_file(request, pk, kind, chapter_id=None):
     if not field:
         raise Http404
     content_type='application/pdf' if kind == 'pdf' else (mimetypes.guess_type(field.name)[0] or 'application/octet-stream')
-    response = FileResponse(field.open('rb'), content_type=content_type)
+    range_value=request.headers.get('Range','') if kind != 'pdf' else ''
+    range_match=re.fullmatch(r'bytes=(\d+)-(\d*)',range_value.strip()) if range_value else None
+    if range_match:
+        size=field.size; start=int(range_match.group(1)); requested_end=int(range_match.group(2)) if range_match.group(2) else size-1
+        if start>=size or requested_end<start:
+            response=HttpResponse(status=416); response['Content-Range']=f'bytes */{size}'; return response
+        end=min(requested_end,size-1,start+2*1024*1024-1)
+        handle=field.open('rb'); handle.seek(start); data=handle.read(end-start+1); handle.close()
+        response=HttpResponse(data,status=206,content_type=content_type)
+        response['Content-Range']=f'bytes {start}-{end}/{size}'
+        response['Content-Length']=str(len(data))
+    else:
+        response = FileResponse(field.open('rb'), content_type=content_type)
+    if kind != 'pdf': response['Accept-Ranges']='bytes'
     extension=field.name.rsplit('.',1)[-1].lower() if '.' in field.name else 'bin'
     response['Content-Disposition'] = f'inline; filename="book-{book.pk}-{kind}.{extension}"'
     try:
