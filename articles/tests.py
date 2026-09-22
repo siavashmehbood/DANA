@@ -250,3 +250,11 @@ class ArticleRenderingSecurityTests(TestCase):
         response=self.client.get(reverse('article_detail',args=[article.slug]),{'lang':'en'})
         self.assertNotContains(response,'<script>alert(1)</script>',html=False)
         self.assertContains(response,'&lt;script&gt;alert(1)&lt;/script&gt;',html=False)
+
+
+class ArticleSlugTests(TestCase):
+    def test_duplicate_titles_receive_unique_slugs(self):
+        first=Article.objects.create(title='عنوان تکراری')
+        second=Article.objects.create(title='عنوان تکراری')
+        self.assertNotEqual(first.slug,second.slug)
+        self.assertTrue(second.slug.startswith(first.slug))
