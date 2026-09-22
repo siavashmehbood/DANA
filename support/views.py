@@ -15,7 +15,7 @@ def tickets(request):
         Ticket.objects.create(user=request.user, subject=subject, body=body)
         messages.success(request, 'درخواست پشتیبانی ثبت شد.')
         return redirect('tickets')
-    return render(request,'support/tickets.html',{'tickets':Ticket.objects.filter(user=request.user).order_by('-updated_at')})
+    return render(request,'support/tickets.html',{'tickets':Ticket.objects.filter(user=request.user).order_by('-updated_at')[:100]})
 
 
 @login_required
