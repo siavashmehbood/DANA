@@ -510,6 +510,15 @@ class NativeChapterReaderTests(TestCase):
         self.assertContains(response,'دارای متن')
 
 
+
+class AudioProgressMonotonicTests(TestCase):
+    def setUp(self):
+        self.user=User.objects.create_user(username='audio-monotonic',password='pass12345')
+        author=Author.objects.create(name='Audio Monotonic Author')
+        self.book=Book.objects.create(name='Audio Monotonic',slug='audio-monotonic',author=author,status='published')
+        self.chapter=Chapter.objects.create(book=self.book,title='فصل صوتی',order=1,audio=SimpleUploadedFile('mono.mp3',b'ID3mono',content_type='audio/mpeg'))
+        self.client.force_login(self.user)
+
     def test_audio_progress_does_not_move_backwards(self):
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
         url=reverse('audio_progress',args=[self.book.pk])
