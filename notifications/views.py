@@ -2,12 +2,15 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator
 from .models import Notification
 
 @login_required
 def notifications(request):
-    items=Notification.objects.filter(user=request.user).order_by('-created_at')[:200]
-    return render(request,'notifications/list.html',{'items':items})
+    qs=Notification.objects.filter(user=request.user).order_by('-created_at')
+    unread_count=qs.filter(read_at__isnull=True).count()
+    page_obj=Paginator(qs,30).get_page(request.GET.get('page'))
+    return render(request,'notifications/list.html',{'items':page_obj.object_list,'page_obj':page_obj,'unread_count':unread_count})
 
 @login_required
 @require_POST
