@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.auth.hashers import make_password, check_password
 
 from .models import OTPCode, User
 from shop.models import Referral, Entitlement, SubscriptionPlan, Subscription
@@ -25,7 +26,7 @@ class AccountFlowTests(TestCase):
         self.client.cookies[settings.SESSION_COOKIE_NAME] = session.session_key
         OTPCode.objects.create(
             phone='+989121234567',
-            code='12345',
+            code=make_password('12345'),
             purpose='login',
             expires_at=timezone.now() + timedelta(minutes=2),
         )
@@ -156,3 +157,12 @@ class PasswordChangeSecurityTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password('new-pass-456'))
+
+
+class OtpStorageSecurityTests(TestCase):
+    def test_generated_otp_is_not_stored_in_plaintext(self):
+        response=self.client.post(reverse('login'),{'login_method':'otp','phone':'09121234567','terms':'1'})
+        self.assertEqual(response.status_code,302)
+        row=OTPCode.objects.latest('id')
+        self.assertNotEqual(len(row.code),5)
+        self.assertTrue(row.code.startswith(('pbkdf2_','argon2','bcrypt','scrypt')))
