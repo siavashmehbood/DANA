@@ -118,8 +118,8 @@ def note(request, pk):
     except (TypeError,ValueError): return JsonResponse({'error':'Invalid page'},status=400)
     text=request.POST.get('text','').strip()[:5000]
     if not text: return JsonResponse({'error':'Note is empty'},status=400)
-    item=Note.objects.create(user=request.user,book=book,page=page,text=text)
-    return JsonResponse({'ok':True,'id':item.id,'page':item.page,'text':item.text})
+    item,created=Note.objects.get_or_create(user=request.user,book=book,page=page,text=text)
+    return JsonResponse({'ok':True,'created':created,'id':item.id,'page':item.page,'text':item.text})
 
 
 @login_required
