@@ -18,6 +18,7 @@ class Bookmark(models.Model):
     created_at=models.DateTimeField(auto_now_add=True)
     class Meta:
         constraints=[models.UniqueConstraint(fields=['user','book','page'],name='unique_bookmark_page')]
+        indexes=[models.Index(fields=['user','book','page'],name='reader_bookmark_lookup_idx')]
 class Note(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE)
     book=models.ForeignKey(Book,on_delete=models.CASCADE)
