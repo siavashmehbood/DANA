@@ -8,7 +8,7 @@
 <hr>
 {% for t in tickets %}<section class="notification"><b>{{t.subject}}</b> <span class="badge">{{t.get_status_display}}</span><p>{{t.body}}</p>
 {% for m in t.messages.all %}<div class="tool-item"><b>{% if m.user_id == user.id %}شما{% else %}پشتیبانی{% endif %}</b><p>{{m.body}}</p><small>{{m.created_at}}</small></div>{% endfor %}
-{% if t.status != 'closed' and t.status != 'resolved' %}<form method="post" action="{% url 'ticket_reply' t.pk %}">{% csrf_token %}<textarea name="body" maxlength="10000" placeholder="پاسخ شما..." required></textarea><button class="btn small">ارسال پاسخ</button></form>{% endif %}
+{% if t.status != 'closed' and t.status != 'resolved' %}<form method="post" action="{% url 'ticket_reply' t.pk %}">{% csrf_token %}<label class="sr-only" for="ticket-reply-{{t.pk}}">پاسخ به {{t.subject}}</label><textarea id="ticket-reply-{{t.pk}}" name="body" maxlength="10000" placeholder="پاسخ شما..." required></textarea><button class="btn small">ارسال پاسخ</button></form>{% endif %}
 </section>{% empty %}<div class="empty">هنوز درخواستی ثبت نکرده‌اید.</div>{% endfor %}
 {% if page_obj.paginator.num_pages > 1 %}<nav class="pagination" aria-label="صفحه‌بندی تیکت‌ها">{% if page_obj.has_previous %}<a class="btn secondary" href="?page={{page_obj.previous_page_number}}">قبلی</a>{% endif %}<span class="muted">صفحه {{page_obj.number}} از {{page_obj.paginator.num_pages}}</span>{% if page_obj.has_next %}<a class="btn secondary" href="?page={{page_obj.next_page_number}}">بعدی</a>{% endif %}</nav>{% endif %}
 </div>{% endblock %}
