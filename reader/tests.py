@@ -2,7 +2,7 @@ from django.test import TestCase
 from accounts.models import User
 from books.models import Author, Book, Chapter
 from gamification.models import PointLedger, UserStreak
-from shop.models import Entitlement, SubscriptionPlan, Subscription
+from shop.models import Entitlement, Subscription, SubscriptionPlan, SubscriptionPlan, Subscription
 from .models import ReadingProgress, Review, Bookmark, Highlight, Note, ProblemReport, SavedWord
 from django.urls import reverse
 from django.utils import timezone
@@ -386,3 +386,15 @@ class VocabularySearchTests(TestCase):
         self.assertEqual(response.status_code,400)
         self.assertFalse(SavedWord.objects.filter(user=user).exists())
 
+
+
+class RetiredSubscriptionPlanAccessTests(TestCase):
+    def test_active_subscription_keeps_access_when_plan_is_retired(self):
+        user=User.objects.create_user(username='subscriber-retired',password='pass12345')
+        author=Author.objects.create(name='Sub Author')
+        book=Book.objects.create(name='Subscription Book',slug='subscription-retired',author=author,status='published',price=100,subscription_included=True)
+        plan=SubscriptionPlan.objects.create(name='Retired Plan',slug='retired-plan',price=10,duration_days=30,active=False,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timezone.timedelta(days=1),expires_at=timezone.now()+timezone.timedelta(days=10),status='active')
+        self.client.force_login(user)
+        response=self.client.get(reverse('reader',args=[book.pk]))
+        self.assertEqual(response.status_code,200)
