@@ -91,7 +91,10 @@ def _has_book_access(user, book):
 
 def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
-    if book.visibility != 'public' and not _has_book_access(request.user,book):
+    if book.visibility == 'password':
+        from django.http import Http404
+        raise Http404
+    if book.visibility == 'private' and not _has_book_access(request.user,book):
         from django.http import Http404
         raise Http404
     approved_reviews=book.review_set.filter(approved=True).select_related('user').order_by('-created_at')[:8]
