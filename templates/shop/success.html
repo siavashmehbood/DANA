@@ -6,8 +6,8 @@
 <p>کتاب‌های خریداری‌شده به کتابخانه شما اضافه شدند.</p>
 <p>کد رهگیری: <b>{{order.tracking_code}}</b></p>
 <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-<a class="btn" href="{% url 'order_detail' order.tracking_code %}">مشاهده فاکتور</a>
-<a class="btn" href="/reader/{{order.items.first.book.id}}/">شروع مطالعه</a>
+<a class="btn" href="{% url 'library' %}">رفتن به کتابخانه من</a>
+<a class="btn secondary" href="{% url 'order_detail' order.tracking_code %}">مشاهده فاکتور</a>
 </div>
 </div>
 {% endblock %}
