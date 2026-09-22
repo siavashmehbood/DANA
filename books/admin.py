@@ -15,6 +15,7 @@ class BookAdmin(ModelAdmin):
     actions = ('publish_selected','unpublish_selected','feature_selected','unfeature_selected')
     readonly_fields = ('created_at','updated_at')
     list_display = ('name', 'author', 'category', 'price', 'old_price', 'status', 'visibility', 'featured', 'subscription_included', 'publish_at', 'has_pdf', 'has_audio')
+    list_select_related = ('author','category','level')
     date_hierarchy = 'created_at'
     list_filter = ('status', 'visibility', 'featured', 'subscription_included', 'category', 'level')
     search_fields = ('name', 'slug', 'author__name', 'summary', 'description')
