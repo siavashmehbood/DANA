@@ -296,3 +296,26 @@ class BookSlugTests(TestCase):
         book=Book.objects.create(name='کتاب فارسی مسیر',slug='',author=author,status='published')
         response=self.client.get(reverse('book_detail',args=[book.slug]))
         self.assertEqual(response.status_code,200)
+
+
+class BookValidationTests(TestCase):
+    def setUp(self):
+        self.author=Author.objects.create(name='Validation Author')
+
+    def test_password_book_requires_password(self):
+        from django.core.exceptions import ValidationError
+        book=Book(name='Locked',slug='locked-validation',author=self.author,visibility='password')
+        with self.assertRaises(ValidationError):
+            book.full_clean()
+
+    def test_scheduled_book_requires_publish_time(self):
+        from django.core.exceptions import ValidationError
+        book=Book(name='Scheduled',slug='scheduled-validation',author=self.author,status='scheduled')
+        with self.assertRaises(ValidationError):
+            book.full_clean()
+
+    def test_old_price_cannot_be_below_current_price(self):
+        from django.core.exceptions import ValidationError
+        book=Book(name='Price',slug='price-validation',author=self.author,price=100,old_price=50)
+        with self.assertRaises(ValidationError):
+            book.full_clean()
