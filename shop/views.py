@@ -220,6 +220,9 @@ def subscribe(request, slug):
             current.status='expired'
             current.save(update_fields=['status'])
         else:
+            if current:
+                current.status='cancelled'
+                current.save(update_fields=['status'])
             start=now
         Subscription.objects.create(user=user,plan=plan,starts_at=start,expires_at=start+timezone.timedelta(days=plan.duration_days))
         messages.success(request,'اشتراک رایگان فعال شد.')
