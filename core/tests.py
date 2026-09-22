@@ -207,3 +207,12 @@ class RecommendationTests(TestCase):
         recs=list(response.context['recommendations'])
         self.assertNotIn(accessible,recs)
         self.assertIn(candidate,recs)
+
+
+    def test_protected_pdf_rejects_non_pdf_extension(self):
+        user=User.objects.create_user(username='bad-pdf-user',password='pass12345')
+        author=Author.objects.create(name='Bad PDF Author')
+        book=Book.objects.create(name='Bad PDF',slug='bad-pdf',author=author,status='published',visibility='private',pdf=SimpleUploadedFile('payload.html',b'<script>alert(1)</script>',content_type='text/html'))
+        Entitlement.objects.create(user=user,book=book,source='admin')
+        self.client.force_login(user)
+        self.assertEqual(self.client.get(reverse('protected_book_pdf',args=[book.pk])).status_code,404)
