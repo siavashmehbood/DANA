@@ -425,6 +425,7 @@ class BookDetailResumeIntegrationTests(TestCase):
         user=User.objects.create_user(username='detail-resume',password='pass12345')
         author=Author.objects.create(name='Resume Author')
         book=Book.objects.create(name='Resume Book',slug='resume-book',author=author,status='published')
+        Chapter.objects.create(book=book,title='Resume Chapter',order=1,text='Resume text')
         Entitlement.objects.create(user=user,book=book)
         ReadingProgress.objects.create(user=user,book=book,progress=42,audio_seconds=15)
         AudioProgress.objects.create(user=user,book=book,position_seconds=90,duration_seconds=300)
