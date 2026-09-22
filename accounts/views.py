@@ -86,10 +86,10 @@ def otp(request):
 @never_cache
 def dashboard(request):
     user=request.user
-    owned=Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).select_related('book__author').order_by('-granted_at')
+    owned=Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=now)).select_related('book__author').order_by('-granted_at')
     valid_book_ids=list(owned.values_list('book_id',flat=True))
     owned_count=len(set(valid_book_ids))
-    subscription=Subscription.objects.filter(user=user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__grants_catalog_access=True).select_related('plan').first()
+    subscription=Subscription.objects.filter(user=user,status='active',starts_at__lte=now,expires_at__gt=now,plan__grants_catalog_access=True).select_related('plan').first()
     if subscription:
         valid_book_ids += list(Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),subscription_included=True).values_list('id',flat=True))
     valid_book_ids=list(set(valid_book_ids))
@@ -162,6 +162,7 @@ def logout_view(request):
 @never_cache
 def library(request):
     user=request.user
+    now=timezone.now()
     owned=list(Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author','book__category').prefetch_related('book__chapters').order_by('-granted_at'))
     active_subscription=Subscription.objects.filter(user=user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__grants_catalog_access=True).select_related('plan').first()
     entitled_ids={item.book_id for item in owned}
