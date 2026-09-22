@@ -2,12 +2,13 @@
 {% block title %}اعلان‌ها | دانا{% endblock %}
 {% block content %}
 <div class="panel">
-  <div class="section-title"><h1>اعلان‌ها</h1>{% if items %}<form method="post" action="{% url 'notifications_mark_all_read' %}">{% csrf_token %}<button class="btn secondary" type="submit">همه خوانده شدند</button></form>{% endif %}</div>
+  <div class="section-title"><h1>اعلان‌ها{% if unread_count %} <span class="badge">{{unread_count}} خوانده‌نشده</span>{% endif %}</h1>{% if items %}<form method="post" action="{% url 'notifications_mark_all_read' %}">{% csrf_token %}<button class="btn secondary" type="submit">همه خوانده شدند</button></form>{% endif %}</div>
   {% for n in items %}
   <div class="notification{% if not n.read_at %} unread{% endif %}">
     <b>{{ n.title }}</b><p>{{ n.body }}</p><small>{{ n.created_at }}</small>
     {% if not n.read_at %}<form method="post" action="{% url 'notification_mark_read' n.pk %}">{% csrf_token %}<button class="btn small" type="submit">خوانده شد</button></form>{% endif %}
   </div>
   {% empty %}<div class="empty">اعلانی ندارید.</div>{% endfor %}
+{% if page_obj.paginator.num_pages > 1 %}<nav class="pagination" aria-label="صفحه‌بندی اعلان‌ها">{% if page_obj.has_previous %}<a class="btn secondary" href="?page={{page_obj.previous_page_number}}">قبلی</a>{% endif %}<span class="muted">صفحه {{page_obj.number}} از {{page_obj.paginator.num_pages}}</span>{% if page_obj.has_next %}<a class="btn secondary" href="?page={{page_obj.next_page_number}}">بعدی</a>{% endif %}</nav>{% endif %}
 </div>
 {% endblock %}
