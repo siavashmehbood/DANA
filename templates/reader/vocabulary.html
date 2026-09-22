@@ -13,6 +13,7 @@
     </article>
     {% endfor %}
   </div>
+  {% if page_obj.paginator.num_pages > 1 %}<nav class="pagination" aria-label="صفحه‌بندی لغات">{% if page_obj.has_previous %}<a class="btn secondary" href="?page={{page_obj.previous_page_number}}&q={{query|urlencode}}">صفحه قبل</a>{% endif %}<span class="muted">صفحه {{page_obj.number}} از {{page_obj.paginator.num_pages}}</span>{% if page_obj.has_next %}<a class="btn secondary" href="?page={{page_obj.next_page_number}}&q={{query|urlencode}}">صفحه بعد</a>{% endif %}</nav>{% endif %}
   {% else %}<div class="empty-state">هنوز کلمه‌ای ذخیره نکرده‌ای.</div>{% endif %}
 </section>
 {% endblock %}
