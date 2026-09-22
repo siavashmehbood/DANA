@@ -25,7 +25,7 @@ def _has_access(user, book):
 @login_required
 @never_cache
 def reader(request, pk):
-    book = get_object_or_404(Book, pk=pk)
+    book = get_object_or_404(Book.objects.prefetch_related('chapters'), pk=pk)
     if not book.is_published: return HttpResponseForbidden('کتاب هنوز منتشر نشده است.')
     accessible = _has_access(request.user, book)
     if not accessible:
