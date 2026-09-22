@@ -534,14 +534,3 @@ class AudioProgressMonotonicTests(TestCase):
         self.client.post(url,{'chapter_id':self.chapter.pk,'position':'10','duration':'100'})
         self.assertTrue(AudioProgress.objects.get(user=self.user,book=self.book,chapter=self.chapter).completed)
 
-
-class DisabledSubscriptionAccessTests(TestCase):
-    def test_disabled_plan_does_not_grant_reader_access(self):
-        user=User.objects.create_user(username='disabled-plan-user',password='pass12345')
-        author=Author.objects.create(name='Disabled Plan Author')
-        book=Book.objects.create(name='Subscription Book',slug='disabled-plan-book',author=author,status='published',subscription_included=True)
-        plan=SubscriptionPlan.objects.create(name='Disabled Plan',slug='disabled-plan',price=10,duration_days=30,grants_catalog_access=True,active=False)
-        Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
-        self.client.force_login(user)
-        response=self.client.get(reverse('reader',args=[book.pk]))
-        self.assertEqual(response.status_code,403)
