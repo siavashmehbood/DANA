@@ -5,14 +5,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0b0b12">
-<meta name="description" content="دانا؛ کتابخانه دیجیتال برای خرید، مطالعه و یادگیری.">
+<meta name="description" content="{% block description %}دانا؛ کتابخانه دیجیتال برای خرید، مطالعه و یادگیری.{% endblock %}">
+{% block robots %}{% endblock %}
 <meta property="og:site_name" content="دانا">
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
 <meta property="og:title" content="{% block og_title %}دانا | کتابخانه دیجیتال{% endblock %}">
 <meta property="og:description" content="{% block og_description %}کتاب‌های دیجیتال و صوتی را کشف، خرید و مطالعه کن.{% endblock %}">
 <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
-<link rel="canonical" href="{{ request.build_absolute_uri }}">
 <link rel="manifest" href="{% url 'pwa_manifest' %}">
 <title>{% block title %}دانا | کتابخانه دیجیتال{% endblock %}</title>
 <link rel="stylesheet" href="{% static 'css/app.css' %}?v=panel-final-3">
