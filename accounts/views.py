@@ -131,7 +131,7 @@ def profile(request):
     completed_books=len(completed_reading_ids|completed_audio_ids)
     total_reading_seconds=sum(ReadingProgress.objects.filter(user=request.user).values_list('seconds',flat=True))
     total_audio_seconds=AudioProgress.objects.filter(user=request.user).aggregate(total=models.Sum('position_seconds'))['total'] or 0
-    active_subscription=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now()).select_related('plan').first()
+    active_subscription=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True).select_related('plan').first()
     streak=UserStreak.objects.filter(user=request.user).first()
     badges=UserBadge.objects.filter(user=request.user,badge__active=True).select_related('badge').order_by('-earned_at')[:8]
     missions=UserMission.objects.filter(user=request.user,mission__active=True).select_related('mission').order_by('-completed_at','-id')[:6]
