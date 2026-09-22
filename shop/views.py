@@ -252,8 +252,7 @@ def subscribe(request, slug):
 
 
 def subscriptions(request):
-    if 'subscription_activation_key' not in request.session:
-        request.session['subscription_activation_key']=secrets.token_urlsafe(24)
+    request.session['subscription_activation_key']=secrets.token_urlsafe(24)
     plans=SubscriptionPlan.objects.filter(active=True).order_by('-featured','price','duration_days')
     current=None
     if request.user.is_authenticated:
