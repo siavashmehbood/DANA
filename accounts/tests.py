@@ -474,3 +474,16 @@ class LibraryRecentSortTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('library'))
         self.assertEqual(response.context['library_rows'][0]['book'],active)
+
+
+class LibraryLegacyAudioRoutingTests(TestCase):
+    def test_audio_only_progress_uses_audio_resume_kind(self):
+        user=User.objects.create_user(username='legacy-audio-lib',password='pass12345')
+        author=Author.objects.create(name='Legacy Audio Lib Author')
+        book=Book.objects.create(name='Legacy Audio Lib',slug='legacy-audio-lib',author=author,status='published',audio=SimpleUploadedFile('legacy.mp3',b'ID3',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=book)
+        ReadingProgress.objects.create(user=user,book=book,progress=25,current_page=1)
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        row=next(item for item in response.context['library_rows'] if item['book'].pk==book.pk)
+        self.assertEqual(row['latest_kind'],'audio')
