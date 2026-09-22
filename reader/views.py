@@ -46,7 +46,7 @@ def progress(request, pk):
             return JsonResponse({'error':'Invalid chapter'},status=400)
     saved,_=ReadingProgress.objects.get_or_create(user=request.user,book=book)
     added_study_time = seconds > saved.seconds or audio_seconds > saved.audio_seconds
-    saved.progress=value; saved.current_page=page
+    saved.progress=max(saved.progress,value); saved.current_page=max(saved.current_page,page)
     saved.seconds=max(saved.seconds,seconds); saved.audio_seconds=max(saved.audio_seconds,audio_seconds)
     if chapter is not None: saved.current_chapter = chapter
     saved.save()
