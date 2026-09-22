@@ -45,9 +45,13 @@ def add_points(user, point_type, amount, reason, book=None, reference=''):
     return row
 
 
+@transaction.atomic
 def record_study_activity(user):
+    from accounts.models import User
+    user = User.objects.select_for_update().get(pk=user.pk)
     today = timezone.localdate()
     streak, _ = UserStreak.objects.get_or_create(user=user)
+    streak = UserStreak.objects.select_for_update().get(pk=streak.pk)
     if streak.last_activity_date == today:
         return streak
     if streak.last_activity_date == today - timedelta(days=1):
