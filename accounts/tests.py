@@ -275,3 +275,14 @@ class RecommendationColdStartTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('library'))
         self.assertIn(candidate,list(response.context['recommended_books']))
+
+
+    def test_library_keeps_access_for_retired_subscription_plan_until_expiry(self):
+        user=User.objects.create_user(username='retired-plan-user',password='pass12345')
+        author=Author.objects.create(name='Retired Plan Author')
+        Book.objects.create(name='Retired Plan Book',slug='retired-plan-book',author=author,status='published',subscription_included=True)
+        plan=SubscriptionPlan.objects.create(name='Retired Catalog',slug='retired-catalog',price=0,duration_days=30,grants_catalog_access=True,active=False)
+        Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertContains(response,'Retired Plan Book')
