@@ -292,3 +292,10 @@ class SubscriptionReaderAccessTests(TestCase):
         response=self.client.get(reverse('reader',args=[self.book.pk]))
         self.assertEqual(response.status_code,200)
         self.assertFalse(response.context['owned'])
+
+
+    def test_reader_response_is_private_and_noindex(self):
+        response=self.client.get(reverse('reader',args=[self.book.pk]))
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response['Cache-Control'],'private, no-store')
+        self.assertEqual(response['X-Robots-Tag'],'noindex, nofollow')
