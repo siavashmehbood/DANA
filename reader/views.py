@@ -53,18 +53,17 @@ def progress(request, pk):
 
 
 @login_required
+@require_POST
 def bookmark(request, pk):
     book=get_object_or_404(Book,pk=pk)
     if not book.is_published or not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
-    if request.method=='POST':
-        try: page=min(1000000,max(0,int(request.POST.get('page',0))))
-        except (TypeError,ValueError): return JsonResponse({'error':'Invalid page'},status=400)
-        title=request.POST.get('title','').strip()[:150]
-        item,created=Bookmark.objects.get_or_create(user=request.user,book=book,page=page,defaults={'title':title})
-        if not created and title and item.title != title:
-            item.title=title; item.save(update_fields=['title'])
-        return JsonResponse({'ok':True,'created':created,'id':item.id,'page':item.page,'title':item.title})
-    return JsonResponse({'items':list(Bookmark.objects.filter(user=request.user,book=book).values('id','page','title'))})
+    try: page=min(1000000,max(0,int(request.POST.get('page',0))))
+    except (TypeError,ValueError): return JsonResponse({'error':'Invalid page'},status=400)
+    title=request.POST.get('title','').strip()[:150]
+    item,created=Bookmark.objects.get_or_create(user=request.user,book=book,page=page,defaults={'title':title})
+    if not created and title and item.title != title:
+        item.title=title; item.save(update_fields=['title'])
+    return JsonResponse({'ok':True,'created':created,'id':item.id,'page':item.page,'title':item.title})
 
 
 @login_required
