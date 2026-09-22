@@ -3,7 +3,7 @@ from django.db.models import Q, Avg, Count
 from django.core.paginator import Paginator
 from django.http import FileResponse, HttpResponseForbidden
 from django.utils import timezone
-from shop.models import Entitlement
+from shop.models import Entitlement, Subscription
 from analytics.models import Event
 from .models import Book,Category
 
@@ -69,12 +69,22 @@ def listing(request):
     page_obj=paginator.get_page(page_number)
     return render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'categories':category_qs,'used_relaxed_search':used_relaxed_search,'query_was_normalized':bool(raw_q and raw_q != q)})
 
+def _has_book_access(user, book):
+    if not user.is_authenticated:
+        return False
+    if book.visibility == 'public':
+        return True
+    if Entitlement.objects.filter(user=user,book=book).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).exists():
+        return True
+    return Subscription.objects.filter(user=user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True,plan__grants_catalog_access=True).exists()
+
+
 def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
     approved_reviews=book.review_set.filter(approved=True).select_related('user').order_by('-created_at')[:8]
     review_stats=book.review_set.filter(approved=True).aggregate(avg=Avg('rating'),count=Count('id'))
     related=_published_books().filter(category=book.category).exclude(pk=book.pk).select_related('author','category')[:4] if book.category else Book.objects.none()
-    has_access = request.user.is_authenticated and (book.visibility == 'public' or Entitlement.objects.filter(user=request.user,book=book).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).exists())
+    has_access = _has_book_access(request.user, book)
     return render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count'],'approved_reviews':approved_reviews})
 
 
@@ -82,7 +92,7 @@ def secure_file(request, pk, kind, chapter_id=None):
     book = get_object_or_404(_published_books(), pk=pk)
     if not request.user.is_authenticated:
         return HttpResponseForbidden('ورود لازم است.')
-    if book.visibility != 'public' and not Entitlement.objects.filter(user=request.user, book=book).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).exists():
+    if not _has_book_access(request.user, book):
         return HttpResponseForbidden('دسترسی به این فایل ندارید.')
     if kind == 'chapter_audio':
         chapter = book.chapters.filter(pk=chapter_id).first()
