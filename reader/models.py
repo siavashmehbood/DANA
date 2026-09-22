@@ -18,6 +18,14 @@ class ReadingActivity(models.Model):
     class Meta:
         indexes=[models.Index(fields=['user','-created_at'],name='reader_activity_recent_idx')]
 
+class ListeningActivity(models.Model):
+    user=models.ForeignKey(User,on_delete=models.CASCADE)
+    book=models.ForeignKey(Book,on_delete=models.CASCADE)
+    seconds=models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    created_at=models.DateTimeField(auto_now_add=True)
+    class Meta:
+        indexes=[models.Index(fields=['user','-created_at'],name='reader_listen_recent_idx')]
+
 class AudioProgress(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE)
     book=models.ForeignKey(Book,on_delete=models.CASCADE)
