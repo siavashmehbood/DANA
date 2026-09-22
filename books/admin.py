@@ -87,6 +87,7 @@ class LevelAdmin(ModelAdmin):
 @admin.register(Chapter)
 class ChapterAdmin(ModelAdmin):
     list_display = ('title', 'book', 'order', 'duration', 'has_audio')
+    list_select_related = ('book',)
     list_filter = ('book',)
     search_fields = ('title', 'book__name')
     ordering = ('book', 'order')
