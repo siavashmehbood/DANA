@@ -1,6 +1,6 @@
 from django.urls import path
 from .bank import bank_checkout, payment_callback
-from .views import cart, checkout, order_detail, remove_cart_item, wallet, orders, subscriptions
+from .views import cart, checkout, order_detail, remove_cart_item, wallet, orders, subscriptions, subscribe
 
 urlpatterns = [
     path('cart/', cart, name='cart'),
