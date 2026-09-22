@@ -76,3 +76,9 @@ class EventApiTests(TestCase):
         response = self.client.post(self.url, data=json.dumps({'name': 'book_viewed', 'metadata': metadata}), content_type='application/json')
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'metadata_too_many_fields')
+
+
+    def test_event_rejects_oversized_payload(self):
+        response = self.client.post(self.url, data=json.dumps({'name': 'book_viewed', 'metadata': {'blob': 'x' * 21000}}), content_type='application/json')
+        self.assertEqual(response.status_code, 413)
+        self.assertEqual(response.json()['error'], 'payload_too_large')
