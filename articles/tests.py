@@ -214,3 +214,13 @@ class ArticleFallbackTests(TestCase):
         self.assertNotContains(response,'SECRET ORIGINAL BODY')
         self.assertNotContains(response,'SECRET PERSIAN BODY')
         self.assertContains(response,'طبق سیاست منبع')
+
+
+    def test_mostly_english_translation_candidate_is_rejected(self):
+        article=Article.objects.create(title='Machine learning systems',slug='quality-reject',title_fa='ترجمه سالم قبلی',translation_status='reviewed',translation_version=1,published=True)
+        with patch('articles.translation.translate_text',return_value='مدل machine learning system performance results'):
+            translate_article(article,force=True)
+        article.refresh_from_db()
+        self.assertEqual(article.title_fa,'ترجمه سالم قبلی')
+        self.assertEqual(article.translation_version,1)
+        self.assertEqual(article.translation_status,'failed')
