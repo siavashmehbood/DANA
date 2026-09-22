@@ -241,3 +241,17 @@ class HomePrivacyTests(TestCase):
         body=response.content.decode()
         self.assertIn("CORE=[]",body)
         self.assertNotIn("CORE=['/",body)
+
+
+class BaseMetadataTests(TestCase):
+    def test_catalog_uses_single_canonical_url_and_page_description(self):
+        response=self.client.get('/books/?q=test')
+        html=response.content.decode()
+        self.assertEqual(html.count('rel="canonical"'),1)
+        self.assertIn('جستجو و کشف کتاب',html)
+
+    def test_library_is_noindex(self):
+        user=User.objects.create_user(username='private-library',password='pass12345')
+        self.client.force_login(user)
+        response=self.client.get('/library/')
+        self.assertContains(response,'name="robots" content="noindex,nofollow"')
