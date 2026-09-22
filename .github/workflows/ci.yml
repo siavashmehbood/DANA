@@ -27,3 +27,42 @@ jobs:
           SECRET_KEY: 'ci-only-random-secret-key-012345678901234567890123456789'
           ALLOWED_HOSTS: 'localhost'
         run: python manage.py check --deploy
+
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: dana_ci
+          POSTGRES_USER: dana
+          POSTGRES_PASSWORD: dana_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dana -d dana_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DB_ENGINE: postgresql
+      DB_NAME: dana_ci
+      DB_USER: dana
+      DB_PASSWORD: dana_ci_password
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_CONN_MAX_AGE: '0'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Migration check
+        run: python manage.py makemigrations --check
+      - name: Apply migrations
+        run: python manage.py migrate --noinput
+      - name: PostgreSQL regression suite
+        run: python manage.py test
