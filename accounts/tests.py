@@ -366,7 +366,7 @@ class ProfileTruthfulStatsTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertNotIn('total_audio_minutes',response.context)
         self.assertNotContains(response,'شنیدن<br>')
-        self.assertContains(response,'مطالعه متنی ثبت شده است')
+        self.assertContains(response,'مطالعه و شنیدن ثبت شده است')
 
 
 class ActiveSubscriberRecommendationTests(TestCase):
