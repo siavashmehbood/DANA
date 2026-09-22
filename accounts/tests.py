@@ -130,3 +130,10 @@ class SessionSecurityTests(TestCase):
         first.post(reverse('logout_others'))
         self.assertEqual(first.get(reverse('profile')).status_code,200)
         self.assertEqual(second.get(reverse('profile')).status_code,302)
+
+
+class WalletIntegrityTests(TestCase):
+    def test_database_rejects_negative_wallet_balance(self):
+        from django.db import IntegrityError
+        with self.assertRaises(IntegrityError):
+            User.objects.create_user(username='negative-wallet',password='pass12345',wallet_balance=-1)
