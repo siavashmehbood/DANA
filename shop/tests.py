@@ -171,7 +171,7 @@ class ShopFlowTests(TestCase):
 
     def test_free_subscription_can_be_activated(self):
         plan=SubscriptionPlan.objects.create(name='Free Catalog',slug='free-catalog',price=0,duration_days=7,grants_catalog_access=True)
-        self.client.login(username='buyer',password='pass123')
+        self.client.login(username='buyer',password='pass12345')
         response=self.client.post(reverse('subscribe',args=[plan.slug]))
         self.assertRedirects(response,reverse('subscriptions'))
         self.assertTrue(Subscription.objects.filter(user=self.user,plan=plan,status='active').exists())
