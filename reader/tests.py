@@ -299,3 +299,9 @@ class SubscriptionReaderAccessTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertEqual(response['Cache-Control'],'private, no-store')
         self.assertEqual(response['X-Robots-Tag'],'noindex, nofollow')
+
+
+    def test_progress_response_is_not_cacheable(self):
+        response=self.client.post(reverse('reader_progress',args=[self.book.pk]),{'progress':'10','page':'1'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response['Cache-Control'],'no-store')
