@@ -293,7 +293,10 @@ def audio_progress(request, pk):
         if item is None:
             item=AudioProgress.objects.create(user=request.user,book=book,chapter=chapter,position_seconds=position,duration_seconds=duration,completed=completed)
         else:
-            item.position_seconds=max(item.position_seconds,position)
+            # Audio position is a resume cursor, not a monotonic achievement.
+            # Persist intentional backward seeks so refresh/login resumes where the
+            # listener actually stopped; completion itself remains monotonic.
+            item.position_seconds=position
             item.duration_seconds=max(item.duration_seconds,duration)
             item.completed=item.completed or completed
             item.save(update_fields=['position_seconds','duration_seconds','completed','updated_at'])
