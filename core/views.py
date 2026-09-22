@@ -7,7 +7,7 @@ from books.models import Book, Category
 from articles.models import Article, ArticleCategory
 from shop.models import Entitlement
 from reader.models import ReadingProgress
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils import timezone
 
 
@@ -15,7 +15,7 @@ def home(request):
     base = Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now())).select_related('author', 'category')
     featured = base.order_by('-created_at')[:6]
     newest = base.order_by('-created_at')[:8]
-    popular = base.order_by('-id')[:8]
+    popular = base.annotate(approved_reviews=Count('review', filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
     recommendations = base.none()
     audio_books = base.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct().order_by('-created_at')[:8]
     categories = Category.objects.all()[:10]
