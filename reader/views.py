@@ -94,8 +94,10 @@ def highlight(request, pk):
     try: page=min(1000000,max(0,int(request.POST.get('page',0))))
     except (TypeError,ValueError): return JsonResponse({'error':'Invalid page'},status=400)
     text=request.POST.get('text','').strip()[:5000]
+    color=request.POST.get('color','yellow')
+    if color not in {'yellow','green','blue','pink'}: color='yellow'
     if not text: return JsonResponse({'error':'Highlight is empty'},status=400)
-    item,created=Highlight.objects.get_or_create(user=request.user,book=book,page=page,text=text)
+    item,created=Highlight.objects.get_or_create(user=request.user,book=book,page=page,text=text,defaults={'color':color})
     return JsonResponse({'ok':True,'created':created,'id':item.id,'page':item.page,'text':item.text})
 
 
