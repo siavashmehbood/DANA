@@ -262,3 +262,12 @@ class BaseMetadataTests(TestCase):
             response=self.client.get(path)
             self.assertIn('public',response['Cache-Control'])
             self.assertEqual(response['X-Content-Type-Options'],'nosniff')
+
+
+    def test_sitemap_excludes_unreadable_articles(self):
+        from articles.models import Article
+        Article.objects.create(title='Empty Article',slug='empty-article',published=True)
+        Article.objects.create(title='Readable Article',slug='readable-article',published=True,abstract='Readable')
+        response=self.client.get('/sitemap.xml')
+        self.assertNotContains(response,'empty-article')
+        self.assertContains(response,'readable-article')
