@@ -161,3 +161,18 @@ class RecommendationTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('home'))
         self.assertIn(book,[item.book for item in response.context['continue_reading']])
+
+
+    def test_expired_entitlement_does_not_hide_recommendation(self):
+        from books.models import Category
+        category=Category.objects.create(name='Expired rec',slug='expired-rec')
+        author=Author.objects.create(name='Expired Rec Author')
+        expired=Book.objects.create(name='Expired Owned',slug='expired-owned',author=author,category=category,status='published')
+        candidate=Book.objects.create(name='Expired Candidate',slug='expired-candidate',author=author,category=category,status='published')
+        user=User.objects.create_user(username='expired-rec-user',password='pass12345')
+        Entitlement.objects.create(user=user,book=expired,source='purchase',expires_at=timezone.now()-timedelta(days=1))
+        Review.objects.create(user=user,book=expired,rating=5,text='liked',approved=True)
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        self.assertIn(candidate,list(response.context['recommendations']))
+        self.assertIn(expired,list(response.context['recommendations']))
