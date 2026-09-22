@@ -202,6 +202,8 @@ def library(request):
     preferred_categories={book.category_id for book in books if book.category_id}
     excluded_recommendation_ids=set(book_ids)
     excluded_recommendation_ids.update(Entitlement.objects.filter(user=user).values_list('book_id',flat=True))
+    if Subscription.objects.filter(user=user).exists():
+        excluded_recommendation_ids.update(Book.objects.filter(subscription_included=True).values_list('id',flat=True))
     if not preferred_categories:
         preferred_categories=set(ReadingProgress.objects.filter(user=user,book__category__isnull=False).exclude(book_id__in=excluded_recommendation_ids).values_list('book__category_id',flat=True)[:20])
     if preferred_categories:
