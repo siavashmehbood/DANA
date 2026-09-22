@@ -438,3 +438,19 @@ class ShopFlowTests(TestCase):
         current.refresh_from_db()
         self.assertEqual(Subscription.objects.filter(user=self.user,status='active').count(),1)
         self.assertGreater(current.expires_at,old_expiry+timedelta(days=29))
+
+
+    def test_paid_same_plan_can_be_renewed_more_than_once_with_auditable_ledger(self):
+        plan=SubscriptionPlan.objects.create(name='Paid renewal',slug='paid-renewal',price=100,duration_days=30)
+        self.user.wallet_balance=Decimal('500')
+        self.user.save(update_fields=['wallet_balance'])
+        self.client.login(username='buyer',password='pass12345')
+        for _ in range(2):
+            self.client.get(reverse('subscriptions'))
+            key=self.client.session['subscription_activation_key']
+            self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key})
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.wallet_balance,Decimal('300'))
+        rows=WalletTransaction.objects.filter(user=self.user,reason='Subscription purchase')
+        self.assertEqual(rows.count(),2)
+        self.assertEqual(rows.values('reference').distinct().count(),2)
