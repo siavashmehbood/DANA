@@ -568,3 +568,16 @@ class BankCheckoutEntryPointTests(TestCase):
         response=self.client.get(reverse('checkout'))
         self.assertContains(response,'formaction="'+reverse('bank_checkout')+'"')
         self.assertContains(response,'formmethod="post"')
+
+
+class BankCheckoutMethodSafetyTests(TestCase):
+    def test_get_bank_checkout_never_creates_order(self):
+        user=User.objects.create_user(username='bank-get-safe',password='pass12345')
+        author=Author.objects.create(name='Bank Safe Author')
+        book=Book.objects.create(name='Bank Safe Book',slug='bank-safe-book',author=author,status='published',price=Decimal('1000'))
+        CartItem.objects.create(user=user,book=book)
+        self.client.force_login(user)
+        before=Order.objects.filter(user=user).count()
+        response=self.client.get(reverse('bank_checkout'))
+        self.assertRedirects(response,reverse('checkout'))
+        self.assertEqual(Order.objects.filter(user=user).count(),before)
