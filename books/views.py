@@ -73,7 +73,7 @@ def listing(request):
 def _has_book_access(user, book):
     if not user.is_authenticated:
         return False
-    if book.visibility == 'public':
+    if book.visibility == 'public' and book.price == 0:
         return True
     if Entitlement.objects.filter(user=user,book=book).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).exists():
         return True
