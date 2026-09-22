@@ -240,6 +240,18 @@ class LibraryRecommendationTests(TestCase):
 
 
 class ReadingProfileTests(TestCase):
+    def test_profile_routes_audio_only_reading_progress_to_audio_player(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from reader.models import ReadingProgress
+        user=User.objects.create_user(username='profile-audio-route',password='pass12345')
+        author=Author.objects.create(name='Profile Audio Route Author')
+        book=Book.objects.create(name='Profile Audio Route',slug='profile-audio-route',author=author,status='published',audio=SimpleUploadedFile('profile.mp3',b'audio',content_type='audio/mpeg'))
+        ReadingProgress.objects.create(user=user,book=book,progress=20)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertContains(response,reverse('audio_player',args=[book.id]))
+        self.assertNotContains(response,reverse('reader',args=[book.id]))
+
     def test_profile_uses_real_streak_badges_and_recent_progress(self):
         from gamification.models import UserStreak, Badge, UserBadge
         from reader.models import ReadingProgress
