@@ -145,4 +145,5 @@ def library(request):
     if source!='all': rows=[row for row in rows if row['source']==source]
     if sort=='title': rows.sort(key=lambda row: row['book'].name)
     elif sort=='progress': rows.sort(key=lambda row: float(row['progress'].progress) if row['progress'] else -1,reverse=True)
-    return render(request,'library.html',{'library_rows':rows,'state':state,'kind':kind,'source':source,'sort':sort,'library_count':len(rows),'active_subscription':active_subscription})
+    visible_count=len(rows)
+    return render(request,'library.html',{'library_rows':rows,'state':state,'kind':kind,'source':source,'sort':sort,'library_count':len(books),'visible_count':visible_count,'active_subscription':active_subscription})
