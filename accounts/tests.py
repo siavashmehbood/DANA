@@ -50,6 +50,8 @@ class AccountFlowTests(TestCase):
         response = self.client.get(reverse('library'))
         self.assertContains(response, 'Active Access')
         self.assertNotContains(response, 'Expired Access')
+        self.assertFalse(any(row['book'].pk == expired.pk for row in response.context['library_rows']))
+        self.assertFalse(any(book.pk == expired.pk for book in response.context['recommended_books']))
 
 
     def test_profile_rejects_disguised_avatar_extension(self):
