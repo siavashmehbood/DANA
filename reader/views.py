@@ -185,7 +185,10 @@ def vocabulary(request):
     query=request.GET.get('q','').strip()[:180]
     words=SavedWord.objects.filter(user=request.user).select_related('article')
     if query: words=words.filter(word__icontains=query)
-    return render(request,'reader/vocabulary.html',{'words':words[:500],'query':query})
+    response=render(request,'reader/vocabulary.html',{'words':words[:500],'query':query})
+    response['Cache-Control']='private, no-store'
+    response['X-Robots-Tag']='noindex, nofollow'
+    return response
 
 
 @login_required
