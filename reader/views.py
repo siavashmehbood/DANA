@@ -5,7 +5,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.db import models
 from books.models import Book
-from shop.models import Entitlement
+from shop.models import Entitlement, Subscription
 from .models import ReadingProgress, Bookmark, Note, SavedWord, Review
 from gamification.services import record_study_activity
 
@@ -13,7 +13,9 @@ from gamification.services import record_study_activity
 def _has_access(user, book):
     if book.visibility == 'public':
         return True
-    return Entitlement.objects.filter(user=user, book=book).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).exists()
+    if Entitlement.objects.filter(user=user, book=book).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).exists():
+        return True
+    return Subscription.objects.filter(user=user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__active=True,plan__grants_catalog_access=True).exists()
 
 
 @login_required
