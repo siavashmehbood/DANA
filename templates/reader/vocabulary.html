@@ -3,7 +3,7 @@
 {% block content %}
 <section class="section vocabulary-page">
   <div class="section-title"><div><h1>لغات من</h1><p class="muted">کلمه‌ها و عبارت‌هایی که هنگام مطالعه ذخیره کرده‌ای.</p></div></div>
-  <form class="reader-search" method="get"><input name="q" value="{{ query }}" placeholder="جست‌وجو در لغات من..."><button class="btn" type="submit">جست‌وجو</button></form>
+  <form class="reader-search" method="get" role="search"><label class="sr-only" for="vocab-search">جست‌وجو در لغات</label><input id="vocab-search" name="q" value="{{ query }}" placeholder="جست‌وجو در لغات من..."><button class="btn" type="submit">جست‌وجو</button></form>
   {% if words %}
   <div class="vocabulary-list">
     {% for item in words %}
