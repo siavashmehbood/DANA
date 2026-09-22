@@ -146,7 +146,7 @@ def pdf_reader(request, slug):
 @never_cache
 def research_library(request):
     items = ArticleLibraryItem.objects.filter(user=request.user, article__published=True).select_related('article', 'article__category')
-    status = request.GET.get('status', '').strip()
+    status = request.GET.get('status', '').strip()[:20]
     favorite = request.GET.get('favorite') == '1'
     q = request.GET.get('q', '').strip()[:200]
     q = ' '.join(q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split())
