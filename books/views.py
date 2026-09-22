@@ -3,12 +3,31 @@ from django.db.models import Q, Avg, Count
 from django.core.paginator import Paginator
 import mimetypes
 import re
+import unicodedata
 from django.http import FileResponse, HttpResponse, HttpResponseForbidden, Http404
 from django.utils import timezone
 from shop.models import Entitlement, Subscription
 from analytics.models import Event
 from reader.models import ReadingProgress
 from .models import Book,Category
+
+def _normalize_search_text(value):
+    """Normalize common Persian/Arabic spelling and invisible spacing for catalog search."""
+    value=unicodedata.normalize('NFKC', value or '')
+    table=str.maketrans({'ي':'ی','ى':'ی','ئ':'ی','ك':'ک','ة':'ه','ۀ':'ه','ؤ':'و','أ':'ا','إ':'ا','ٱ':'ا','ـ':'','\u200c':' ','\u200d':' ','\u200e':' ','\u200f':' ','\ufeff':' '})
+    value=value.translate(table)
+    value=''.join(ch for ch in unicodedata.normalize('NFD',value) if unicodedata.category(ch)!='Mn')
+    return ' '.join(value.split())
+
+
+def _search_variants(value):
+    normalized=_normalize_search_text(value)
+    variants={normalized,normalized.replace('ی','ي').replace('ک','ك')}
+    # Persian content is often stored with ZWNJ while users type a normal space (or vice versa).
+    if ' ' in normalized:
+        variants.add(normalized.replace(' ','\u200c'))
+    return {item for item in variants if item}
+
 
 def _published_books():
     return Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now()))
@@ -47,10 +66,10 @@ def listing(request):
         if sort=='name': return qs.order_by('name','id')
         return qs.order_by('-created_at','-id')
     if q:
-        variants={q,q.replace('ی','ي').replace('ک','ك')}
+        variants=_search_variants(q)
         search_q=Q()
         for term in variants:
-            search_q |= Q(name__icontains=term)|Q(author__name__icontains=term)|Q(summary__icontains=term)|Q(description__icontains=term)
+            search_q |= Q(name__icontains=term)|Q(author__name__icontains=term)|Q(category__name__icontains=term)|Q(summary__icontains=term)|Q(description__icontains=term)
         books=books.filter(search_q)
     books=apply_filters(books)
     books=apply_sort(books)
@@ -62,7 +81,8 @@ def listing(request):
         tokens=[t for t in q.split() if len(t)>1]
         relaxed=Q()
         for token in tokens:
-            relaxed |= Q(name__icontains=token)|Q(author__name__icontains=token)|Q(summary__icontains=token)
+            for term in _search_variants(token):
+                relaxed |= Q(name__icontains=term)|Q(author__name__icontains=term)|Q(category__name__icontains=term)|Q(summary__icontains=term)
         if relaxed:
             books=apply_sort(apply_filters(_published_books().filter(visibility='public').select_related('author','category').filter(relaxed)))
             total_count=books.count()
