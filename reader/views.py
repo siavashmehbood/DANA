@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse, HttpResponseForbidden, FileResponse, Http404
+from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
 from django.utils import timezone
@@ -262,30 +262,6 @@ def audio_player(request, pk):
     latest=AudioProgress.objects.filter(user=request.user,book=book).order_by('-updated_at').first()
     response=render(request,'reader/audio_player.html',{'book':book,'chapters':chapters,'audio_progress':progress,'latest_audio':latest,'has_book_audio':has_book_audio})
     response['Cache-Control']='private, no-store'
-    response['X-Robots-Tag']='noindex, nofollow'
-    response['Referrer-Policy']='same-origin'
-    return response
-
-
-@login_required
-@never_cache
-def protected_audio(request, pk, chapter_id=None):
-    book=get_object_or_404(Book,pk=pk)
-    if not book.is_published or not _has_access(request.user,book):
-        return HttpResponseForbidden('Access denied')
-    if chapter_id is None:
-        audio=book.audio
-    else:
-        try: audio=book.chapters.get(pk=chapter_id).audio
-        except (ValueError,TypeError,book.chapters.model.DoesNotExist): raise Http404
-    if not audio:
-        raise Http404
-    try: handle=audio.open('rb')
-    except (OSError,ValueError): raise Http404
-    response=FileResponse(handle,content_type='audio/mpeg')
-    response['Content-Disposition']=f'inline; filename="dana-audio-{book.pk}.mp3"'
-    response['Cache-Control']='private, no-store'
-    response['X-Content-Type-Options']='nosniff'
     response['X-Robots-Tag']='noindex, nofollow'
     response['Referrer-Policy']='same-origin'
     return response
