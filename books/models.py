@@ -14,4 +14,4 @@ class Chapter(models.Model):
     class Meta:
         ordering=['order']
         constraints=[models.UniqueConstraint(fields=['book','order'],name='unique_chapter_order_per_book')]
-class MediaAsset(models.Model): title=models.CharField(max_length=200); file=models.FileField(upload_to='media/'); kind=models.CharField(max_length=30,default='file'); created_at=models.DateTimeField(auto_now_add=True)
+class MediaAsset(models.Model): title=models.CharField(max_length=200); file=models.FileField(upload_to='media/',validators=[FileExtensionValidator(['pdf','mp3','m4a','aac','ogg','wav','jpg','jpeg','png','webp'])]); kind=models.CharField(max_length=30,default='file'); created_at=models.DateTimeField(auto_now_add=True)
