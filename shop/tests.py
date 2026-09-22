@@ -540,3 +540,19 @@ class BankCheckoutIdempotencyProductTests(TestCase):
         self.assertEqual(Order.objects.filter(user=self.user,status='pending').count(),2)
         self.assertEqual(Payment.objects.filter(user=self.user,provider='zarinpal',status='pending').count(),2)
         self.assertEqual(gateway.request.call_count,2)
+
+
+class GuestCartHandoffTests(TestCase):
+    def setUp(self):
+        self.author=Author.objects.create(name='Guest Cart Author')
+        self.book=Book.objects.create(name='Guest Cart Book',slug='guest-cart-book',author=self.author,status='published',price=1000)
+
+    def test_guest_add_to_cart_survives_login_handoff(self):
+        response=self.client.post(reverse('cart'),{'book_id':self.book.pk})
+        self.assertRedirects(response,reverse('login')+'?next='+reverse('cart'),fetch_redirect_response=False)
+        user=User.objects.create_user(username='guest-cart-user',password='pass12345')
+        self.client.force_login(user)
+        response=self.client.get(reverse('cart'))
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(CartItem.objects.filter(user=user,book=self.book).exists())
+        self.assertNotIn('pending_cart_book_id',self.client.session)
