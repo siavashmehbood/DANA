@@ -285,3 +285,8 @@ class BaseMetadataTests(TestCase):
         Book.objects.create(name='Sitemap Book',slug='sitemap-book',author=author,status='published',visibility='public')
         response=self.client.get('/sitemap.xml')
         self.assertContains(response,'/books/sitemap-book/')
+
+
+    def test_anonymous_home_renders_successfully(self):
+        response=self.client.get('/')
+        self.assertEqual(response.status_code,200)
