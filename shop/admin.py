@@ -109,6 +109,11 @@ class SubscriptionPlanAdmin(ModelAdmin):
 @admin.register(Subscription)
 class SubscriptionAdmin(ModelAdmin):
     list_display=('user','plan','status','starts_at','expires_at')
+    actions=('cancel_selected',)
+
+    @admin.action(description='لغو اشتراک‌های انتخاب‌شده')
+    def cancel_selected(self, request, queryset):
+        queryset.filter(status='active').update(status='cancelled')
     date_hierarchy='created_at'
     list_filter=('status','plan')
     search_fields=('user__username','user__email','plan__name')
