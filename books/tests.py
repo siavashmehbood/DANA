@@ -326,3 +326,10 @@ class BookValidationTests(TestCase):
         book=Book(name='Public password',slug='public-password-validation',author=self.author,visibility='public',access_password='secret')
         with self.assertRaises(ValidationError):
             book.full_clean()
+
+
+    def test_non_scheduled_book_rejects_publish_time(self):
+        from django.core.exceptions import ValidationError
+        book=Book(name='Immediate',slug='immediate-validation',author=self.author,status='published',publish_at=timezone.now()+timedelta(days=1))
+        with self.assertRaises(ValidationError):
+            book.full_clean()
