@@ -256,8 +256,7 @@ def subscribe(request, slug):
 def subscriptions(request):
     if request.method != 'GET':
         return redirect('subscriptions')
-    if request.method == 'GET':
-        request.session['subscription_activation_key']=secrets.token_urlsafe(24)
+    request.session['subscription_activation_key']=secrets.token_urlsafe(24)
     plans=SubscriptionPlan.objects.filter(active=True).order_by('-featured','price','duration_days','id')
     current=None
     if request.user.is_authenticated:
