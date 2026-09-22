@@ -173,6 +173,8 @@ def save_word(request, slug):
     from articles.models import Article
     import re
     article=get_object_or_404(Article,slug=slug,published=True)
+    if not (article.full_text or article.full_text_fa or article.abstract or article.abstract_fa):
+        return JsonResponse({'ok':False,'error':'محتوای قابل مطالعه برای این مقاله موجود نیست.'},status=400)
     word=re.sub(r'\s+',' ',request.POST.get('word','').strip())
     if not word: return JsonResponse({'ok':False,'error':'کلمه یا عبارت خالی است.'},status=400)
     if len(word)>180: return JsonResponse({'ok':False,'error':'کلمه یا عبارت بیش از حد طولانی است.'},status=400)
