@@ -223,6 +223,7 @@ class SubscriptionBookAccessTests(TestCase):
         response=self.client.get(reverse('book_secure_file',args=[book.pk,'audio']))
         self.assertEqual(response.status_code,200)
         self.assertEqual(response['Cache-Control'],'private, no-store')
+        self.assertIn('Cookie',response['Vary'])
         self.assertEqual(response['X-Content-Type-Options'],'nosniff')
 
 
