@@ -357,3 +357,13 @@ class VocabularySearchTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('reader_vocabulary'),{'q':'كتاب'})
         self.assertContains(response,'کتاب')
+
+
+    def test_saved_word_deduplicates_arabic_persian_variants(self):
+        user=User.objects.create_user(username='word-dedupe',password='pass12345')
+        article=__import__('articles.models',fromlist=['Article']).Article.objects.create(title='Word article',slug='word-article',published=True,abstract='text')
+        self.client.force_login(user)
+        url=reverse('reader_save_word',args=[article.slug])
+        self.client.post(url,{'word':'كتاب'})
+        self.client.post(url,{'word':'کتاب'})
+        self.assertEqual(SavedWord.objects.filter(user=user).count(),1)
