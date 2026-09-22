@@ -380,8 +380,12 @@ class BookValidationTests(TestCase):
 
 
     def test_subscription_private_detail_is_noindex_and_private_cache(self):
+        user=User.objects.create_user(username='private-seo-user',password='pass12345')
+        author=Author.objects.create(name='Private SEO Author')
+        book=Book.objects.create(name='Private SEO Book',slug='private-seo-book',author=author,status='published',visibility='private',subscription_included=True)
         plan=SubscriptionPlan.objects.create(name='Catalog SEO',slug='catalog-seo',price=0,duration_days=30,grants_catalog_access=True)
-        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
-        response=self.client.get(reverse('book_detail',args=[self.book.slug]))
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        self.client.force_login(user)
+        response=self.client.get(reverse('book_detail',args=[book.slug]))
         self.assertEqual(response.headers.get('X-Robots-Tag'),'noindex, nofollow')
         self.assertIn('no-store',response.headers.get('Cache-Control',''))
