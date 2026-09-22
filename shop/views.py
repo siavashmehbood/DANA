@@ -7,6 +7,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.db import models
 from django.shortcuts import get_object_or_404, render, redirect
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 
@@ -69,13 +70,23 @@ def reward_referral(invitee):
     return True
 
 
-@login_required
 def cart(request):
     if request.method == 'POST':
         book = Book.objects.filter(pk=request.POST.get('book_id')).filter(models.Q(status='published')|models.Q(status='scheduled',publish_at__lte=timezone.now())).first()
+        if not request.user.is_authenticated:
+            if book:
+                request.session['pending_cart_book_id'] = book.pk
+            return redirect(f"{reverse('login')}?next={reverse('cart')}")
         if book and not Entitlement.objects.filter(user=request.user, book=book).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).exists():
             CartItem.objects.get_or_create(user=request.user, book=book)
         return redirect('cart')
+    if not request.user.is_authenticated:
+        return redirect(f"{reverse('login')}?next={reverse('cart')}")
+    pending_book_id=request.session.pop('pending_cart_book_id',None)
+    if pending_book_id:
+        pending_book=Book.objects.filter(pk=pending_book_id).filter(models.Q(status='published')|models.Q(status='scheduled',publish_at__lte=timezone.now())).first()
+        if pending_book and not Entitlement.objects.filter(user=request.user,book=pending_book).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).exists():
+            CartItem.objects.get_or_create(user=request.user,book=pending_book)
     items = CartItem.objects.filter(user=request.user).select_related('book')
     stale_ids=[i.pk for i in items if not i.book.is_published]
     if stale_ids:
