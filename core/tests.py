@@ -297,3 +297,16 @@ class BaseMetadataTests(TestCase):
         Book.objects.create(name='Hidden Home Book',slug='hidden-home-book',author=author,status='published',visibility='password',access_password='secret')
         response=self.client.get('/')
         self.assertNotContains(response,'Hidden Home Book')
+
+
+    def test_subscription_cannot_open_private_pdf(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from shop.models import SubscriptionPlan, Subscription
+        author=Author.objects.create(name='Private PDF Author')
+        book=Book.objects.create(name='Private PDF',slug='private-pdf-sub',author=author,status='published',visibility='private',subscription_included=True,price=100,pdf=SimpleUploadedFile('private.pdf',b'%PDF-1.4 test',content_type='application/pdf'))
+        user=User.objects.create_user(username='private-pdf-user',password='pass12345')
+        plan=SubscriptionPlan.objects.create(name='Catalog PDF',slug='catalog-pdf',price=10,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='private-pdf-user',password='pass12345')
+        response=self.client.get(reverse('protected_book_pdf',args=[book.pk]))
+        self.assertEqual(response.status_code,403)
