@@ -119,7 +119,9 @@ def bank_checkout(request):
             current_book_ids=sorted(i.book_id for i in locked_items)
             reusable=None
             for candidate in Order.objects.filter(user=user,status='pending',payments__provider='zarinpal',payments__status='pending').prefetch_related('items','payments').order_by('-created_at')[:5]:
-                if sorted(item.book_id for item in candidate.items.all()) == current_book_ids and candidate.total == total:
+                candidate_payment=candidate.payments.filter(provider='zarinpal',status='pending').order_by('-id').first()
+                candidate_coupon=(candidate_payment.callback_payload or {}).get('coupon_code','') if candidate_payment else ''
+                if sorted(item.book_id for item in candidate.items.all()) == current_book_ids and candidate.total == total and candidate_coupon == (coupon.code if coupon and discount > 0 else ''):
                     reusable=candidate
                     break
             if reusable:
