@@ -13,6 +13,7 @@ class ChapterInline(admin.TabularInline):
 @admin.register(Book)
 class BookAdmin(ModelAdmin):
     actions = ('publish_selected','unpublish_selected')
+    readonly_fields = ('created_at','updated_at')
     list_display = ('name', 'author', 'category', 'price', 'old_price', 'status', 'visibility', 'featured', 'subscription_included', 'publish_at', 'has_pdf', 'has_audio')
     list_filter = ('status', 'visibility', 'featured', 'subscription_included', 'category', 'level')
     search_fields = ('name', 'author__name', 'summary', 'description')
@@ -26,6 +27,7 @@ class BookAdmin(ModelAdmin):
         ('فروش', {'fields': ('price', 'old_price', 'preview_percent')}),
         ('فایل و رسانه', {'fields': ('pdf', 'audio')}),
         ('انتشار و دسترسی', {'fields': ('status', 'publish_at', 'visibility', 'featured', 'subscription_included', 'access_password')}),
+        ('اطلاعات سیستمی', {'fields': ('created_at','updated_at'), 'classes': ('collapse',)}),
     )
 
     @admin.action(description='انتشار کتاب‌های انتخاب‌شده')
