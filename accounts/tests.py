@@ -382,3 +382,18 @@ class ActiveSubscriberRecommendationTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('library'))
         self.assertIn(candidate,list(response.context['recommended_books']))
+
+
+class WeeklyReadingStatsTests(TestCase):
+    def test_profile_weekly_minutes_use_activity_deltas_not_lifetime_snapshot(self):
+        from reader.models import ReadingProgress, ReadingActivity
+        user=User.objects.create_user(username='weekly-stats',password='pass12345')
+        author=Author.objects.create(name='Weekly Author')
+        book=Book.objects.create(name='Weekly Book',slug='weekly-book',author=author,status='published',visibility='public',price=0)
+        ReadingProgress.objects.create(user=user,book=book,seconds=7200,progress=20)
+        ReadingActivity.objects.create(user=user,book=book,seconds=600)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.context['weekly_minutes_done'],10)
+        self.assertEqual(response.context['total_reading_minutes'],120)
+
