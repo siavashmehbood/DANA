@@ -30,6 +30,7 @@ def dashboard(request):
     search_success_rate = min(round((max(searches-zero_searches,0)*100/searches),2),100) if searches else 0
     top_zero_searches = list(Event.objects.filter(name='search_zero_result',created_at__gte=now-timedelta(days=30)).values('metadata__query').annotate(count=Count('id')).order_by('-count')[:10])
     relaxed_searches = Event.objects.filter(name='search',created_at__gte=now-timedelta(days=30),metadata__relaxed=True).count()
+    relaxed_rate = round((relaxed_searches*100/searches),2) if searches else 0
     relaxed_searches = Event.objects.filter(name='search',created_at__gte=now-timedelta(days=30),metadata__relaxed=True).count()
     zero_rate = min(round((zero_searches*100/searches),2),100) if searches else 0
     return render(request, 'analytics/dashboard.html', {'sales': sales, 'today_sales': today_sales, 'orders': paid.count(), 'users': users,
