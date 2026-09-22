@@ -15,7 +15,7 @@
       </article>
       {% endfor %}
     </div>
-    <aside class="panel cart-summary"><h2>خلاصه سفارش</h2><div class="row"><span>تعداد کتاب</span><b>{{ items|length }}</b></div><div class="row"><span>جمع کالاها</span><b>{{ total }} تومان</b></div><div class="cart-total"><span>مبلغ قابل پرداخت</span><strong>{{ total }} تومان</strong></div><a class="btn cart-checkout" href="{% url 'checkout' %}">ادامه و پرداخت ←</a><small>پرداخت از موجودی کیف پول انجام می‌شود.</small></aside>
+    <aside class="panel cart-summary"><h2>خلاصه سفارش</h2><div class="row"><span>تعداد کتاب</span><b>{{ items|length }}</b></div><div class="row"><span>جمع کالاها</span><b>{{ total }} تومان</b></div><div class="cart-total"><span>مبلغ قابل پرداخت</span><strong>{{ total }} تومان</strong></div><a class="btn cart-checkout" href="{% url 'checkout' %}">ادامه و پرداخت ←</a><small>در مرحله بعد می‌توانید پرداخت از کیف پول یا پرداخت بانکی امن را انتخاب کنید.</small></aside>
   </div>
   {% else %}<div class="panel empty cart-empty"><div class="empty-cart-icon">🛒</div><h2>سبد خرید خالی است</h2><p>از کتابخانه یک کتاب انتخاب کن و به سبدت اضافه کن.</p><a class="btn" href="/books/">رفتن به کتابخانه</a></div>{% endif %}
 </section>
