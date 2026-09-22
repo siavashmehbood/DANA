@@ -271,3 +271,10 @@ class BaseMetadataTests(TestCase):
         response=self.client.get('/sitemap.xml')
         self.assertNotContains(response,'empty-article')
         self.assertContains(response,'readable-article')
+
+
+    def test_sitemap_excludes_password_protected_books(self):
+        author=Author.objects.create(name='Protected SEO')
+        Book.objects.create(name='Protected',slug='protected-seo',author=author,status='published',visibility='password',access_password='secret')
+        response=self.client.get('/sitemap.xml')
+        self.assertNotContains(response,'protected-seo')
