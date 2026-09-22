@@ -105,7 +105,7 @@ def vocabulary(request):
     query=request.GET.get('q','').strip()[:180]
     words=SavedWord.objects.filter(user=request.user).select_related('article')
     if query: words=words.filter(word__icontains=query)
-    return render(request,'reader/vocabulary.html',{'words':words,'query':query})
+    return render(request,'reader/vocabulary.html',{'words':words[:500],'query':query})
 
 
 @login_required
