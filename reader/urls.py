@@ -1,13 +1,11 @@
 from django.urls import path
-from .views import reader, progress, bookmark, highlight, delete_highlight, note, delete_bookmark, delete_note, save_word, vocabulary, delete_word, review, report_problem, audio_player, protected_audio, audio_progress
+from .views import reader, progress, bookmark, highlight, delete_highlight, note, delete_bookmark, delete_note, save_word, vocabulary, delete_word, review, report_problem, audio_player, audio_progress
 
 urlpatterns = [
     path('vocabulary/', vocabulary, name='reader_vocabulary'),
     path('vocabulary/<int:pk>/delete/', delete_word, name='reader_delete_word'),
     path('article/<str:slug>/save-word/', save_word, name='reader_save_word'),
     path('<int:pk>/audio/', audio_player, name='audio_player'),
-    path('<int:pk>/audio/file/', protected_audio, name='protected_book_audio'),
-    path('<int:pk>/audio/chapter/<int:chapter_id>/', protected_audio, name='protected_chapter_audio'),
     path('<int:pk>/audio/progress/', audio_progress, name='audio_progress'),
     path('<int:pk>/', reader, name='reader'),
     path('<int:pk>/progress/', progress, name='reader_progress'),
