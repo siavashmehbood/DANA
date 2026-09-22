@@ -110,3 +110,12 @@ class StudyFlowTests(TestCase):
     def test_note_get_is_not_allowed(self):
         response=self.client.get(reverse('reader_note',args=[self.book.pk]))
         self.assertEqual(response.status_code,405)
+
+
+    def test_progress_does_not_reduce_accumulated_time(self):
+        url=reverse('reader_progress',args=[self.book.pk])
+        self.client.post(url,{'progress':'30','seconds':'300','audio_seconds':'120'})
+        self.client.post(url,{'progress':'40','seconds':'10','audio_seconds':'5'})
+        saved=ReadingProgress.objects.get(user=self.user,book=self.book)
+        self.assertEqual(saved.seconds,300)
+        self.assertEqual(saved.audio_seconds,120)
