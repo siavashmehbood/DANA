@@ -341,3 +341,18 @@ class ProfileTruthfulStatsTests(TestCase):
         self.assertNotIn('total_audio_minutes',response.context)
         self.assertNotContains(response,'شنیدن<br>')
         self.assertContains(response,'مطالعه متنی ثبت شده است')
+
+
+class ActiveSubscriberRecommendationTests(TestCase):
+    def test_active_subscriber_can_be_recommended_unengaged_catalog_book(self):
+        user=User.objects.create_user(username='subscriber-recs',password='pass12345')
+        author=Author.objects.create(name='Subscriber Author')
+        category=Category.objects.create(name='Subscriber Category',slug='subscriber-category')
+        owned=Book.objects.create(name='Owned Seed',slug='owned-seed',author=author,category=category,status='published',visibility='public')
+        candidate=Book.objects.create(name='Catalog Candidate',slug='catalog-candidate',author=author,category=category,status='published',visibility='public',subscription_included=True)
+        Entitlement.objects.create(user=user,book=owned)
+        plan=SubscriptionPlan.objects.create(name='Catalog',slug='catalog-recs',price=0,duration_days=30,active=True,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=29))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertIn(candidate,list(response.context['recommended_books']))
