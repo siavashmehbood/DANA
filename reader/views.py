@@ -4,6 +4,7 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
 from django.utils import timezone
+from django.db.models import Q
 from django.db import models, transaction
 from books.models import Book
 from shop.models import Entitlement, Subscription
@@ -184,8 +185,13 @@ def save_word(request, slug):
 @never_cache
 def vocabulary(request):
     query=request.GET.get('q','').strip()[:180]
+    query=' '.join(query.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split())
     words=SavedWord.objects.filter(user=request.user).select_related('article')
-    if query: words=words.filter(word__icontains=query)
+    if query:
+        variants={query,query.replace('ی','ي').replace('ک','ك')}
+        q=Q()
+        for term in variants: q |= Q(word__icontains=term)
+        words=words.filter(q)
     response=render(request,'reader/vocabulary.html',{'words':words[:500],'query':query})
     response['Cache-Control']='private, no-store'
     response['X-Robots-Tag']='noindex, nofollow'
