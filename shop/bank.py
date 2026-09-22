@@ -114,12 +114,24 @@ def bank_checkout(request):
             discount = _coupon_discount(coupon, subtotal)
             tax = ((subtotal - discount) * Decimal('0.10')).quantize(Decimal('1'))
             total = subtotal - discount + tax
-            order = Order.objects.create(user=user, subtotal=subtotal, discount=discount, tax=tax, total=total, status='pending', tracking_code=_tracking_code())
-            OrderItem.objects.bulk_create([OrderItem(order=order, book=i.book, price=i.book.price) for i in locked_items])
-            if coupon and discount > 0:
-                coupon.used=F('used')+1
-                coupon.save(update_fields=['used'])
-            payment = Payment.objects.create(user=user, order=order, provider='zarinpal', amount=total, status='pending', idempotency_key=f'bank:{order.pk}', callback_payload={'coupon_code': coupon.code if coupon else '', 'coupon_reserved': bool(coupon and discount > 0)})
+            # Reuse an unfinished bank checkout for the same current cart instead
+            # of creating duplicate pending orders when the user double-submits.
+            current_book_ids=sorted(i.book_id for i in locked_items)
+            reusable=None
+            for candidate in Order.objects.filter(user=user,status='pending',payments__provider='zarinpal',payments__status='pending').prefetch_related('items','payments').order_by('-created_at')[:5]:
+                if sorted(item.book_id for item in candidate.items.all()) == current_book_ids and candidate.total == total:
+                    reusable=candidate
+                    break
+            if reusable:
+                order=reusable
+                payment=order.payments.filter(provider='zarinpal',status='pending').order_by('-id').first()
+            else:
+                order = Order.objects.create(user=user, subtotal=subtotal, discount=discount, tax=tax, total=total, status='pending', tracking_code=_tracking_code())
+                OrderItem.objects.bulk_create([OrderItem(order=order, book=i.book, price=i.book.price) for i in locked_items])
+                if coupon and discount > 0:
+                    coupon.used=F('used')+1
+                    coupon.save(update_fields=['used'])
+                payment = Payment.objects.create(user=user, order=order, provider='zarinpal', amount=total, status='pending', idempotency_key=f'bank:{order.pk}', callback_payload={'coupon_code': coupon.code if coupon else '', 'coupon_reserved': bool(coupon and discount > 0)})
             result = gateway().request(order, request)
             if not result.ok:
                 payment.status = 'failed'
