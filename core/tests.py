@@ -255,3 +255,10 @@ class BaseMetadataTests(TestCase):
         self.client.force_login(user)
         response=self.client.get('/library/')
         self.assertContains(response,'name="robots" content="noindex,nofollow"')
+
+
+    def test_public_discovery_metadata_has_safe_cache_headers(self):
+        for path in ('/robots.txt','/sitemap.xml'):
+            response=self.client.get(path)
+            self.assertIn('public',response['Cache-Control'])
+            self.assertEqual(response['X-Content-Type-Options'],'nosniff')
