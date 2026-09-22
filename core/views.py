@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from books.models import Book, Category
 from articles.models import Article, ArticleCategory
 from shop.models import Entitlement
-from reader.models import ReadingProgress
+from reader.models import ReadingProgress, Review
 from django.db.models import Q, Count
 from django.utils import timezone
 
@@ -27,7 +27,9 @@ def home(request):
         continue_reading=ReadingProgress.objects.filter(user=request.user,book_id__in=valid_books,progress__gt=0,progress__lt=100).select_related('book__author').order_by('-updated_at')[:6]
         owned_categories=Entitlement.objects.filter(user=request.user,book__category__isnull=False).values_list('book__category_id',flat=True)
         owned_ids=Entitlement.objects.filter(user=request.user).values_list('book_id',flat=True)
-        recommendations=base.filter(category_id__in=owned_categories).exclude(id__in=owned_ids).distinct().order_by('-created_at')[:8]
+        rated_categories=Review.objects.filter(user=request.user,approved=True,rating__gte=4,book__category__isnull=False).values_list('book__category_id',flat=True)
+        preferred_categories=set(owned_categories)|set(rated_categories)
+        recommendations=base.filter(category_id__in=preferred_categories).exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at').distinct()[:8]
     return render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
         'latest_articles': article_base.order_by('-created_at')[:8], 'featured_articles': article_base.filter(featured=True)[:4],
         'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading, 'audio_books': audio_books, 'recommendations': recommendations})
