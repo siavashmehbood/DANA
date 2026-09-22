@@ -264,4 +264,8 @@ def subscriptions(request):
         now=timezone.now()
         Subscription.objects.filter(user=request.user,status='active',expires_at__lte=now).update(status='expired')
         current=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=now,expires_at__gt=now,plan__active=True).select_related('plan').order_by('-expires_at').first()
-    return render(request,'shop/subscriptions.html',{'plans':plans,'current_subscription':current,'activation_key':request.session['subscription_activation_key']})
+    response=render(request,'shop/subscriptions.html',{'plans':plans,'current_subscription':current,'activation_key':request.session['subscription_activation_key']})
+    if request.user.is_authenticated:
+        response['Cache-Control']='private, no-store'
+        response['X-Robots-Tag']='noindex, nofollow'
+    return response
