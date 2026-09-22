@@ -8,6 +8,7 @@ from django.db.models import F
 from django.db import models
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 
 from accounts.models import User
 from books.models import Book
@@ -183,18 +184,21 @@ def checkout(request):
 
 
 @login_required
+@never_cache
 def order_detail(request, tracking_code):
     order = get_object_or_404(Order.objects.prefetch_related('items__book'), tracking_code=tracking_code, user=request.user)
     return render(request, 'shop/order_detail.html', {'order': order})
 
 
 @login_required
+@never_cache
 def wallet(request):
     transactions = WalletTransaction.objects.filter(user=request.user).select_related('order').order_by('-created_at')[:50]
     return render(request, 'shop/wallet.html', {'transactions': transactions})
 
 
 @login_required
+@never_cache
 def orders(request):
     rows=Order.objects.filter(user=request.user).prefetch_related('items__book').order_by('-created_at')[:100]
     return render(request,'shop/orders.html',{'orders':rows})
