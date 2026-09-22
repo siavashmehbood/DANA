@@ -222,7 +222,7 @@ def subscribe(request, slug):
         if plan.price > 0 and user.wallet_balance < plan.price:
             messages.error(request,'موجودی کیف پول برای فعال‌سازی این اشتراک کافی نیست.')
             return redirect('subscriptions')
-        current=Subscription.objects.select_for_update().filter(user=user,status='active').first()
+        current=Subscription.objects.select_for_update().filter(user=user,status='active',starts_at__lte=now).order_by('-expires_at').first()
         if current and current.expires_at <= now:
             current.status='expired'
             current.save(update_fields=['status'])
