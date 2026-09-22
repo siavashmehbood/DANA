@@ -91,6 +91,8 @@ def detail(request, slug):
     article.reader_full_text_fa = linebreaks(article.full_text_fa or '', autoescape=True) if can_show_full_text else ''
     if mode == 'fa' and not (article.full_text_fa or article.abstract_fa):
         mode = 'en'
+    if mode == 'en' and not (article.full_text or article.abstract) and (article.full_text_fa or article.abstract_fa):
+        mode = 'fa'
     related = Article.objects.filter(published=True).exclude(pk=article.pk)
     if article.category_id:
         related = related.filter(category_id=article.category_id)
