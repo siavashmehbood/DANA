@@ -32,7 +32,7 @@ def reader(request, pk):
     accessible = _has_access(request.user, book)
     if not accessible:
         return HttpResponseForbidden('برای مطالعه این کتاب دسترسی فعال لازم است.')
-    owned = book.visibility != 'public'
+    owned = Entitlement.objects.filter(user=request.user,book=book).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).exists()
     saved = ReadingProgress.objects.filter(user=request.user, book=book).select_related('current_chapter').first()
     bookmark_query=request.GET.get('bookmark_q','').strip()[:150]
     note_query=request.GET.get('note_q','').strip()[:200]
