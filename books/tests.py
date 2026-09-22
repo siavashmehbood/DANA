@@ -1,8 +1,10 @@
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
 from django.core.files.uploadedfile import SimpleUploadedFile
 from accounts.models import User
-from shop.models import Entitlement
+from shop.models import Entitlement, SubscriptionPlan, Subscription
 from .models import Author, Book, Chapter
 from reader.models import Review
 from analytics.models import Event
@@ -178,3 +180,25 @@ class CatalogRankingTests(TestCase):
         response=self.client.get(reverse('books'),{'cat':'missing-category'})
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.context['cat'],'')
+
+
+class SubscriptionBookAccessTests(TestCase):
+    def setUp(self):
+        self.user=User.objects.create_user(username='subscriber',password='pass12345')
+        author=Author.objects.create(name='Subscription Author')
+        self.book=Book.objects.create(name='Subscriber Book',slug='subscriber-book',author=author,status='published',visibility='private',pdf=SimpleUploadedFile('sub.pdf',b'%PDF-1.4 test',content_type='application/pdf'))
+        self.client.login(username='subscriber',password='pass12345')
+
+    def test_active_catalog_subscription_grants_private_book_access(self):
+        plan=SubscriptionPlan.objects.create(name='Catalog',slug='catalog-access',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        response=self.client.get(reverse('book_detail',args=[self.book.slug]))
+        self.assertTrue(response.context['has_access'])
+        media=self.client.get(reverse('secure_book_file',args=[self.book.pk,'pdf']))
+        self.assertEqual(media.status_code,200)
+
+    def test_subscription_without_catalog_access_does_not_grant_private_book(self):
+        plan=SubscriptionPlan.objects.create(name='Basic',slug='basic-no-catalog',price=10,duration_days=30,grants_catalog_access=False)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        response=self.client.get(reverse('book_detail',args=[self.book.slug]))
+        self.assertFalse(response.context['has_access'])
