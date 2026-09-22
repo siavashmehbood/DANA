@@ -128,7 +128,7 @@ def bank_checkout(request):
 def payment_callback(request):
     authority = request.GET.get('Authority', '')
     status = request.GET.get('Status', '')
-    payment = Payment.objects.select_related('order', 'user').filter(authority=authority, provider='zarinpal').first()
+    payment = Payment.objects.select_related('order', 'user').filter(authority=authority, provider='zarinpal', user=request.user).first()
     if not payment:
         messages.error(request, 'تراکنش پیدا نشد.')
         return redirect('cart')
