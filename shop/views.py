@@ -211,8 +211,8 @@ def subscribe(request, slug):
         if Subscription.objects.select_for_update().filter(user=user,plan=plan,status='active',starts_at__gt=now).exists():
             messages.info(request,'تمدید این پلن از قبل برای شما ثبت شده است.')
             return redirect('subscriptions')
-        if plan.price != 0:
-            messages.info(request,'برای فعال‌سازی این پلن باید پرداخت اشتراک تکمیل شود.')
+        if plan.price > 0 and user.wallet_balance < plan.price:
+            messages.error(request,'موجودی کیف پول برای فعال‌سازی این اشتراک کافی نیست.')
             return redirect('subscriptions')
         current=Subscription.objects.select_for_update().filter(user=user,status='active').first()
         if current and current.expires_at <= now:
@@ -228,8 +228,12 @@ def subscribe(request, slug):
                 current.status='cancelled'
                 current.save(update_fields=['status'])
             start=now
-        Subscription.objects.create(user=user,plan=plan,starts_at=start,expires_at=start+timezone.timedelta(days=plan.duration_days))
-        messages.success(request,'اشتراک رایگان فعال شد.')
+        subscription=Subscription.objects.create(user=user,plan=plan,starts_at=start,expires_at=start+timezone.timedelta(days=plan.duration_days))
+        if plan.price > 0:
+            _wallet_transaction(user,plan.price,'debit','Subscription purchase',reference=f'subscription:{subscription.pk}:debit')
+            messages.success(request,'اشتراک با موفقیت از کیف پول فعال شد.')
+        else:
+            messages.success(request,'اشتراک رایگان فعال شد.')
     return redirect('subscriptions')
 
 
