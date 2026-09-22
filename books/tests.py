@@ -259,3 +259,13 @@ class SubscriptionBookAccessTests(TestCase):
         response=self.client.get(reverse('books'),{'access':'subscription'})
         self.assertContains(response,included.name)
         self.assertNotContains(response,'Excluded Filter')
+
+
+class BookMediaValidationTests(TestCase):
+    def test_book_pdf_rejects_non_pdf_extension(self):
+        from django.core.exceptions import ValidationError
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        author=Author.objects.create(name='Media Author')
+        book=Book(name='Unsafe Media',slug='unsafe-media',author=author,status='draft',pdf=SimpleUploadedFile('payload.exe',b'MZ'))
+        with self.assertRaises(ValidationError):
+            book.full_clean()
