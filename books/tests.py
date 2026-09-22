@@ -194,7 +194,7 @@ class SubscriptionBookAccessTests(TestCase):
         Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
         response=self.client.get(reverse('book_detail',args=[self.book.slug]))
         self.assertTrue(response.context['has_access'])
-        media=self.client.get(reverse('secure_book_file',args=[self.book.pk,'pdf']))
+        media=self.client.get(reverse('book_secure_file',args=[self.book.pk,'pdf']))
         self.assertEqual(media.status_code,200)
 
     def test_subscription_without_catalog_access_does_not_grant_private_book(self):
