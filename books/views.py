@@ -148,10 +148,9 @@ def secure_file(request, pk, kind, chapter_id=None):
         pass
     response['Cache-Control'] = 'private, no-store'
     response['Vary'] = 'Cookie'
+    response['Content-Security-Policy'] = "default-src 'none'; media-src 'self'; frame-ancestors 'self'; sandbox" if kind != 'pdf' else "default-src 'none'; frame-ancestors 'self'; sandbox"
     response['X-Content-Type-Options'] = 'nosniff'
     response['Cross-Origin-Resource-Policy'] = 'same-origin'
     response['X-Robots-Tag'] = 'noindex, nofollow'
     response['Referrer-Policy'] = 'no-referrer'
-    if kind == 'pdf':
-        response['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'self'; sandbox"
     return response
