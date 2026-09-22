@@ -102,3 +102,17 @@ class LibraryFilterTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('library'))
         self.assertNotContains(response,'Expired Subscription Book')
+
+
+    def test_library_can_filter_subscription_access(self):
+        user=User.objects.create_user(username='library-source',password='pass12345')
+        author=Author.objects.create(name='Source Author')
+        purchased=Book.objects.create(name='Purchased Only',slug='purchased-only',author=author,status='published')
+        subscribed=Book.objects.create(name='Subscription Only',slug='subscription-only',author=author,status='published')
+        Entitlement.objects.create(user=user,book=purchased)
+        plan=SubscriptionPlan.objects.create(name='Source Plan',slug='source-plan',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=1))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'),{'source':'subscription'})
+        self.assertContains(response,'Subscription Only')
+        self.assertNotContains(response,'Purchased Only')
