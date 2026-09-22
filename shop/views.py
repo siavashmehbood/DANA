@@ -216,8 +216,8 @@ def subscribe(request, slug):
         user=User.objects.select_for_update().get(pk=request.user.pk)
         plan=get_object_or_404(SubscriptionPlan,slug=slug,active=True)
         now=timezone.now()
-        if Subscription.objects.select_for_update().filter(user=user,plan=plan,status='active',starts_at__gt=now).exists():
-            messages.info(request,'تمدید این پلن از قبل برای شما ثبت شده است.')
+        if Subscription.objects.select_for_update().filter(user=user,status='active',starts_at__gt=now).exists():
+            messages.info(request,'یک تمدید اشتراک از قبل برای شما ثبت شده است.')
             return redirect('subscriptions')
         if plan.price > 0 and user.wallet_balance < plan.price:
             messages.error(request,'موجودی کیف پول برای فعال‌سازی این اشتراک کافی نیست.')
