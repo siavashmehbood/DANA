@@ -222,7 +222,7 @@ def subscribe(request, slug):
             return redirect('subscriptions')
         active_now=Subscription.objects.select_for_update().filter(user=user,status='active',starts_at__lte=now,expires_at__gt=now).select_related('plan').order_by('-expires_at').first()
         if active_now and active_now.plan_id != plan.id:
-            messages.info(request,'برای تغییر پلن، ابتدا تا پایان اشتراک فعلی صبر کنید یا از پشتیبانی درخواست تغییر دهید.')
+            messages.info(request,'برای جلوگیری از از دست رفتن اعتبار، تغییر پلن تا پایان اشتراک فعلی غیرفعال است.')
             return redirect('subscriptions')
         if plan.price > 0 and user.wallet_balance < plan.price:
             messages.error(request,'موجودی کیف پول برای فعال‌سازی این اشتراک کافی نیست.')
