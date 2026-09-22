@@ -501,3 +501,26 @@ class ShopFlowTests(TestCase):
         self.assertEqual(first.status_code,302)
         self.assertEqual(second.status_code,302)
         self.assertEqual(Subscription.objects.filter(user=self.user,plan=plan).count(),1)
+
+
+class BankCheckoutIdempotencyProductTests(TestCase):
+    def setUp(self):
+        self.user=User.objects.create_user(username='bank-repeat',password='pass12345')
+        author=Author.objects.create(name='Bank Repeat Author')
+        self.book=Book.objects.create(name='Bank Repeat Book',slug='bank-repeat-book',author=author,price=Decimal('100000'),status='published',visibility='public')
+        CartItem.objects.create(user=self.user,book=self.book)
+        self.client.force_login(self.user)
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_repeated_bank_checkout_reuses_pending_order(self, gateway_factory):
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='AUTH-REPEAT',url='https://gateway.example/pay',message='')
+        gateway_factory.return_value=gateway
+        first=self.client.post(reverse('bank_checkout'))
+        self.assertEqual(first.status_code,302)
+        second=self.client.post(reverse('bank_checkout'))
+        self.assertEqual(second.status_code,302)
+        self.assertEqual(Order.objects.filter(user=self.user,status='pending').count(),1)
+        self.assertEqual(Payment.objects.filter(user=self.user,provider='zarinpal',status='pending').count(),1)
+        self.assertEqual(gateway.request.call_count,1)
