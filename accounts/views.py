@@ -49,7 +49,7 @@ def login_view(request):
             if _rate_limited(f'dana-login:{ip}',10,300): messages.error(request,'تعداد تلاش‌ها زیاد است؛ چند دقیقه بعد دوباره امتحان کنید.'); return redirect('login')
             username=request.POST.get('username','').strip(); password=request.POST.get('password',''); user=auth.authenticate(request,username=username,password=password)
             if user is not None and user.is_active: auth.login(request,user); _session_record(request,user); return redirect(_safe_next(request,request.POST.get('next')))
-            messages.error(request,'نام کاربری یا رمز عبور نادرست است.'); return render(request,'auth/login.html')
+            messages.error(request,'نام کاربری یا رمز عبور نادرست است.'); return render(request,'auth/login.html',{'next_url':_safe_next(request,request.POST.get('next'))})
         phone=_phone(request.POST.get('phone'))
         if not phone: messages.error(request,'شماره موبایل معتبر نیست.'); return redirect('login')
         if not request.POST.get('terms'): messages.error(request,'پذیرش قوانین الزامی است.'); return redirect('login')
