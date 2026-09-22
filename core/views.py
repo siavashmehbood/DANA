@@ -72,6 +72,8 @@ def protected_book_pdf(request, pk):
     response['X-Content-Type-Options'] = 'nosniff'
     response['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'self'; sandbox"
     response['Cache-Control'] = 'private, no-store'
+    response['Referrer-Policy'] = 'same-origin'
+    response['X-Robots-Tag'] = 'noindex, nofollow'
     response['Content-Length'] = str(size)
     return response
 
