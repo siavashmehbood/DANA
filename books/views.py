@@ -96,7 +96,7 @@ def detail(request,slug):
         raise Http404
     approved_reviews=book.review_set.filter(approved=True).select_related('user').order_by('-created_at')[:8]
     review_stats=book.review_set.filter(approved=True).aggregate(avg=Avg('rating'),count=Count('id'))
-    related=_published_books().exclude(visibility='private').filter(category=book.category).exclude(pk=book.pk).select_related('author','category')[:4] if book.category else Book.objects.none()
+    related=_published_books().filter(visibility='public',category=book.category).exclude(pk=book.pk).select_related('author','category')[:4] if book.category else Book.objects.none()
     has_access = _has_book_access(request.user, book)
     saved_audio_seconds=0
     if request.user.is_authenticated and has_access:
