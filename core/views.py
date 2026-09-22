@@ -103,7 +103,10 @@ self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;con
 
 def robots_txt(request):
     body = "User-agent: *\nDisallow: /admin/\nDisallow: /protected/\nDisallow: /reader/\nSitemap: " + request.build_absolute_uri('/sitemap.xml') + "\n"
-    return HttpResponse(body, content_type='text/plain')
+    response=HttpResponse(body, content_type='text/plain')
+    response['Cache-Control']='public, max-age=3600'
+    response['X-Content-Type-Options']='nosniff'
+    return response
 
 
 def sitemap_xml(request):
@@ -112,4 +115,7 @@ def sitemap_xml(request):
     urls += [base+'/books/'+slug+'/' for slug in Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now())).exclude(visibility='private').values_list('slug',flat=True)[:5000]]
     urls += [base+'/articles/'+slug+'/' for slug in Article.objects.filter(published=True).values_list('slug',flat=True)[:5000]]
     body='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(f'<url><loc>{escape(url)}</loc></url>' for url in urls) + '</urlset>'
-    return HttpResponse(body, content_type='application/xml')
+    response=HttpResponse(body, content_type='application/xml')
+    response['Cache-Control']='public, max-age=900'
+    response['X-Content-Type-Options']='nosniff'
+    return response
