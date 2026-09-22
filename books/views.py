@@ -94,9 +94,6 @@ def detail(request,slug):
     if book.visibility == 'password':
         from django.http import Http404
         raise Http404
-    if book.visibility == 'private' and not _has_book_access(request.user,book):
-        from django.http import Http404
-        raise Http404
     approved_reviews=book.review_set.filter(approved=True).select_related('user').order_by('-created_at')[:8]
     review_stats=book.review_set.filter(approved=True).aggregate(avg=Avg('rating'),count=Count('id'))
     related=_published_books().exclude(visibility='private').filter(category=book.category).exclude(pk=book.pk).select_related('author','category')[:4] if book.category else Book.objects.none()
