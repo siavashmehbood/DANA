@@ -205,6 +205,7 @@ def orders(request):
 
 
 @login_required
+@never_cache
 def subscribe(request, slug):
     if request.method != 'POST':
         return redirect('subscriptions')
