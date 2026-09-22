@@ -234,3 +234,12 @@ class ShopFlowTests(TestCase):
         previous.refresh_from_db()
         self.assertEqual(previous.status,'cancelled')
         self.assertEqual(Subscription.objects.filter(user=self.user,status='active').count(),1)
+
+
+    def test_database_rejects_two_active_subscriptions_for_same_user(self):
+        from django.db import IntegrityError
+        first=SubscriptionPlan.objects.create(name='Constraint A',slug='constraint-a',price=0,duration_days=7)
+        second=SubscriptionPlan.objects.create(name='Constraint B',slug='constraint-b',price=0,duration_days=7)
+        Subscription.objects.create(user=self.user,plan=first,starts_at=timezone.now(),expires_at=timezone.now()+timedelta(days=7))
+        with self.assertRaises(IntegrityError):
+            Subscription.objects.create(user=self.user,plan=second,starts_at=timezone.now(),expires_at=timezone.now()+timedelta(days=7))
