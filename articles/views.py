@@ -96,11 +96,15 @@ def detail(request, slug):
     if request.user.is_authenticated:
         library_item = ArticleLibraryItem.objects.filter(user=request.user, article=article).first()
         annotations = ArticleAnnotation.objects.filter(user=request.user, article=article)
-    return render(request, 'articles/detail.html', {
+    response=render(request, 'articles/detail.html', {
         'article': article, 'related_articles': related,
         'language_mode': mode, 'reader_search': search,
         'library_item': library_item, 'annotations': annotations, 'can_show_full_text': can_show_full_text,
     })
+    if request.user.is_authenticated:
+        response['Cache-Control']='private, no-store'
+        response['Vary']='Cookie'
+    return response
 
 
 @login_required
@@ -119,7 +123,7 @@ def pdf_reader(request, slug):
     annotations = list(ArticleAnnotation.objects.filter(user=request.user, article=article).values('id', 'kind', 'selected_text', 'note', 'color', 'page', 'rects', 'text_prefix', 'text_suffix', 'created_at'))
     for annotation in annotations:
         annotation['created_at'] = annotation['created_at'].isoformat()
-    return render(request, 'articles/pdf_reader.html', {
+    response=render(request, 'articles/pdf_reader.html', {
         'article': article,
         'pdf_url': reverse('article_download', args=[article.slug]),
         'annotations_json': json.dumps(annotations, ensure_ascii=False),
@@ -127,6 +131,10 @@ def pdf_reader(request, slug):
         'reading_seconds': item.reading_seconds if item else 0,
         'bookmarks_json': json.dumps((item.bookmarks if item else []), ensure_ascii=False),
     })
+    response['Cache-Control']='private, no-store'
+    response['Vary']='Cookie'
+    response['X-Robots-Tag']='noindex, nofollow'
+    return response
 
 
 @login_required
