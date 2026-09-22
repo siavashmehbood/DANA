@@ -329,3 +329,14 @@ class ShopFlowTests(TestCase):
         coupon.refresh_from_db(); self.assertEqual(coupon.used,1)
         self.client.get(reverse('payment_callback'),{'Authority':'COUPON-AUTH','Status':'NOK'})
         coupon.refresh_from_db(); self.assertEqual(coupon.used,0)
+
+
+    def test_subscription_renewal_ignores_future_row_when_no_current_membership(self):
+        plan=SubscriptionPlan.objects.create(name='Future Guard',slug='future-guard',price=0,duration_days=7)
+        future=Subscription.objects.create(user=self.user,plan=plan,status='cancelled',starts_at=timezone.now()+timedelta(days=3),expires_at=timezone.now()+timedelta(days=10))
+        response=self._subscribe(plan)
+        self.assertEqual(response.status_code,302)
+        active=Subscription.objects.get(user=self.user,status='active')
+        self.assertLessEqual(active.starts_at,timezone.now())
+        future.refresh_from_db()
+        self.assertEqual(future.status,'cancelled')
