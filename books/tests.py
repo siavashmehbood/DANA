@@ -208,3 +208,19 @@ class SubscriptionBookAccessTests(TestCase):
         response=self.client.get(reverse('book_detail',args=[self.book.slug]))
         self.assertFalse(response.context['has_access'])
         self.assertContains(response,reverse('subscriptions'))
+
+
+    def test_protected_media_disables_shared_caching(self):
+        import tempfile
+        from django.core.files.base import ContentFile
+        user=User.objects.create_user(username='media-cache-user',password='pass12345')
+        author=Author.objects.create(name='Media Cache Author')
+        book=Book.objects.create(name='Private media',slug='private-media-cache',author=author,status='published',visibility='private')
+        book.audio.save('private.mp3',ContentFile(b'audio-bytes'),save=True)
+        from shop.models import Entitlement
+        Entitlement.objects.create(user=user,book=book,source='purchase')
+        self.client.login(username='media-cache-user',password='pass12345')
+        response=self.client.get(reverse('book_secure_file',args=[book.pk,'audio']))
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response['Cache-Control'],'private, no-store')
+        self.assertEqual(response['X-Content-Type-Options'],'nosniff')
