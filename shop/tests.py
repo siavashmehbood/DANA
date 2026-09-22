@@ -351,3 +351,17 @@ class ShopFlowTests(TestCase):
         stale.refresh_from_db()
         self.assertEqual(stale.status,'expired')
         self.assertTrue(Subscription.objects.filter(user=self.user,plan=new,status='active').exists())
+
+
+    def test_switching_plan_does_not_destroy_remaining_paid_membership(self):
+        old=SubscriptionPlan.objects.create(name='Paid Current',slug='paid-current',price=100,duration_days=30)
+        new=SubscriptionPlan.objects.create(name='Other Plan',slug='other-plan',price=50,duration_days=30)
+        current=Subscription.objects.create(user=self.user,plan=old,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=20))
+        self.user.wallet_balance=Decimal('500')
+        self.user.save(update_fields=['wallet_balance'])
+        response=self._subscribe(new)
+        self.assertEqual(response.status_code,302)
+        current.refresh_from_db(); self.user.refresh_from_db()
+        self.assertEqual(current.status,'active')
+        self.assertFalse(Subscription.objects.filter(user=self.user,plan=new).exists())
+        self.assertEqual(self.user.wallet_balance,Decimal('500'))
