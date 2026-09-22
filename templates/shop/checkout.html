@@ -3,7 +3,7 @@
 {% block content %}
 <section class="section checkout-page">
   <div class="cart-head"><div><span class="shelf-label">مرحله پرداخت</span><h1>تکمیل سفارش</h1><p>تخفیف را وارد کن و روش پرداخت را انتخاب کن.</p></div></div>
-  <div class="steps"><b>۱ سبد خرید</b><b>۲ تخفیف و بررسی</b><b>۳ پرداخت</b></div>
+  <ol class="steps" aria-label="مراحل خرید"><li>۱ سبد خرید</li><li aria-current="step">۲ تخفیف و بررسی</li><li>۳ پرداخت</li></ol>
   <div class="checkout-layout">
     <form class="panel checkout-form" method="post">
       {% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ checkout_key }}">
@@ -12,7 +12,7 @@
       <button class="btn checkout-pay" name="action" value="pay" type="submit">پرداخت از کیف پول ←</button>
       <a class="btn secondary checkout-pay" href="{% url 'bank_checkout' %}">پرداخت بانکی امن ←</a>
     </form>
-    <aside class="panel cart-summary"><h2>خلاصه پرداخت</h2><div class="row"><span>مبلغ کالاها</span><b>{{ subtotal }} تومان</b></div><div class="row"><span>تخفیف</span><b>{{ discount }} تومان</b></div><div class="row"><span>مالیات ۱۰٪</span><b>{{ tax }} تومان</b></div><div class="cart-total"><span>مبلغ نهایی</span><strong>{{ total }} تومان</strong></div><small>پس از پرداخت موفق، کتاب‌ها به حساب شما اضافه می‌شوند.</small></aside>
+    <aside class="panel cart-summary" aria-labelledby="checkout-summary-title"><h2 id="checkout-summary-title">خلاصه پرداخت</h2><div class="row"><span>مبلغ کالاها</span><b>{{ subtotal }} تومان</b></div><div class="row"><span>تخفیف</span><b>{{ discount }} تومان</b></div><div class="row"><span>مالیات ۱۰٪</span><b>{{ tax }} تومان</b></div><div class="cart-total"><span>مبلغ نهایی</span><strong>{{ total }} تومان</strong></div><small>پس از پرداخت موفق، کتاب‌ها به حساب شما اضافه می‌شوند.</small></aside>
   </div>
 </section>
 {% endblock %}
