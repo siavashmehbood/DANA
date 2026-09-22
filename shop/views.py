@@ -251,6 +251,7 @@ def subscribe(request, slug):
     return redirect('subscriptions')
 
 
+@never_cache
 def subscriptions(request):
     if request.method == 'GET':
         request.session['subscription_activation_key']=secrets.token_urlsafe(24)
