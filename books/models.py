@@ -14,6 +14,8 @@ class Book(models.Model):
             raise ValidationError({'access_password':'برای کتاب رمزدار، رمز دسترسی الزامی است.'})
         if self.status == 'scheduled' and not self.publish_at:
             raise ValidationError({'publish_at':'برای انتشار زمان‌بندی‌شده، زمان انتشار الزامی است.'})
+        if self.visibility != 'password' and self.access_password:
+            raise ValidationError({'access_password':'رمز دسترسی فقط برای کتاب رمزدار مجاز است.'})
         if self.old_price and self.old_price < self.price:
             raise ValidationError({'old_price':'قیمت قبلی نمی‌تواند کمتر از قیمت فعلی باشد.'})
 
