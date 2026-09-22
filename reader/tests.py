@@ -100,3 +100,8 @@ class StudyFlowTests(TestCase):
         response=self.client.post(reverse('reader_note',args=[self.book.pk]),{'page':'999999999','text':'note'})
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.json()['page'],1000000)
+
+
+    def test_bookmark_get_is_not_allowed(self):
+        response=self.client.get(reverse('reader_bookmark',args=[self.book.pk]))
+        self.assertEqual(response.status_code,405)
