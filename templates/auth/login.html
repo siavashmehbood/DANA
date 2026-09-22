@@ -21,7 +21,7 @@
       <form method="post">{% csrf_token %}<input type="hidden" name="next" value="{{next_url}}"><input name="phone" inputmode="tel" placeholder="09xxxxxxxxx" required><label class="check"><input type="checkbox" name="terms" required> قوانین دانا را می‌پذیرم</label><button class="btn auth-btn" name="login_method" value="otp">ارسال کد ورود ←</button></form>
       <button type="button" class="switch-login" onclick="showPasswordLogin()">ورود با نام کاربری</button>
     </div>
-    <div id="recoveryPanel" class="login-panel" hidden><h3>بازیابی رمز عبور</h3><p>برای بازیابی، شماره موبایل حساب را وارد کنید.</p><input id="recoveryPhone" inputmode="tel" placeholder="09xxxxxxxxx"><button type="button" class="btn auth-btn" onclick="showPasswordLogin()">ادامه</button><button type="button" class="switch-login" onclick="showPasswordLogin()">بازگشت به ورود</button></div>
+    <div id="recoveryPanel" class="login-panel" hidden><h3>بازیابی دسترسی</h3><p>اگر شماره موبایل به حسابت متصل است، با کد یکبارمصرف وارد شو و سپس از پروفایل رمز جدید تنظیم کن.</p><button type="button" class="btn auth-btn" onclick="showPhoneLogin()">ورود با کد یکبارمصرف ←</button><button type="button" class="switch-login" onclick="showPasswordLogin()">بازگشت به ورود</button></div>
     <p class="auth-footer">ورود به دانا سریع، امن و ساده است.</p>
   </div>
 </section>
