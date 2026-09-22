@@ -94,3 +94,9 @@ class StudyFlowTests(TestCase):
         self.assertFalse(second.json()['created'])
         self.assertEqual(self.book.bookmark_set.filter(user=self.user,page=7).count(),1)
         self.assertEqual(self.book.bookmark_set.get(user=self.user,page=7).title,'جدید')
+
+
+    def test_note_page_is_bounded(self):
+        response=self.client.post(reverse('reader_note',args=[self.book.pk]),{'page':'999999999','text':'note'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json()['page'],1000000)
