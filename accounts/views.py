@@ -10,6 +10,7 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.db.models import Q
 from articles.models import Article
+from books.models import Book
 from shop.models import CartItem, Entitlement, Referral, Subscription
 from reader.models import ReadingProgress
 from .models import User, OTPCode, Device, UserSession
