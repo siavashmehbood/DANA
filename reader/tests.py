@@ -367,3 +367,12 @@ class VocabularySearchTests(TestCase):
         self.client.post(url,{'word':'كتاب'})
         self.client.post(url,{'word':'کتاب'})
         self.assertEqual(SavedWord.objects.filter(user=user).count(),1)
+
+
+    def test_vocabulary_hides_words_linked_to_unpublished_articles(self):
+        user=User.objects.create_user(username='private-vocab',password='pass12345')
+        article=__import__('articles.models',fromlist=['Article']).Article.objects.create(title='Private article',slug='private-article',published=False,abstract='text')
+        SavedWord.objects.create(user=user,word='secretword',normalized_word='secretword',article=article)
+        self.client.force_login(user)
+        response=self.client.get(reverse('reader_vocabulary'))
+        self.assertNotContains(response,'secretword')
