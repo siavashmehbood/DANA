@@ -304,3 +304,14 @@ class ShopFlowTests(TestCase):
         plan=SubscriptionPlan.objects.create(name='Disabled active state',slug='disabled-active-state',price=0,duration_days=30,active=False)
         sub=Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=1))
         self.assertFalse(sub.is_active)
+
+
+    def test_bank_callback_cannot_use_another_users_authority(self):
+        other=User.objects.create_user(username='other-bank-user',password='pass12345')
+        order=Order.objects.create(user=other,subtotal=100,discount=0,tax=0,total=100,status='pending',tracking_code='998877')
+        Payment.objects.create(user=other,order=order,provider='zarinpal',amount=100,status='pending',authority='private-authority',idempotency_key='private-payment')
+        self.client.force_login(self.user)
+        response=self.client.get(reverse('payment_callback'),{'Authority':'private-authority','Status':'OK'})
+        self.assertEqual(response.status_code,302)
+        order.refresh_from_db()
+        self.assertEqual(order.status,'pending')
