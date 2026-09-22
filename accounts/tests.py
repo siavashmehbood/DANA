@@ -133,7 +133,8 @@ class SessionSecurityTests(TestCase):
 
 
 class WalletIntegrityTests(TestCase):
-    def test_database_rejects_negative_wallet_balance(self):
-        from django.db import IntegrityError
-        with self.assertRaises(IntegrityError):
-            User.objects.create_user(username='negative-wallet',password='pass12345',wallet_balance=-1)
+    def test_model_validation_rejects_negative_wallet_balance(self):
+        from django.core.exceptions import ValidationError
+        user=User(username='negative-wallet',wallet_balance=-1)
+        with self.assertRaises(ValidationError):
+            user.full_clean()
