@@ -10,7 +10,7 @@
     {% for item in words %}
     <article class="vocabulary-item">
       <div><h3>{{ item.word }}</h3><p class="muted">{% if item.meaning_fa %}{{ item.meaning_fa }}{% else %}معنی فارسی هنوز ثبت نشده است{% endif %}</p>{% if item.article %}<a href="{% url 'article_detail' item.article.slug %}">مطالعه منبع</a>{% endif %}</div>
-      <form method="post" action="{% url 'reader_delete_word' item.pk %}">{% csrf_token %}<button class="btn danger" type="submit">حذف</button></form>
+      <form method="post" action="{% url 'reader_delete_word' item.pk %}" onsubmit="return confirm('این واژه از فهرست حذف شود؟')">{% csrf_token %}<button class="btn danger" type="submit">حذف</button></form>
     </article>
     {% endfor %}
   </div>
