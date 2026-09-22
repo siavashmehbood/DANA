@@ -9,6 +9,8 @@ from .models import XPEvent, PointLedger, UserStreak
 
 @transaction.atomic
 def add_xp(user, amount, reason, source=''):
+    from accounts.models import User
+    user = User.objects.select_for_update().get(pk=user.pk)
     amount = int(amount)
     if not amount:
         return
