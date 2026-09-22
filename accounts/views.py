@@ -105,8 +105,10 @@ def dashboard(request):
     if latest_text or latest_audio:
         if latest_audio and (not latest_text or latest_audio.updated_at > latest_text.updated_at):
             continue_item={'book':latest_audio.book,'kind':'audio'}
-        else:
-            continue_item={'book':latest_text.book,'kind':'text'}
+        elif latest_text:
+            has_text=bool(latest_text.book.pdf) or latest_text.book.chapters.exclude(text='').exists()
+            has_audio=bool(latest_text.book.audio) or latest_text.book.chapters.exclude(audio='').exists()
+            continue_item={'book':latest_text.book,'kind':'text' if has_text or not has_audio else 'audio'}
     return render(request,'dashboard.html',{'books_count':len(valid_book_ids) if subscription else owned_count,'article_count':Article.objects.filter(published=True).count(),'vocabulary_count':user.saved_words.count(),'cart_count':CartItem.objects.filter(user=user).count(),'latest_articles':Article.objects.filter(published=True).order_by('-created_at')[:5],'owned_books':owned[:8],'reading_progress':progress_rows,'continue_item':continue_item})
 
 @login_required
