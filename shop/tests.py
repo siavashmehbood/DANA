@@ -469,3 +469,16 @@ class ShopFlowTests(TestCase):
         second=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key},follow=True)
         self.assertContains(second,'درخواست فعال‌سازی نامعتبر یا تکراری است')
         self.assertFalse(Subscription.objects.filter(user=self.user,plan=plan).exists())
+
+
+    def test_paid_subscription_renewal_uses_unique_wallet_reference(self):
+        plan=SubscriptionPlan.objects.create(name='Renew Paid',slug='renew-paid',price=100,duration_days=30)
+        self.user.wallet_balance=Decimal('300')
+        self.user.save(update_fields=['wallet_balance'])
+        self._subscribe(plan)
+        self._subscribe(plan)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.wallet_balance,Decimal('100'))
+        refs=list(WalletTransaction.objects.filter(user=self.user,reason='Subscription purchase').values_list('reference',flat=True))
+        self.assertEqual(len(refs),2)
+        self.assertEqual(len(set(refs)),2)
