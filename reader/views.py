@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.db import models, transaction
 from books.models import Book
 from shop.models import Entitlement, Subscription
-from .models import ReadingProgress, AudioProgress, Bookmark, Highlight, Note, SavedWord, Review, ProblemReport
+from .models import ReadingProgress, ReadingActivity, AudioProgress, Bookmark, Highlight, Note, SavedWord, Review, ProblemReport
 from gamification.services import record_study_activity
 
 
@@ -86,7 +86,8 @@ def progress(request, pk):
         saved=ReadingProgress.objects.select_for_update().filter(user=request.user,book=book).first()
         if saved is None:
             saved=ReadingProgress.objects.create(user=request.user,book=book)
-        added_study_time = seconds > saved.seconds or audio_seconds > saved.audio_seconds
+        reading_delta=max(0,seconds-saved.seconds)
+        added_study_time = reading_delta > 0 or audio_seconds > saved.audio_seconds
         saved.progress=max(float(saved.progress),value)
         saved.seconds=max(saved.seconds,seconds); saved.audio_seconds=max(saved.audio_seconds,audio_seconds)
         # Page/chapter are resume cursors, not achievements. Persist the reader's
@@ -101,6 +102,8 @@ def progress(request, pk):
         if chapter is not None and saved.current_chapter_id == chapter.id:
             fields.append('current_chapter')
         saved.save(update_fields=fields)
+        if reading_delta:
+            ReadingActivity.objects.create(user=request.user,book=book,seconds=reading_delta)
     if added_study_time:
         record_study_activity(request.user)
     response=JsonResponse({'ok':True,'progress':float(saved.progress),'page':saved.current_page,'audio_seconds':saved.audio_seconds})
