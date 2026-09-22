@@ -22,7 +22,7 @@ class EventApiTests(TestCase):
         self.assertFalse(Event.objects.exists())
 
     def test_event_rejects_non_object_metadata(self):
-        response = self.client.post(self.url, data=json.dumps({'name': 'bad', 'metadata': []}), content_type='application/json')
+        response = self.client.post(self.url, data=json.dumps({'name': 'reader_opened', 'metadata': []}), content_type='application/json')
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'metadata_object_required')
         self.assertFalse(Event.objects.exists())
