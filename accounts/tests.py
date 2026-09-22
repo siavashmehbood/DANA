@@ -397,3 +397,20 @@ class WeeklyReadingStatsTests(TestCase):
         self.assertEqual(response.context['weekly_minutes_done'],10)
         self.assertEqual(response.context['total_reading_minutes'],120)
 
+
+
+class DashboardLatestActivityTests(TestCase):
+    def test_newer_audio_activity_drives_dashboard_continue_action(self):
+        from reader.models import AudioProgress, ReadingProgress
+        user=User.objects.create_user(username='dash-audio',password='pass12345')
+        author=Author.objects.create(name='Dash Author')
+        text_book=Book.objects.create(name='Text Book',slug='dash-text',author=author,status='published',pdf=SimpleUploadedFile('text.pdf',b'%PDF-1.4',content_type='application/pdf'))
+        audio_book=Book.objects.create(name='Audio Book',slug='dash-audio',author=author,status='published',audio=SimpleUploadedFile('audio.mp3',b'ID3',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=text_book)
+        Entitlement.objects.create(user=user,book=audio_book)
+        ReadingProgress.objects.create(user=user,book=text_book,progress=40,current_page=4)
+        AudioProgress.objects.create(user=user,book=audio_book,position_seconds=90,duration_seconds=300)
+        self.client.force_login(user)
+        response=self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['continue_item']['book'],audio_book)
+        self.assertEqual(response.context['continue_item']['kind'],'audio')
