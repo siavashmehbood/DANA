@@ -6,4 +6,5 @@ class Migration(migrations.Migration):
         migrations.AlterUniqueTogether(name='readingprogress',unique_together=set()),
         migrations.AddConstraint(model_name='readingprogress',constraint=models.UniqueConstraint(fields=('user','book'),name='unique_reading_progress')),
         migrations.AddIndex(model_name='readingprogress',index=models.Index(fields=['user','-updated_at'],name='reader_progress_recent_idx')),
+        migrations.AddIndex(model_name='note',index=models.Index(fields=['user','book','-created_at'],name='reader_note_recent_idx')),
     ]
