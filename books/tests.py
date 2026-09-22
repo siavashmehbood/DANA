@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.core.files.uploadedfile import SimpleUploadedFile
 from accounts.models import User
 from shop.models import Entitlement, SubscriptionPlan, Subscription
-from .models import Author, Book, Chapter
+from .models import Author, Book, Chapter, Category
 from reader.models import Review
 from analytics.models import Event
 
