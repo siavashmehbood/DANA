@@ -508,3 +508,19 @@ class NativeChapterReaderTests(TestCase):
         response=self.client.get(reverse('reader',args=[book.pk]))
         self.assertNotContains(response,'خالی')
         self.assertContains(response,'دارای متن')
+
+
+    def test_audio_progress_does_not_move_backwards(self):
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        url=reverse('audio_progress',args=[self.book.pk])
+        self.client.post(url,{'chapter_id':self.chapter.pk,'position':'90','duration':'300'})
+        self.client.post(url,{'chapter_id':self.chapter.pk,'position':'20','duration':'300'})
+        item=AudioProgress.objects.get(user=self.user,book=self.book,chapter=self.chapter)
+        self.assertEqual(item.position_seconds,90)
+
+    def test_completed_audio_progress_stays_completed(self):
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        url=reverse('audio_progress',args=[self.book.pk])
+        self.client.post(url,{'chapter_id':self.chapter.pk,'position':'100','duration':'100'})
+        self.client.post(url,{'chapter_id':self.chapter.pk,'position':'10','duration':'100'})
+        self.assertTrue(AudioProgress.objects.get(user=self.user,book=self.book,chapter=self.chapter).completed)
