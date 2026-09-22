@@ -590,3 +590,18 @@ class ReaderResumeCursorTests(TestCase):
         self.assertEqual(saved.current_page,1)
         self.assertEqual(float(saved.progress),80)
         self.assertEqual(saved.seconds,120)
+
+
+class ExpiredSubscriptionRecoveryTests(TestCase):
+    def test_expired_subscription_reader_redirects_to_recovery_detail(self):
+        user=User.objects.create_user(username='expired-reader-recovery',password='pass12345')
+        author=Author.objects.create(name='Expired Recovery Author')
+        book=Book.objects.create(name='Expired Recovery Book',slug='expired-recovery-book',author=author,status='published',visibility='public',subscription_included=True,price=100)
+        plan=SubscriptionPlan.objects.create(name='Expired Recovery Plan',slug='expired-recovery-plan',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=31),expires_at=timezone.now()-timedelta(days=1))
+        self.client.force_login(user)
+        response=self.client.get(reverse('reader',args=[book.pk]))
+        self.assertRedirects(response,reverse('book_detail',args=[book.slug]))
+        detail=self.client.get(reverse('book_detail',args=[book.slug]))
+        self.assertFalse(detail.context['has_access'])
+        self.assertContains(detail,'بررسی اشتراک')
