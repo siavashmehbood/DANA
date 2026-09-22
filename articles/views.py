@@ -26,6 +26,7 @@ from .translation import (
 
 def listing(request):
     query = request.GET.get('q', '').strip()[:200]
+    query = ' '.join(query.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split())
     category = request.GET.get('category', '').strip()
     sort = request.GET.get('sort', 'top').strip()
     saved_only = request.GET.get('saved') == '1' and request.user.is_authenticated
@@ -36,7 +37,7 @@ def listing(request):
     if saved_only:
         articles = articles.filter(library_items__user=request.user)
     if query:
-        variants={query,query.replace('ي','ی').replace('ك','ک'),query.replace('ی','ي').replace('ک','ك'),query.replace('\u200c',' ')}
+        variants={query,query.replace('ی','ي').replace('ک','ك')}
         search_q=Q()
         for term in variants:
             search_q |= Q(title__icontains=term)|Q(title_fa__icontains=term)|Q(authors__icontains=term)|Q(abstract__icontains=term)|Q(abstract_fa__icontains=term)|Q(full_text__icontains=term)|Q(full_text_fa__icontains=term)|Q(journal__icontains=term)|Q(doi__icontains=term)
