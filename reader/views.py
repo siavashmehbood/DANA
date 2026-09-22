@@ -49,7 +49,7 @@ def progress(request, pk):
     saved.progress=max(saved.progress,value); saved.current_page=max(saved.current_page,page)
     saved.seconds=max(saved.seconds,seconds); saved.audio_seconds=max(saved.audio_seconds,audio_seconds)
     if chapter is not None and (saved.current_chapter_id is None or chapter.order >= saved.current_chapter.order): saved.current_chapter = chapter
-    saved.save()
+    saved.save(update_fields=['progress','current_page','seconds','audio_seconds','current_chapter','updated_at'])
     if added_study_time:
         record_study_activity(request.user)
     return JsonResponse({'ok':True,'progress':float(saved.progress),'page':saved.current_page,'audio_seconds':saved.audio_seconds})
