@@ -149,6 +149,7 @@ def secure_file(request, pk, kind, chapter_id=None):
     response['Cache-Control'] = 'private, no-store'
     response['Vary'] = 'Cookie'
     response['X-Content-Type-Options'] = 'nosniff'
+    response['Cross-Origin-Resource-Policy'] = 'same-origin'
     response['X-Robots-Tag'] = 'noindex, nofollow'
     response['Referrer-Policy'] = 'same-origin'
     if kind == 'pdf':
