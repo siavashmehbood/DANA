@@ -92,6 +92,7 @@ def dashboard(request):
     subscription=Subscription.objects.filter(user=user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__grants_catalog_access=True).select_related('plan').first()
     if subscription:
         valid_book_ids += list(Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),subscription_included=True).values_list('id',flat=True))
+    valid_book_ids += list(Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public',price=0).values_list('id',flat=True))
     valid_book_ids=list(set(valid_book_ids))
     text_progress=list(ReadingProgress.objects.filter(user=user,book_id__in=valid_book_ids,progress__gt=0).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author').prefetch_related('book__chapters').order_by('-updated_at')[:8])
     audio_progress=list(AudioProgress.objects.filter(user=user,book_id__in=valid_book_ids,position_seconds__gt=0).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author').prefetch_related('book__chapters').order_by('-updated_at')[:8])
