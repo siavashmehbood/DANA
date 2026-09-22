@@ -226,3 +226,11 @@ class ArticleFallbackTests(TestCase):
         self.assertEqual(article.title_fa,'ترجمه سالم قبلی')
         self.assertEqual(article.translation_version,1)
         self.assertEqual(article.translation_status,'failed')
+
+
+class ArticleDownloadSecurityTests(TestCase):
+    def test_local_pdf_urls_are_rejected(self):
+        from .translation import _safe_remote_url
+        self.assertFalse(_safe_remote_url('http://127.0.0.1/private.pdf'))
+        self.assertFalse(_safe_remote_url('http://localhost/private.pdf'))
+        self.assertFalse(_safe_remote_url('file:///etc/passwd'))
