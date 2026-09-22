@@ -468,3 +468,19 @@ class AudiobookExperienceTests(TestCase):
         self.client.post(url,{'position':'20','duration':'100'})
         self.assertEqual(AudioProgress.objects.filter(user=self.user,book=self.book,chapter__isnull=True).count(),1)
         self.assertEqual(AudioProgress.objects.get(user=self.user,book=self.book,chapter__isnull=True).position_seconds,20)
+
+
+    def test_completed_whole_audiobook_marks_book_completed(self):
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        self.client.post(reverse('audio_progress',args=[self.book.pk]),{'position':'100','duration':'100'})
+        progress=ReadingProgress.objects.get(user=self.user,book=self.book)
+        self.assertEqual(float(progress.progress),100.0)
+
+    def test_all_audio_chapters_completed_marks_book_completed(self):
+        second=Chapter.objects.create(book=self.book,title='فصل دو',order=2,audio=SimpleUploadedFile('chapter2.mp3',b'ID3chapter2',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        url=reverse('audio_progress',args=[self.book.pk])
+        self.client.post(url,{'chapter_id':self.chapter.pk,'position':'100','duration':'100'})
+        self.assertLess(float(ReadingProgress.objects.get(user=self.user,book=self.book).progress),100)
+        self.client.post(url,{'chapter_id':second.pk,'position':'100','duration':'100'})
+        self.assertEqual(float(ReadingProgress.objects.get(user=self.user,book=self.book).progress),100.0)
