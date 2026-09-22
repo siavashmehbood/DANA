@@ -29,7 +29,7 @@ def home(request):
         readable_progress=Q(book_id__in=valid_books)|Q(book__visibility='public',book__price=0)
         if subscription_access:
             readable_progress |= Q(book__subscription_included=True)
-        continue_reading=ReadingProgress.objects.filter(readable_progress,user=request.user,book__status='published',progress__gt=0,progress__lt=100).select_related('book__author').order_by('-updated_at')[:6]
+        continue_reading=ReadingProgress.objects.filter(readable_progress,user=request.user,progress__gt=0,progress__lt=100).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author').order_by('-updated_at')[:6]
         owned_categories=Entitlement.objects.filter(user=request.user,book__category__isnull=False).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book__category_id',flat=True)
         owned_ids=Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True)
         if subscription_access:
