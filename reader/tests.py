@@ -127,3 +127,12 @@ class StudyFlowTests(TestCase):
         ledger_count=PointLedger.objects.filter(user=self.user).count()
         self.client.post(url,{'progress':'25','seconds':'120'})
         self.assertEqual(PointLedger.objects.filter(user=self.user).count(),ledger_count)
+
+
+    def test_stale_progress_update_does_not_move_reader_backwards(self):
+        url=reverse('reader_progress',args=[self.book.pk])
+        self.client.post(url,{'progress':'70','page':'70'})
+        self.client.post(url,{'progress':'20','page':'20'})
+        saved=ReadingProgress.objects.get(user=self.user,book=self.book)
+        self.assertEqual(float(saved.progress),70.0)
+        self.assertEqual(saved.current_page,70)
