@@ -58,10 +58,15 @@ def protected_book_pdf(request, pk):
             return HttpResponse('Access denied', status=403)
     if not book.pdf or not book.is_published:
         raise Http404
+    try:
+        size=book.pdf.size
+    except (OSError,ValueError):
+        raise Http404
     response = FileResponse(book.pdf.open('rb'), content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="book-{book.pk}.pdf"'
     response['X-Content-Type-Options'] = 'nosniff'
     response['Cache-Control'] = 'private, no-store'
+    response['Content-Length'] = str(size)
     return response
 
 
