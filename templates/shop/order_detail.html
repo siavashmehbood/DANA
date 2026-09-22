@@ -13,7 +13,7 @@
 </div>
 <h2>کتاب‌ها</h2>
 {% for item in order.items.all %}
-<div class="card" style="margin:8px 0;padding:12px"><a href="{% url 'book_detail' item.book.slug %}"><b>{{ item.book.name }}</b></a> — {{ item.price }} تومان {% if order.status == 'paid' or order.status == 'gift' %}<a class="btn small" href="{% url 'reader' item.book_id %}">مطالعه</a>{% endif %}</div>
+<div class="card" style="margin:8px 0;padding:12px"><a href="{% url 'book_detail' item.book.slug %}"><b>{{ item.book.name }}</b></a> — {{ item.price }} تومان {% if order.status == 'paid' or order.status == 'gift' %}<a class="btn small" href="{% url 'book_detail' item.book.slug %}">باز کردن کتاب</a>{% endif %}</div>
 {% endfor %}
 <a class="btn" href="/shop/wallet/">تاریخچه کیف پول</a> <a class="btn secondary" href="{% url 'orders' %}">همه سفارش‌ها</a>
 </div>
