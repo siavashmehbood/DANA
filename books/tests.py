@@ -358,3 +358,12 @@ class BookValidationTests(TestCase):
         Book.objects.create(name='Hidden Password Detail',slug='hidden-password-detail',author=author,status='published',visibility='password',access_password='secret')
         response=self.client.get(reverse('book_detail',args=['hidden-password-detail']))
         self.assertEqual(response.status_code,404)
+
+
+    def test_related_recommendations_exclude_password_books(self):
+        author=Author.objects.create(name='Related Author')
+        category=Category.objects.create(name='Related Category',slug='related-category')
+        main=Book.objects.create(name='Main Public',slug='main-public',author=author,category=category,status='published',visibility='public')
+        Book.objects.create(name='Locked Related',slug='locked-related',author=author,category=category,status='published',visibility='password',access_password='secret')
+        response=self.client.get(reverse('book_detail',args=[main.slug]))
+        self.assertNotContains(response,'Locked Related')
