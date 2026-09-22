@@ -167,7 +167,12 @@ def payment_callback(request):
     result = gateway().verify(payment.order)
     if result.ok:
         with transaction.atomic():
-            payment = Payment.objects.select_for_update().get(pk=payment.pk)
+            payment = Payment.objects.select_for_update().select_related('order').get(pk=payment.pk)
+            if payment.status == 'successful':
+                return render(request, 'shop/success.html', {'order': payment.order})
+            if payment.status != 'pending':
+                messages.error(request, 'این تراکنش قبلاً نهایی شده است.')
+                return redirect('cart')
             payment.status = 'successful'
             payment.reference_id = result.authority
             payment.callback_payload = {**payment.callback_payload, 'ref_id': result.authority}
