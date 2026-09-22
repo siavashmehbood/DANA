@@ -19,6 +19,8 @@ def event(request):
     if count >= 60:
         return JsonResponse({'ok': False, 'error': 'rate_limited'}, status=429)
     cache.set(key, count + 1, timeout=60)
+    if len(request.body) > 20000:
+        return JsonResponse({'ok': False, 'error': 'payload_too_large'}, status=413)
     try:
         data = json.loads(request.body or '{}')
     except (TypeError, ValueError):
