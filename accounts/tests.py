@@ -331,6 +331,7 @@ class RecommendationColdStartTests(TestCase):
 
 class ProfileTruthfulStatsTests(TestCase):
     def test_profile_does_not_report_audio_cursor_as_listening_time(self):
+        from reader.models import AudioProgress
         user=User.objects.create_user(username='truthful-stats',password='pass12345')
         author=Author.objects.create(name='Stats Author')
         book=Book.objects.create(name='Stats Audio',slug='stats-audio',author=author,status='published')
