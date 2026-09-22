@@ -145,7 +145,7 @@ def pdf_reader(request, slug):
 @login_required
 @never_cache
 def research_library(request):
-    items = ArticleLibraryItem.objects.filter(user=request.user).select_related('article', 'article__category')
+    items = ArticleLibraryItem.objects.filter(user=request.user, article__published=True).select_related('article', 'article__category')
     status = request.GET.get('status', '').strip()
     favorite = request.GET.get('favorite') == '1'
     q = request.GET.get('q', '').strip()[:200]
@@ -158,10 +158,10 @@ def research_library(request):
         items = items.filter(Q(article__title__icontains=q) | Q(article__title_fa__icontains=q) | Q(article__authors__icontains=q) | Q(article__journal__icontains=q))
     annotations = ArticleAnnotation.objects.filter(user=request.user, article__published=True).select_related('article')
     stats = {
-        'total': ArticleLibraryItem.objects.filter(user=request.user).count(),
-        'reading': ArticleLibraryItem.objects.filter(user=request.user, status='reading').count(),
-        'read': ArticleLibraryItem.objects.filter(user=request.user, status='read').count(),
-        'favorites': ArticleLibraryItem.objects.filter(user=request.user, favorite=True).count(),
+        'total': ArticleLibraryItem.objects.filter(user=request.user, article__published=True).count(),
+        'reading': ArticleLibraryItem.objects.filter(user=request.user, article__published=True, status='reading').count(),
+        'read': ArticleLibraryItem.objects.filter(user=request.user, article__published=True, status='read').count(),
+        'favorites': ArticleLibraryItem.objects.filter(user=request.user, article__published=True, favorite=True).count(),
     }
     page_obj = Paginator(items, 30).get_page(request.GET.get('page', 1))
     return render(request, 'articles/library.html', {'items': page_obj.object_list, 'page_obj': page_obj, 'annotations': annotations[:40], 'stats': stats, 'status': status, 'favorite': favorite, 'query': q})
