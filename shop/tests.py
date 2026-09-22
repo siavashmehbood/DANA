@@ -402,3 +402,8 @@ class ShopFlowTests(TestCase):
         self.assertEqual(response.status_code,302)
         self.assertIn('/login/',response.url)
         self.assertFalse(Subscription.objects.filter(plan=plan).exists())
+
+
+    def test_subscription_catalog_is_private_cache(self):
+        response=self.client.get(reverse('subscriptions'))
+        self.assertIn('no-cache',response.headers.get('Cache-Control',''))
