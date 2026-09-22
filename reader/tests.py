@@ -426,6 +426,12 @@ class AudiobookExperienceTests(TestCase):
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
         self.assertEqual(self.client.get(reverse('audio_player',args=[self.book.pk])).status_code,200)
 
+    def test_audio_only_player_does_not_offer_text_reader_switch(self):
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        response=self.client.get(reverse('audio_player',args=[self.book.pk]))
+        self.assertEqual(response.status_code,200)
+        self.assertNotContains(response,'نسخه متنی / Reader')
+
     def test_secure_audio_denies_cross_book_access(self):
         other=Book.objects.create(name='Other Audio',slug='other-audio',author=self.book.author,status='published',visibility='private')
         foreign=Chapter.objects.create(book=other,title='Foreign',order=1,audio=SimpleUploadedFile('foreign.mp3',b'ID3foreign',content_type='audio/mpeg'))
