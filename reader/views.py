@@ -268,9 +268,7 @@ def audio_player(request, pk):
     if not book.is_published:
         return HttpResponseForbidden('کتاب هنوز منتشر نشده است.')
     if not _has_access(request.user,book):
-        response=redirect('book_detail',slug=book.slug)
-        response['Cache-Control']='private, no-store'
-        return response
+        return HttpResponseForbidden('برای شنیدن این کتاب دسترسی فعال لازم است.')
     chapters=list(book.chapters.exclude(audio='').order_by('order'))
     has_book_audio=bool(book.audio)
     if not chapters and not has_book_audio:
