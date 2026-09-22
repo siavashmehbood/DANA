@@ -14,7 +14,7 @@ ALLOWED_EVENT_NAMES = {
 @login_required
 @require_POST
 def event(request):
-    key = f'dana-api-event:{request.user.pk}:{request.META.get("REMOTE_ADDR", "unknown")}'
+    key = f'dana-api-event:{request.user.pk}'
     count = cache.get(key, 0)
     if count >= 60:
         return JsonResponse({'ok': False, 'error': 'rate_limited'}, status=429)
