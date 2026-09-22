@@ -143,12 +143,17 @@ def profile(request):
     streak=UserStreak.objects.filter(user=request.user).first()
     badges=UserBadge.objects.filter(user=request.user,badge__active=True).select_related('badge').order_by('-earned_at')[:8]
     missions=UserMission.objects.filter(user=request.user,mission__active=True).select_related('mission').order_by('-completed_at','-id')[:6]
-    recent_progress=ReadingProgress.objects.filter(user=request.user).select_related('book__author').order_by('-updated_at')[:6]
+    recent_progress=list(ReadingProgress.objects.filter(user=request.user).select_related('book__author').prefetch_related('book__chapters').order_by('-updated_at')[:6])
+    recent_progress_rows=[]
+    for item in recent_progress:
+        has_text=bool(item.book.pdf) or any(bool(ch.text and ch.text.strip()) for ch in item.book.chapters.all())
+        has_audio=bool(item.book.audio) or any(bool(ch.audio) for ch in item.book.chapters.all())
+        recent_progress_rows.append({'progress':item,'book':item.book,'has_text':has_text,'has_audio':has_audio})
     recent_audio=AudioProgress.objects.filter(user=request.user).select_related('book__author','chapter').order_by('-updated_at')[:6]
     in_progress_count=ReadingProgress.objects.filter(user=request.user,progress__gt=0,progress__lt=100).values('book_id').distinct().count()
     weekly_minutes_done=min(goal.weekly_minutes,weekly_seconds//60)
     weekly_goal_percent=min(100,round((weekly_minutes_done/max(1,goal.weekly_minutes))*100))
-    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':weekly_minutes_done,'weekly_goal_percent':weekly_goal_percent,'completed_books':completed_books,'in_progress_count':in_progress_count,'total_reading_minutes':total_reading_seconds//60,'streak':streak,'badges':badges,'missions':missions,'recent_progress':recent_progress,'recent_audio':recent_audio,'active_subscription':active_subscription})
+    return render(request,'profile.html',{'login_sessions':sessions,'reading_goal':goal,'weekly_minutes_done':weekly_minutes_done,'weekly_goal_percent':weekly_goal_percent,'completed_books':completed_books,'in_progress_count':in_progress_count,'total_reading_minutes':total_reading_seconds//60,'streak':streak,'badges':badges,'missions':missions,'recent_progress':recent_progress_rows,'recent_audio':recent_audio,'active_subscription':active_subscription})
 
 @login_required
 def logout_others(request):
