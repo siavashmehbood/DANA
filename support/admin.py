@@ -5,7 +5,8 @@ class TicketMessageInline(admin.TabularInline):
     model=TicketMessage
     extra=0
     fields=('user','body','created_at')
-    readonly_fields=('created_at',)
+    readonly_fields=('user','body','created_at')
+    can_delete=False
     list_per_page=50
     autocomplete_fields=('user',)
 @admin.register(Ticket)
@@ -16,7 +17,7 @@ class TicketAdmin(ModelAdmin):
     autocomplete_fields=('user','assigned_to')
     list_editable=('status','priority')
     list_per_page=50
-    readonly_fields=('created_at','updated_at')
+    readonly_fields=('user','subject','body','created_at','updated_at')
     date_hierarchy='created_at'
     inlines=(TicketMessageInline,)
 @admin.register(TicketMessage)
@@ -24,4 +25,8 @@ class TicketMessageAdmin(ModelAdmin):
     list_display=('ticket','user','created_at')
     search_fields=('ticket__subject','user__username','user__phone','body')
     autocomplete_fields=('ticket','user')
-    readonly_fields=('created_at',)
+    readonly_fields=('ticket','user','body','created_at')
+    def has_add_permission(self, request):
+        return False
+    def has_delete_permission(self, request, obj=None):
+        return False
