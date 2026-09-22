@@ -200,5 +200,7 @@ def library(request):
     elif sort=='progress': rows.sort(key=effective_progress,reverse=True)
     visible_count=len(rows)
     preferred_categories={book.category_id for book in books if book.category_id}
+    if not preferred_categories:
+        preferred_categories=set(ReadingProgress.objects.filter(user=user,book__category__isnull=False).values_list('book__category_id',flat=True)[:20])
     recommended_books=Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public',category_id__in=preferred_categories).exclude(pk__in=book_ids).select_related('author','category').annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:6]
     return render(request,'library.html',{'library_rows':rows,'state':state,'kind':kind,'source':source,'sort':sort,'library_count':len(books),'visible_count':visible_count,'active_subscription':active_subscription,'recommended_books':recommended_books})
