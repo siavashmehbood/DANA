@@ -100,7 +100,7 @@ class LibraryFilterTests(TestCase):
     def test_library_excludes_catalog_for_expired_subscription(self):
         user=User.objects.create_user(username='expired-subscriber-library',password='pass12345')
         author=Author.objects.create(name='Expired Subscription Author')
-        Book.objects.create(name='Expired Subscription Book',slug='expired-subscription-book',author=author,status='published')
+        Book.objects.create(name='Expired Subscription Book',slug='expired-subscription-book',author=author,status='published',subscription_included=True)
         plan=SubscriptionPlan.objects.create(name='Expired Catalog',slug='expired-catalog-library',price=100,duration_days=30,grants_catalog_access=True)
         Subscription.objects.create(user=user,plan=plan,status='expired',starts_at=timezone.now()-timedelta(days=31),expires_at=timezone.now()-timedelta(days=1))
         self.client.force_login(user)
