@@ -63,3 +63,9 @@ class EventApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Event.objects.count(), 2)
         self.assertTrue(all(event.user_id == self.user.id for event in Event.objects.all()))
+
+
+    def test_event_rejects_oversized_metadata_field(self):
+        response = self.client.post(self.url, data=json.dumps({'name': 'book_viewed', 'metadata': {'note': 'x' * 2001}}), content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'metadata_field_too_large')
