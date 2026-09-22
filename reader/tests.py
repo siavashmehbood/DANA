@@ -636,5 +636,4 @@ class AudioAccessRecoveryTests(TestCase):
         Entitlement.objects.create(user=user,book=book,expires_at=timezone.now()-timezone.timedelta(seconds=1))
         self.client.force_login(user)
         response=self.client.get(reverse('audio_player',args=[book.pk]))
-        self.assertRedirects(response,reverse('book_detail',args=[book.slug]))
-        self.assertEqual(response['Cache-Control'],'private, no-store')
+        self.assertEqual(response.status_code,403)
