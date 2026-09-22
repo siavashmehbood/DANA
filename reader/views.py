@@ -83,7 +83,9 @@ def progress(request, pk):
         saved.save(update_fields=fields)
     if added_study_time:
         record_study_activity(request.user)
-    return JsonResponse({'ok':True,'progress':float(saved.progress),'page':saved.current_page,'audio_seconds':saved.audio_seconds})
+    response=JsonResponse({'ok':True,'progress':float(saved.progress),'page':saved.current_page,'audio_seconds':saved.audio_seconds})
+    response['Cache-Control']='no-store'
+    return response
 
 
 @login_required
