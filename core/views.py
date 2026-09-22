@@ -68,6 +68,7 @@ def protected_book_pdf(request, pk):
         raise Http404
     response = FileResponse(book.pdf.open('rb'), content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="book-{book.pk}.pdf"'
+    response['Accept-Ranges'] = 'none'
     response['X-Content-Type-Options'] = 'nosniff'
     response['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'self'; sandbox"
     response['Cache-Control'] = 'private, no-store'
