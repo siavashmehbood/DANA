@@ -176,3 +176,17 @@ class RecommendationTests(TestCase):
         response=self.client.get(reverse('home'))
         self.assertIn(candidate,list(response.context['recommendations']))
         self.assertIn(expired,list(response.context['recommendations']))
+
+
+    def test_protected_pdf_sets_private_security_headers(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        user=User.objects.create_user(username='pdf-header-user',password='pass12345')
+        author=Author.objects.create(name='PDF Header Author')
+        book=Book.objects.create(name='PDF Header',slug='pdf-header',author=author,status='published',visibility='private',pdf=SimpleUploadedFile('sample.pdf',b'%PDF-1.4 test',content_type='application/pdf'))
+        Entitlement.objects.create(user=user,book=book,source='admin')
+        self.client.force_login(user)
+        response=self.client.get(reverse('protected_book_pdf',args=[book.pk]))
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response['Cache-Control'],'private, no-store')
+        self.assertEqual(response['X-Content-Type-Options'],'nosniff')
+        self.assertIn("frame-ancestors 'self'",response['Content-Security-Policy'])
