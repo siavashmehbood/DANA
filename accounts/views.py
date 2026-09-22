@@ -225,6 +225,8 @@ def library(request):
         latest_kind=None
         if progress or audio_progress:
             latest_kind='audio' if audio_progress and (not progress or audio_progress.updated_at > progress.updated_at) else 'text'
+            if latest_kind=='text' and not has_text and has_audio:
+                latest_kind='audio'
         rows.append({'book':book,'progress':progress,'audio_progress':audio_progress,'latest_kind':latest_kind,'has_audio':has_audio,'has_text':has_text,'source':'purchased' if book.id in entitled_ids else 'subscription'})
     state=request.GET.get('state','all')
     kind=request.GET.get('kind','all')
@@ -247,7 +249,7 @@ def library(request):
     if sort=='title': rows.sort(key=lambda row: row['book'].name)
     elif sort=='progress': rows.sort(key=effective_progress,reverse=True)
     else:
-        rows.sort(key=lambda row: (row['audio_progress'].updated_at if row['latest_kind']=='audio' and row['audio_progress'] else row['progress'].updated_at if row['progress'] else timezone.make_aware(datetime.min)),reverse=True)
+        rows.sort(key=lambda row: (row['audio_progress'].updated_at if row['latest_kind']=='audio' and row['audio_progress'] else row['progress'].updated_at if row['progress'] else timezone.make_aware(datetime(1970,1,1))),reverse=True)
     visible_count=len(rows)
     preferred_categories={book.category_id for book in books if book.category_id}
     # Exclude books the reader already owns or has engaged with. An active
