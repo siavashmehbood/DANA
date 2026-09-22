@@ -150,8 +150,11 @@ class ArticleAdminTranslationTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.article.refresh_from_db()
-        self.assertEqual(self.article.translation_version, 1)
+        self.assertEqual(self.article.translation_version, 3)
         self.assertEqual(self.article.full_text_fa, 'متن یک')
+        rollback = self.article.translation_versions.get(version=3)
+        self.assertEqual(rollback.provider, 'rollback')
+        self.assertEqual(rollback.content_fa, 'متن یک')
         self.assertEqual(self.article.translation_status, 'reviewed')
 
 
@@ -200,3 +203,14 @@ class ArticleFallbackTests(TestCase):
         Article.objects.create(title='دانش یک',slug='persian-article-search',published=True,abstract='Readable')
         response=self.client.get(reverse('article_list'),{'q':'دانش يك'})
         self.assertContains(response,'دانش یک')
+
+
+    def test_restricted_source_detail_never_renders_full_text(self):
+        source=ArticleSource.objects.create(name='restricted-detail',source_type='manual',allow_full_republish=False)
+        article=Article.objects.create(title='Restricted body',slug='restricted-body',abstract='Public abstract',full_text='SECRET ORIGINAL BODY',full_text_fa='SECRET PERSIAN BODY',published=True,source=source,source_url='https://example.test/original')
+        response=self.client.get(reverse('article_detail',args=[article.slug]),{'lang':'both'})
+        self.assertEqual(response.status_code,200)
+        self.assertFalse(response.context['can_show_full_text'])
+        self.assertNotContains(response,'SECRET ORIGINAL BODY')
+        self.assertNotContains(response,'SECRET PERSIAN BODY')
+        self.assertContains(response,'طبق سیاست منبع')
