@@ -415,3 +415,21 @@ class BookValidationTests(TestCase):
     def test_zero_result_search_does_not_record_success_outcome(self):
         self.client.get(reverse('books'),{'q':'هیچنتیجهایوجودندارد'})
         self.assertFalse(Event.objects.filter(name='search_success').exists())
+
+
+class BookDetailResumeIntegrationTests(TestCase):
+    def test_detail_exposes_text_and_audio_resume_state(self):
+        from accounts.models import User
+        from shop.models import Entitlement
+        from reader.models import ReadingProgress, AudioProgress
+        user=User.objects.create_user(username='detail-resume',password='pass12345')
+        author=Author.objects.create(name='Resume Author')
+        book=Book.objects.create(name='Resume Book',slug='resume-book',author=author,status='published')
+        Entitlement.objects.create(user=user,book=book)
+        ReadingProgress.objects.create(user=user,book=book,progress=42,audio_seconds=15)
+        AudioProgress.objects.create(user=user,book=book,position_seconds=90,duration_seconds=300)
+        self.client.force_login(user)
+        response=self.client.get(reverse('book_detail',args=[book.slug]))
+        self.assertEqual(response.context['saved_progress'],42)
+        self.assertEqual(response.context['saved_audio_seconds'],90)
+        self.assertContains(response,'ادامه مطالعه')
