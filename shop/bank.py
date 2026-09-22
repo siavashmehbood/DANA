@@ -83,6 +83,9 @@ def finalize_bank_order(order, payment):
 @login_required
 @never_cache
 def bank_checkout(request):
+    if request.method != 'POST':
+        messages.info(request, 'پرداخت بانکی را از صفحه تسویه‌حساب آغاز کنید.')
+        return redirect('checkout')
     items = [i for i in CartItem.objects.filter(user=request.user).select_related('book') if i.book.is_published]
     owned = set(Entitlement.objects.filter(user=request.user, book_id__in=[i.book_id for i in items]).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id', flat=True))
     items = [i for i in items if i.book_id not in owned]
@@ -97,8 +100,7 @@ def bank_checkout(request):
     tax = ((subtotal - discount) * Decimal('0.10')).quantize(Decimal('1'))
     total = subtotal - discount + tax
 
-    if request.method == 'POST':
-        if not gateway().enabled:
+    if not gateway().enabled:
             messages.error(request, 'درگاه بانکی هنوز پیکربندی نشده است.')
             return redirect('checkout')
         with transaction.atomic():
@@ -151,9 +153,7 @@ def bank_checkout(request):
                 return redirect('checkout')
             payment.authority = result.authority
             payment.save(update_fields=['authority'])
-        return redirect(result.url)
-
-    return render(request, 'shop/bank_checkout.html', {'subtotal': subtotal, 'discount': discount, 'tax': tax, 'total': total, 'gateway_enabled': gateway().enabled})
+    return redirect(result.url)
 
 
 @login_required
