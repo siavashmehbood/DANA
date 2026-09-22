@@ -12,7 +12,7 @@ class ChapterInline(admin.TabularInline):
 
 @admin.register(Book)
 class BookAdmin(ModelAdmin):
-    actions = ('publish_selected','unpublish_selected')
+    actions = ('publish_selected','unpublish_selected','feature_selected','unfeature_selected')
     readonly_fields = ('created_at','updated_at')
     list_display = ('name', 'author', 'category', 'price', 'old_price', 'status', 'visibility', 'featured', 'subscription_included', 'publish_at', 'has_pdf', 'has_audio')
     list_filter = ('status', 'visibility', 'featured', 'subscription_included', 'category', 'level')
@@ -29,6 +29,14 @@ class BookAdmin(ModelAdmin):
         ('انتشار و دسترسی', {'fields': ('status', 'publish_at', 'visibility', 'featured', 'subscription_included', 'access_password')}),
         ('اطلاعات سیستمی', {'fields': ('created_at','updated_at'), 'classes': ('collapse',)}),
     )
+
+    @admin.action(description='افزودن به پیشنهادهای ویژه')
+    def feature_selected(self, request, queryset):
+        queryset.update(featured=True)
+
+    @admin.action(description='حذف از پیشنهادهای ویژه')
+    def unfeature_selected(self, request, queryset):
+        queryset.update(featured=False)
 
     @admin.action(description='انتشار کتاب‌های انتخاب‌شده')
     def publish_selected(self, request, queryset):
