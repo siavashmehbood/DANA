@@ -212,3 +212,13 @@ class SubscriptionReaderAccessTests(TestCase):
         response=self.client.post(reverse('reader_delete_highlight',args=[self.book.pk,item.pk]))
         self.assertEqual(response.status_code,200)
         self.assertFalse(Highlight.objects.filter(pk=item.pk).exists())
+
+
+    def test_duplicate_note_is_idempotent(self):
+        url=reverse('reader_note',args=[self.book.pk])
+        payload={'page':'6','text':'یادداشت تکراری'}
+        self.client.post(url,payload)
+        response=self.client.post(url,payload)
+        self.assertEqual(response.status_code,200)
+        self.assertFalse(response.json()['created'])
+        self.assertEqual(Note.objects.filter(user=self.user,book=self.book,page=6,text='یادداشت تکراری').count(),1)
