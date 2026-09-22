@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from books.models import Book, Category
 from articles.models import Article, ArticleCategory
 from shop.models import Entitlement, Subscription
-from reader.models import ReadingProgress, Review
+from reader.models import ReadingProgress, AudioProgress, Review
 from django.db.models import Q, Count
 from django.utils import timezone
 
@@ -25,6 +25,7 @@ def home(request):
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
     article_base = Article.objects.filter(published=True).filter(readable).select_related('category')
     continue_reading=[]
+    continue_listening=[]
     if request.user.is_authenticated:
         valid_books=Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True)
         subscription_access=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__grants_catalog_access=True).exists()
@@ -32,6 +33,7 @@ def home(request):
         if subscription_access:
             readable_progress |= Q(book__subscription_included=True)
         continue_reading=ReadingProgress.objects.filter(readable_progress,user=request.user,progress__gt=0,progress__lt=100).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author').order_by('-updated_at')[:6]
+        continue_listening=AudioProgress.objects.filter(readable_progress,user=request.user,position_seconds__gt=0,completed=False).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author','chapter').order_by('-updated_at')[:6]
         owned_categories=Entitlement.objects.filter(user=request.user,book__category__isnull=False).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book__category_id',flat=True)
         owned_ids=Entitlement.objects.filter(user=request.user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).values_list('book_id',flat=True)
         if subscription_access:
@@ -43,7 +45,7 @@ def home(request):
             recommendations=base.exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
     response=render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
         'latest_articles': article_base.order_by('-created_at')[:8], 'featured_articles': article_base.filter(featured=True)[:4],
-        'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading, 'audio_books': audio_books, 'recommendations': recommendations})
+        'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading, 'continue_listening':continue_listening, 'audio_books': audio_books, 'recommendations': recommendations})
     if request.user.is_authenticated:
         response['Cache-Control']='private, no-store'
         response['Vary']='Cookie'
