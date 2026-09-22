@@ -7,7 +7,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from .models import OTPCode, User
-from shop.models import Referral, Entitlement
+from shop.models import Referral, Entitlement, SubscriptionPlan, Subscription
 from books.models import Author, Book
 
 
@@ -80,3 +80,25 @@ class LibraryFilterTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('library'))
         self.assertNotContains(response,'Draft owned')
+
+
+    def test_library_includes_catalog_for_active_subscription(self):
+        user=User.objects.create_user(username='subscriber-library',password='pass12345')
+        author=Author.objects.create(name='Subscription Author')
+        Book.objects.create(name='Subscription Book',slug='subscription-book',author=author,status='published')
+        plan=SubscriptionPlan.objects.create(name='Catalog',slug='catalog-library',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=29))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertContains(response,'Subscription Book')
+        self.assertContains(response,'اشتراک')
+
+    def test_library_excludes_catalog_for_expired_subscription(self):
+        user=User.objects.create_user(username='expired-subscriber-library',password='pass12345')
+        author=Author.objects.create(name='Expired Subscription Author')
+        Book.objects.create(name='Expired Subscription Book',slug='expired-subscription-book',author=author,status='published')
+        plan=SubscriptionPlan.objects.create(name='Expired Catalog',slug='expired-catalog-library',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,status='expired',starts_at=timezone.now()-timedelta(days=31),expires_at=timezone.now()-timedelta(days=1))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertNotContains(response,'Expired Subscription Book')
