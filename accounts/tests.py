@@ -105,7 +105,7 @@ class LibraryFilterTests(TestCase):
         Subscription.objects.create(user=user,plan=plan,status='expired',starts_at=timezone.now()-timedelta(days=31),expires_at=timezone.now()-timedelta(days=1))
         self.client.force_login(user)
         response=self.client.get(reverse('library'))
-        self.assertNotContains(response,'Expired Subscription Book')
+        self.assertFalse(any(row['book'].pk == Book.objects.get(slug='expired-subscription-book').pk for row in response.context['library_rows']))
 
 
     def test_library_can_filter_subscription_access(self):
