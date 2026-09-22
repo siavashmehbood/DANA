@@ -626,3 +626,15 @@ class AudioListeningActivityTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertEqual(ListeningActivity.objects.filter(user=user,book=book).values_list('seconds',flat=True).get(),30)
         self.assertEqual(ReadingProgress.objects.get(user=user,book=book).audio_seconds,0)
+
+
+class AudioAccessRecoveryTests(TestCase):
+    def test_expired_audio_access_returns_user_to_book_recovery_page(self):
+        user=User.objects.create_user(username='expired-audio-recovery',password='pass12345')
+        author=Author.objects.create(name='Expired Audio Author')
+        book=Book.objects.create(name='Expired Audio',slug='expired-audio',author=author,status='published',visibility='private',audio=SimpleUploadedFile('expired.mp3',b'ID3expired',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=book,expires_at=timezone.now()-timezone.timedelta(seconds=1))
+        self.client.force_login(user)
+        response=self.client.get(reverse('audio_player',args=[book.pk]))
+        self.assertRedirects(response,reverse('book_detail',args=[book.slug]))
+        self.assertEqual(response['Cache-Control'],'private, no-store')
