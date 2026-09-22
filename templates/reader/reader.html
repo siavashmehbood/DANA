@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}{{ book.name }} | مطالعه | دانا{% endblock %}
+{% block description %}محیط مطالعه خصوصی کتاب {{ book.name }} در دانا.{% endblock %}
 {% block content %}
 <div class="reader-shell">
   <div class="readerbar"><div><b>{{ book.name }}</b><small>{{ book.author.name }}</small></div><div class="reader-settings"><label>پوسته <select data-theme><option value="light">روشن</option><option value="sepia">کاغذی</option><option value="dark">شب</option></select></label><label>اندازه <input data-scale type="range" min="80" max="140" value="100"></label></div><div class="reader-actions"><button type="button" data-reader-mode>◐ حالت مطالعه</button><button type="button" data-bookmark>🔖 نشانک</button><button type="button" data-note>📝 یادداشت</button><button type="button" data-highlight>🖍 برجسته‌سازی</button><span class="reader-progress"><span data-progress-label>{{ saved.progress|default:0|floatformat:0 }}</span>%</span></div></div>
