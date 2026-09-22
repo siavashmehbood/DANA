@@ -234,3 +234,11 @@ class ArticleDownloadSecurityTests(TestCase):
         self.assertFalse(_safe_remote_url('http://127.0.0.1/private.pdf'))
         self.assertFalse(_safe_remote_url('http://localhost/private.pdf'))
         self.assertFalse(_safe_remote_url('file:///etc/passwd'))
+
+
+class ArticleDiscoveryInputTests(TestCase):
+    def test_invalid_sort_falls_back_to_top(self):
+        Article.objects.create(title='Readable',slug='readable-sort',published=True,abstract='content')
+        response=self.client.get(reverse('articles'),{'sort':'invalid'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.context['selected_sort'],'top')
