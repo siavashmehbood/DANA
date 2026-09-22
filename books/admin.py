@@ -36,7 +36,7 @@ class BookAdmin(ModelAdmin):
         updated=valid.update(status='published', publish_at=None)
         skipped=queryset.count()-updated
         if skipped:
-            self.message_user(request, f'{skipped} کتاب رمزدار بدون رمز منتشر نشد.', level='warning')
+            self.message_user(request, f'{skipped} کتاب با وضعیت دسترسی/انتشار نامعتبر منتشر نشد.', level='warning')
 
     @admin.action(description='بازگرداندن کتاب‌های انتخاب‌شده به پیش‌نویس')
     def unpublish_selected(self, request, queryset):
