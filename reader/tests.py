@@ -570,3 +570,21 @@ class AudioStudyTimeIntegrityTests(TestCase):
         aggregate=ReadingProgress.objects.get(user=user,book=book)
         self.assertEqual(aggregate.audio_seconds,0)
         self.assertFalse(UserStreak.objects.filter(user=user).exists())
+
+
+class ReaderResumeCursorTests(TestCase):
+    def test_reader_resume_cursor_can_move_to_earlier_chapter(self):
+        user=User.objects.create_user(username='reader-cursor',password='pass12345')
+        author=Author.objects.create(name='Reader Cursor Author')
+        book=Book.objects.create(name='Reader Cursor Book',slug='reader-cursor-book',author=author,status='published',visibility='public',price=0)
+        first=Chapter.objects.create(book=book,title='First',order=1,text='one')
+        second=Chapter.objects.create(book=book,title='Second',order=2,text='two')
+        ReadingProgress.objects.create(user=user,book=book,progress=80,current_page=2,current_chapter=second,seconds=100)
+        self.client.force_login(user)
+        response=self.client.post(reverse('reader_progress',args=[book.pk]),{'progress':'50','page':'1','chapter_id':first.pk,'seconds':'120'})
+        self.assertEqual(response.status_code,200)
+        saved=ReadingProgress.objects.get(user=user,book=book)
+        self.assertEqual(saved.current_chapter_id,first.pk)
+        self.assertEqual(saved.current_page,1)
+        self.assertEqual(float(saved.progress),80)
+        self.assertEqual(saved.seconds,120)
