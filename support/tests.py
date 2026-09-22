@@ -18,3 +18,12 @@ class SupportFlowTests(TestCase):
         response=self.client.post(reverse('ticket_reply',args=[self.ticket.pk]),{'body':'intrusion'})
         self.assertEqual(response.status_code,404)
         self.assertFalse(TicketMessage.objects.filter(body='intrusion').exists())
+
+    def test_ticket_list_is_paginated(self):
+        self.client.force_login(self.owner)
+        for i in range(24):
+            Ticket.objects.create(user=self.owner,subject=f'Ticket {i}',body='Body')
+        response=self.client.get(reverse('tickets'))
+        self.assertEqual(len(response.context['tickets']),20)
+        second=self.client.get(reverse('tickets')+'?page=2')
+        self.assertEqual(len(second.context['tickets']),5)
