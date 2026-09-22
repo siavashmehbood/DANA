@@ -1,6 +1,6 @@
 import re
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta
 from django.contrib import auth, messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
@@ -246,6 +246,8 @@ def library(request):
     if source!='all': rows=[row for row in rows if row['source']==source]
     if sort=='title': rows.sort(key=lambda row: row['book'].name)
     elif sort=='progress': rows.sort(key=effective_progress,reverse=True)
+    else:
+        rows.sort(key=lambda row: (row['audio_progress'].updated_at if row['latest_kind']=='audio' and row['audio_progress'] else row['progress'].updated_at if row['progress'] else timezone.make_aware(datetime.min)),reverse=True)
     visible_count=len(rows)
     preferred_categories={book.category_id for book in books if book.category_id}
     # Exclude books the reader already owns or has engaged with. An active
