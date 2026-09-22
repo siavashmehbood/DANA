@@ -6,7 +6,7 @@ from datetime import timedelta
 from django.urls import reverse
 from accounts.models import User
 from books.models import Author, Book
-from shop.models import Entitlement, SubscriptionPlan, Subscription
+from shop.models import Entitlement, Subscription, SubscriptionPlan, SubscriptionPlan, Subscription
 from reader.models import Review, ReadingProgress
 
 class ProtectedMediaTests(TestCase):
@@ -299,3 +299,16 @@ class BaseMetadataTests(TestCase):
         self.assertNotContains(response,'Hidden Home Book')
 
 
+
+
+class RetiredPlanPdfAccessTests(TestCase):
+    def test_retired_subscription_plan_keeps_protected_pdf_entitlement(self):
+        user=User.objects.create_user(username='retired-pdf',password='pass12345')
+        author=Author.objects.create(name='PDF Author')
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        book=Book.objects.create(name='Protected Subscription PDF',slug='protected-sub-pdf',author=author,status='published',price=100,subscription_included=True,pdf=SimpleUploadedFile('book.pdf',b'%PDF-1.4 test',content_type='application/pdf'))
+        plan=SubscriptionPlan.objects.create(name='Old Plan',slug='old-plan',price=10,duration_days=30,active=False,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timezone.timedelta(days=1),expires_at=timezone.now()+timezone.timedelta(days=2),status='active')
+        self.client.force_login(user)
+        response=self.client.get(reverse('protected_book_pdf',args=[book.pk]))
+        self.assertEqual(response.status_code,200)
