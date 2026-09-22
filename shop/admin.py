@@ -108,7 +108,7 @@ class SubscriptionPlanAdmin(ModelAdmin):
 
 @admin.register(Subscription)
 class SubscriptionAdmin(ModelAdmin):
-    list_display=('user','plan','status','starts_at','expires_at')
+    list_display=('user','plan','status','starts_at','expires_at','created_at')
     actions=('cancel_selected',)
 
     @admin.action(description='لغو اشتراک‌های انتخاب‌شده')
@@ -119,3 +119,4 @@ class SubscriptionAdmin(ModelAdmin):
     search_fields=('user__username','user__email','plan__name')
     autocomplete_fields=('user','plan')
     readonly_fields=('created_at',)
+    list_per_page=50
