@@ -289,3 +289,10 @@ class BookSlugTests(TestCase):
         second=Book.objects.create(name='کتاب تکراری',slug='',author=author,status='published')
         self.assertTrue(first.slug)
         self.assertNotEqual(first.slug,second.slug)
+
+
+    def test_generated_unicode_slug_detail_route_resolves(self):
+        author=Author.objects.create(name='Route Author')
+        book=Book.objects.create(name='کتاب فارسی مسیر',slug='',author=author,status='published')
+        response=self.client.get(reverse('book_detail',args=[book.slug]))
+        self.assertEqual(response.status_code,200)
