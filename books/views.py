@@ -2,7 +2,7 @@ from django.shortcuts import render,get_object_or_404
 from django.db.models import Q, Avg, Count
 from django.core.paginator import Paginator
 import mimetypes
-from django.http import FileResponse, HttpResponseForbidden
+from django.http import FileResponse, HttpResponseForbidden, Http404
 from django.utils import timezone
 from shop.models import Entitlement, Subscription
 from analytics.models import Event
@@ -92,7 +92,6 @@ def _has_book_access(user, book):
 def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
     if book.visibility == 'password':
-        from django.http import Http404
         raise Http404
     approved_reviews=book.review_set.filter(approved=True).select_related('user').order_by('-created_at')[:8]
     review_stats=book.review_set.filter(approved=True).aggregate(avg=Avg('rating'),count=Count('id'))
@@ -117,7 +116,6 @@ def secure_file(request, pk, kind, chapter_id=None):
     if not request.user.is_authenticated:
         return HttpResponseForbidden('ورود لازم است.')
     if book.visibility == 'password':
-        from django.http import Http404
         raise Http404
     if not _has_book_access(request.user, book):
         return HttpResponseForbidden('دسترسی به این فایل ندارید.')
@@ -127,7 +125,6 @@ def secure_file(request, pk, kind, chapter_id=None):
     else:
         field = {'pdf': book.pdf, 'audio': book.audio}.get(kind)
     if not field:
-        from django.http import Http404
         raise Http404
     content_type='application/pdf' if kind == 'pdf' else (mimetypes.guess_type(field.name)[0] or 'application/octet-stream')
     response = FileResponse(field.open('rb'), content_type=content_type)
