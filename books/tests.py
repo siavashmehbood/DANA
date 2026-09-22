@@ -433,3 +433,18 @@ class BookDetailResumeIntegrationTests(TestCase):
         self.assertEqual(response.context['saved_progress'],42)
         self.assertEqual(response.context['saved_audio_seconds'],90)
         self.assertContains(response,'ادامه مطالعه')
+
+
+class ContentAwareBookActionsTests(TestCase):
+    def test_audio_only_access_hides_text_reader_action(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from shop.models import Entitlement
+        user=User.objects.create_user(username='audio-only-actions',password='pass12345')
+        author=Author.objects.create(name='Audio Only Author')
+        book=Book.objects.create(name='Audio Only Actions',slug='audio-only-actions',author=author,status='published',visibility='public',audio=SimpleUploadedFile('audio-only.mp3',b'ID3audio',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=book)
+        self.client.force_login(user)
+        response=self.client.get(reverse('book_detail',kwargs={'slug':book.slug}))
+        self.assertEqual(response.status_code,200)
+        self.assertNotContains(response,'شروع مطالعه')
+        self.assertContains(response,'شنیدن کتاب')
