@@ -16,7 +16,7 @@ def tickets(request):
         Ticket.objects.create(user=request.user, subject=subject, body=body)
         messages.success(request, 'درخواست پشتیبانی ثبت شد.')
         return redirect('tickets')
-    qs=Ticket.objects.filter(user=request.user).order_by('-updated_at')
+    qs=Ticket.objects.filter(user=request.user).prefetch_related('messages__user').order_by('-updated_at')
     page_obj=Paginator(qs,20).get_page(request.GET.get('page'))
     return render(request,'support/tickets.html',{'tickets':page_obj.object_list,'page_obj':page_obj})
 
