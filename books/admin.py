@@ -6,7 +6,7 @@ from .models import Author, Category, Level, Book, Chapter, MediaAsset
 class ChapterInline(admin.TabularInline):
     model = Chapter
     extra = 0
-    fields = ('order', 'title', 'audio', 'duration')
+    fields = ('order', 'title', 'text', 'audio', 'duration')
     ordering = ('order',)
 
 
@@ -87,13 +87,17 @@ class LevelAdmin(ModelAdmin):
 
 @admin.register(Chapter)
 class ChapterAdmin(ModelAdmin):
-    list_display = ('title', 'book', 'order', 'duration', 'has_audio')
+    list_display = ('title', 'book', 'order', 'duration', 'has_text', 'has_audio')
     list_select_related = ('book',)
     list_filter = ('book',)
     search_fields = ('title', 'book__name')
     ordering = ('book', 'order')
     list_per_page = 50
     autocomplete_fields = ('book',)
+
+    @admin.display(boolean=True, description='متن')
+    def has_text(self, obj):
+        return bool(obj.text and obj.text.strip())
 
     @admin.display(boolean=True, description='فایل صوتی')
     def has_audio(self, obj):
