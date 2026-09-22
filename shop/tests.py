@@ -190,3 +190,11 @@ class ShopFlowTests(TestCase):
         self.client.post(reverse('subscribe',args=[plan.slug]))
         newest=Subscription.objects.filter(user=self.user,plan=plan).order_by('-created_at').first()
         self.assertGreaterEqual(newest.starts_at,current.expires_at)
+
+
+    def test_reactivating_same_free_plan_leaves_one_active_row(self):
+        plan=SubscriptionPlan.objects.create(name='Single Active',slug='single-active',price=0,duration_days=7)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        self.client.post(reverse('subscribe',args=[plan.slug]))
+        self.assertEqual(Subscription.objects.filter(user=self.user,plan=plan,status='active').count(),1)
