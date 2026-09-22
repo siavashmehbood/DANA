@@ -7,6 +7,7 @@ from django.http import FileResponse, JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.template.defaultfilters import linebreaks
@@ -108,6 +109,7 @@ def detail(request, slug):
 
 
 @login_required
+@never_cache
 def pdf_reader(request, slug):
     article = get_object_or_404(Article.objects.select_related('source'), slug=slug, published=True)
     if article.source_id and not article.source.allow_full_republish:
@@ -138,6 +140,7 @@ def pdf_reader(request, slug):
 
 
 @login_required
+@never_cache
 def research_library(request):
     items = ArticleLibraryItem.objects.filter(user=request.user).select_related('article', 'article__category')
     status = request.GET.get('status', '').strip()
