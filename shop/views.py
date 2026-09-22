@@ -208,7 +208,7 @@ def subscribe(request, slug):
         user=User.objects.select_for_update().get(pk=request.user.pk)
         plan=get_object_or_404(SubscriptionPlan,slug=slug,active=True)
         if plan.price != 0:
-            messages.info(request,'خرید آنلاین این پلن هنوز از مسیر پرداخت اشتراک انجام می‌شود.')
+            messages.info(request,'برای فعال‌سازی این پلن باید پرداخت اشتراک تکمیل شود.')
             return redirect('subscriptions')
         now=timezone.now()
         current=Subscription.objects.select_for_update().filter(user=user,status='active',expires_at__gt=now).order_by('-expires_at').first()
