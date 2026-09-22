@@ -183,14 +183,18 @@ def library(request):
     if kind not in {'all','audio','text'}: kind='all'
     if source not in {'all','purchased','subscription'}: source='all'
     if sort not in {'recent','title','progress'}: sort='recent'
-    if state=='reading': rows=[row for row in rows if row['progress'] and 0 < row['progress'].progress < 100]
-    elif state=='completed': rows=[row for row in rows if row['progress'] and row['progress'].progress >= 100]
-    elif state=='unread': rows=[row for row in rows if not row['progress'] or row['progress'].progress <= 0]
+    def effective_progress(row):
+        reading=float(row['progress'].progress) if row['progress'] else 0
+        if row['audio_progress'] and row['audio_progress'].completed: return 100
+        return reading
+    if state=='reading': rows=[row for row in rows if 0 < effective_progress(row) < 100 or (row['audio_progress'] and row['audio_progress'].position_seconds > 0 and not row['audio_progress'].completed)]
+    elif state=='completed': rows=[row for row in rows if effective_progress(row) >= 100]
+    elif state=='unread': rows=[row for row in rows if effective_progress(row) <= 0 and not (row['audio_progress'] and row['audio_progress'].position_seconds > 0)]
     if kind=='audio': rows=[row for row in rows if row['book'].audio or any(ch.audio for ch in row['book'].chapters.all())]
     elif kind=='text': rows=[row for row in rows if row['book'].pdf or any(ch.text for ch in row['book'].chapters.all())]
     if source!='all': rows=[row for row in rows if row['source']==source]
     if sort=='title': rows.sort(key=lambda row: row['book'].name)
-    elif sort=='progress': rows.sort(key=lambda row: float(row['progress'].progress) if row['progress'] else -1,reverse=True)
+    elif sort=='progress': rows.sort(key=effective_progress,reverse=True)
     visible_count=len(rows)
     preferred_categories={book.category_id for book in books if book.category_id}
     recommended_books=Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public',category_id__in=preferred_categories).exclude(pk__in=book_ids).select_related('author','category').annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:6]
