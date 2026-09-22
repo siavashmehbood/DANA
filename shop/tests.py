@@ -167,3 +167,17 @@ class ShopFlowTests(TestCase):
         plan=SubscriptionPlan.objects.create(name='Range',slug='range-plan',price=10,duration_days=30)
         with self.assertRaises(IntegrityError):
             Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now(),expires_at=timezone.now()-timedelta(days=1))
+
+
+    def test_free_subscription_can_be_activated(self):
+        plan=SubscriptionPlan.objects.create(name='Free Catalog',slug='free-catalog',price=0,duration_days=7,grants_catalog_access=True)
+        self.client.login(username='buyer',password='pass123')
+        response=self.client.post(reverse('subscribe',args=[plan.slug]))
+        self.assertRedirects(response,reverse('subscriptions'))
+        self.assertTrue(Subscription.objects.filter(user=self.user,plan=plan,status='active').exists())
+
+    def test_paid_subscription_cannot_be_activated_without_payment(self):
+        plan=SubscriptionPlan.objects.create(name='Paid Catalog',slug='paid-catalog',price=100,duration_days=30)
+        self.client.login(username='buyer',password='pass123')
+        self.client.post(reverse('subscribe',args=[plan.slug]))
+        self.assertFalse(Subscription.objects.filter(user=self.user,plan=plan).exists())
