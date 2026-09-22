@@ -14,6 +14,8 @@ from gamification.services import record_study_activity
 def _has_access(user, book):
     if book.visibility == 'public':
         return True
+    if not user.is_authenticated:
+        return False
     if Entitlement.objects.filter(user=user, book=book).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).exists():
         return True
     now=timezone.now()
