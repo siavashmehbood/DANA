@@ -31,10 +31,13 @@ def event(request):
     name = name.strip()
     if name not in ALLOWED_EVENT_NAMES:
         return JsonResponse({'ok': False, 'error': 'unsupported_event'}, status=400)
+    value = data.get('value', 0)
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or abs(value) > 1000000000:
+        return JsonResponse({'ok': False, 'error': 'invalid_value'}, status=400)
     metadata = data.get('metadata', {})
     if not isinstance(metadata, dict):
         return JsonResponse({'ok': False, 'error': 'metadata_object_required'}, status=400)
     if len(json.dumps(metadata, ensure_ascii=False)) > 10000:
         return JsonResponse({'ok': False, 'error': 'metadata_too_large'}, status=400)
-    Event.objects.create(user=request.user, name=name, metadata=metadata)
+    Event.objects.create(user=request.user, name=name, value=value, metadata=metadata)
     return JsonResponse({'ok': True})
