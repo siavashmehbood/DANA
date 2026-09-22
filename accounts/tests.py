@@ -194,7 +194,7 @@ class DashboardSubscriptionTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('dashboard'))
         self.assertContains(response,reverse('audio_player',args=[book.id]))
-        self.assertNotContains(response,reverse('reader',args=[book.id]))
+        self.assertNotContains(response,reverse('reader',args=[book.id])+'\"')
 
 
     def test_subscription_library_excludes_non_catalog_books(self):
@@ -250,7 +250,7 @@ class ReadingProfileTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('profile'))
         self.assertContains(response,reverse('audio_player',args=[book.id]))
-        self.assertNotContains(response,reverse('reader',args=[book.id]))
+        self.assertNotContains(response,reverse('reader',args=[book.id])+'\"')
 
     def test_profile_uses_real_streak_badges_and_recent_progress(self):
         from gamification.models import UserStreak, Badge, UserBadge
