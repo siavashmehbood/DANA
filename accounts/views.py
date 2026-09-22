@@ -11,6 +11,7 @@ from django.conf import settings
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.db.models import Q
+from django.views.decorators.cache import never_cache
 from articles.models import Article
 from books.models import Book
 from shop.models import CartItem, Entitlement, Referral, Subscription
@@ -77,6 +78,7 @@ def otp(request):
     return render(request,'auth/otp.html',{'phone':phone})
 
 @login_required
+@never_cache
 def dashboard(request):
     user=request.user
     owned=Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).select_related('book__author').order_by('-granted_at')
@@ -88,6 +90,7 @@ def dashboard(request):
     return render(request,'dashboard.html',{'books_count':owned.count(),'article_count':Article.objects.filter(published=True).count(),'vocabulary_count':user.saved_words.count(),'cart_count':CartItem.objects.filter(user=user).count(),'latest_articles':Article.objects.filter(published=True).order_by('-created_at')[:5],'owned_books':owned[:8],'reading_progress':progress[:4]})
 
 @login_required
+@never_cache
 def profile(request):
     if request.method=='POST' and request.POST.get('form')=='goal':
         try:
@@ -141,6 +144,7 @@ def logout_view(request):
 
 
 @login_required
+@never_cache
 def library(request):
     user=request.user
     owned=list(Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author','book__category').prefetch_related('book__chapters').order_by('-granted_at'))
