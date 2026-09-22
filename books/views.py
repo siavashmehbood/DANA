@@ -5,6 +5,7 @@ from django.http import FileResponse, HttpResponseForbidden
 from django.utils import timezone
 from shop.models import Entitlement, Subscription
 from analytics.models import Event
+from reader.models import ReadingProgress
 from .models import Book,Category
 
 def _published_books():
@@ -86,7 +87,10 @@ def detail(request,slug):
     review_stats=book.review_set.filter(approved=True).aggregate(avg=Avg('rating'),count=Count('id'))
     related=_published_books().filter(category=book.category).exclude(pk=book.pk).select_related('author','category')[:4] if book.category else Book.objects.none()
     has_access = _has_book_access(request.user, book)
-    return render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count'],'approved_reviews':approved_reviews})
+    saved_audio_seconds=0
+    if request.user.is_authenticated and has_access:
+        saved_audio_seconds=ReadingProgress.objects.filter(user=request.user,book=book).values_list('audio_seconds',flat=True).first() or 0
+    return render(request,'books/detail.html',{'book':book,'related':related,'has_access':has_access,'review_avg':review_stats['avg'],'review_count':review_stats['count'],'approved_reviews':approved_reviews,'saved_audio_seconds':saved_audio_seconds})
 
 
 def secure_file(request, pk, kind, chapter_id=None):
