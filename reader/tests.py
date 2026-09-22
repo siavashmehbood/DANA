@@ -3,7 +3,7 @@ from accounts.models import User
 from books.models import Author, Book, Chapter
 from gamification.models import PointLedger, UserStreak
 from shop.models import Entitlement, SubscriptionPlan, Subscription
-from .models import ReadingProgress, Review
+from .models import ReadingProgress, Review, Bookmark, Note
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
@@ -161,3 +161,17 @@ class SubscriptionReaderAccessTests(TestCase):
         response=self.client.get(reverse('reader',args=[book.pk]))
         self.assertEqual(response.status_code,200)
         self.assertTrue(response.context['accessible'])
+
+
+    def test_bookmark_delete_is_scoped_to_current_user_and_book(self):
+        item=Bookmark.objects.create(user=self.user,book=self.book,page=3,title='remove')
+        response=self.client.post(reverse('reader_delete_bookmark',args=[self.book.pk,item.pk]))
+        self.assertEqual(response.status_code,200)
+        self.assertFalse(Bookmark.objects.filter(pk=item.pk).exists())
+
+    def test_note_delete_cannot_delete_another_users_note(self):
+        other=User.objects.create_user(username='note-owner',password='pass12345')
+        item=Note.objects.create(user=other,book=self.book,page=2,text='private')
+        response=self.client.post(reverse('reader_delete_note',args=[self.book.pk,item.pk]))
+        self.assertEqual(response.status_code,404)
+        self.assertTrue(Note.objects.filter(pk=item.pk).exists())
