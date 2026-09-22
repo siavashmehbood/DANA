@@ -36,6 +36,6 @@ def reply_ticket(request, pk):
         messages.error(request, 'متن پاسخ نمی‌تواند خالی باشد.')
         return redirect('tickets')
     TicketMessage.objects.create(ticket=ticket, user=request.user, body=body)
-    ticket.status = 'waiting'
+    ticket.status = 'open'
     ticket.save(update_fields=['status','updated_at'])
     return redirect('tickets')
