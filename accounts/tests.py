@@ -206,3 +206,19 @@ class LoginRedirectTests(TestCase):
         response=self.client.post(reverse('login'),{'login_method':'password','username':'next-user','password':'pass12345','next':'https://evil.example/'})
         self.assertEqual(response.status_code,302)
         self.assertEqual(response.url,'/')
+
+
+class LibraryRecommendationTests(TestCase):
+    def test_library_recommends_same_category_without_owned_book(self):
+        from books.models import Author, Book, Category
+        from shop.models import Entitlement
+        user=User.objects.create_user(username='library-rec',password='pass12345')
+        author=Author.objects.create(name='Library Rec Author')
+        category=Category.objects.create(name='Library Rec',slug='library-rec')
+        owned=Book.objects.create(name='Owned Rec',slug='owned-rec',author=author,category=category,status='published')
+        candidate=Book.objects.create(name='Candidate Rec',slug='candidate-rec',author=author,category=category,status='published')
+        Entitlement.objects.create(user=user,book=owned)
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertIn(candidate,list(response.context['recommended_books']))
+        self.assertNotIn(owned,list(response.context['recommended_books']))
