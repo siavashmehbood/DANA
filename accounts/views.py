@@ -116,7 +116,8 @@ def logout_view(request):
 def library(request):
     user=request.user
     owned=list(Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now())).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author','book__category').prefetch_related('book__chapters').order_by('-granted_at'))
-    pmap={p.book_id:p for p in ReadingProgress.objects.filter(user=user)}
+    owned_book_ids=[item.book_id for item in owned]
+    pmap={p.book_id:p for p in ReadingProgress.objects.filter(user=user,book_id__in=owned_book_ids)}
     rows=[{'book':item.book,'progress':pmap.get(item.book_id)} for item in owned]
     state=request.GET.get('state','all')
     kind=request.GET.get('kind','all')
