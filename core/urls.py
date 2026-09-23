@@ -1,8 +1,10 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import home, admin_logout, pwa_manifest, service_worker, protected_book_pdf, robots_txt, sitemap_xml
+from .views import home, admin_logout, pwa_manifest, service_worker, protected_book_pdf, robots_txt, sitemap_xml, healthz, readyz
 
 urlpatterns = [
+    path('healthz/', healthz, name='healthz'),
+    path('readyz/', readyz, name='readyz'),
     path('admin/logout/', admin_logout, name='admin_logout'),
     path('admin/', admin.site.urls),
     path('manifest.json', pwa_manifest, name='pwa_manifest'),
