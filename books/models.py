@@ -1,11 +1,11 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator, FileExtensionValidator
 from django.conf import settings
-from django.core.files.storage import FileSystemStorage
 from django.utils import timezone
 from django.utils.text import slugify
+from .storage import PrivateMediaStorage
 
-private_book_storage=FileSystemStorage(location=settings.PRIVATE_MEDIA_ROOT,base_url=None)
+private_book_storage=PrivateMediaStorage(location=settings.PRIVATE_MEDIA_ROOT)
 class Author(models.Model):
     name=models.CharField(max_length=200); bio=models.TextField(blank=True); avatar=models.ImageField(upload_to='authors/',blank=True,null=True)
     def __str__(self): return self.name
