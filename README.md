@@ -60,3 +60,17 @@ python manage.py test
 در production، `DEBUG` باید خاموش باشد، `SECRET_KEY` از محیط خوانده شود، `ALLOWED_HOSTS` محدود شود، HTTPS و secure cookies فعال باشند و فایل‌های media پشت storage مناسب قرار گیرند. اجرای `collectstatic` و بررسی migrationها پیش از release الزامی است.
 
 وضعیت دقیق audit و کارهای باقی‌مانده در [PROJECT_STATUS.md](PROJECT_STATUS.md) ثبت شده است.
+
+
+## Private media در production
+
+فایل‌های محافظت‌شده کتاب (PDF، فایل صوتی کامل و صوت فصل‌ها) از storage جداگانه `PRIVATE_MEDIA_ROOT` خوانده می‌شوند و storage آن‌ها URL عمومی ندارد. این مسیر را **خارج از `MEDIA_ROOT` و هر alias عمومی وب‌سرور** قرار دهید. Nginx/Apache/CDN نباید `PRIVATE_MEDIA_ROOT` را مستقیماً publish کند؛ دسترسی فقط باید از endpointهای مجاز Django عبور کند تا entitlement/subscription expiry بررسی شود و Range request صوتی نیز حفظ شود.
+
+نمونه production:
+
+```env
+MEDIA_ROOT=/srv/dana/public_media
+PRIVATE_MEDIA_ROOT=/srv/dana/private_media
+```
+
+برای فایل‌های خصوصی موجود در استقرارهای قدیمی، قبل از release آن‌ها را از `MEDIA_ROOT/books/pdf`، `MEDIA_ROOT/books/audio` و `MEDIA_ROOT/chapters/audio` به ساختار متناظر زیر `PRIVATE_MEDIA_ROOT` منتقل کنید. این انتقال یک **EXTERNAL RELEASE REQUIREMENT** برای deployment دارای داده موجود است و نباید با public URL انجام شود.
