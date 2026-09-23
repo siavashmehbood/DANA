@@ -1,10 +1,9 @@
+import books.storage
 from django.db import migrations, models
-from django.conf import settings
-from django.core.files.storage import FileSystemStorage
 from django.core.validators import FileExtensionValidator
 
 
-private_book_storage = FileSystemStorage(location=settings.PRIVATE_MEDIA_ROOT, base_url=None)
+private_book_storage = books.storage.PrivateMediaStorage()
 
 
 class Migration(migrations.Migration):
