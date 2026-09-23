@@ -1,5 +1,5 @@
 from django.shortcuts import render,get_object_or_404
-from django.db.models import Q, Avg, Count
+from django.db.models import Q, Avg, Count, F
 from django.core.paginator import Paginator
 import mimetypes
 import re
