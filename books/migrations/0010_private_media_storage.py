@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('books', '0009_book_featured'),
+        ('books', '0008_book_featured'),
     ]
 
     operations = [
