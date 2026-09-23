@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from .storage import PrivateMediaStorage
 
-private_book_storage=PrivateMediaStorage(location=settings.PRIVATE_MEDIA_ROOT)
+private_book_storage=PrivateMediaStorage()
 class Author(models.Model):
     name=models.CharField(max_length=200); bio=models.TextField(blank=True); avatar=models.ImageField(upload_to='authors/',blank=True,null=True)
     def __str__(self): return self.name
