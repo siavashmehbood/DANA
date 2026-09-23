@@ -62,7 +62,7 @@ def listing(request):
         if sort=='price_low': return qs.order_by('price','id')
         if sort=='price_high': return qs.order_by('-price','id')
         if sort=='popular': return qs.annotate(review_count=Count('review',filter=Q(review__approved=True))).order_by('-review_count','-created_at','-id')
-        if sort=='rating': return qs.annotate(avg_rating=Avg('review__rating',filter=Q(review__approved=True))).order_by('-avg_rating','-created_at','-id')
+        if sort=='rating': return qs.annotate(avg_rating=Avg('review__rating',filter=Q(review__approved=True))).order_by(F('avg_rating').desc(nulls_last=True),'-created_at','-id')
         if sort=='name': return qs.order_by('name','id')
         return qs.order_by('-created_at','-id')
     if q:
