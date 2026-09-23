@@ -10,6 +10,19 @@ from books.models import Author, Book
 from shop.models import Entitlement, Subscription, SubscriptionPlan
 from reader.models import Review, ReadingProgress, AudioProgress
 
+class PrivateMediaConfigurationTests(TestCase):
+    def test_private_media_root_rejects_public_media_root_or_children(self):
+        from core.settings import validate_private_media_root
+        from pathlib import Path
+        import tempfile
+        with tempfile.TemporaryDirectory() as root:
+            public=Path(root)/'media'
+            with self.assertRaises(RuntimeError):
+                validate_private_media_root(public, public)
+            with self.assertRaises(RuntimeError):
+                validate_private_media_root(public, public/'private')
+
+
 class PrivateStorageIsolationTests(TestCase):
     def test_protected_book_files_have_no_public_media_url(self):
         from books.models import Book, Chapter
