@@ -10,6 +10,18 @@ from books.models import Author, Book
 from shop.models import Entitlement, Subscription, SubscriptionPlan
 from reader.models import Review, ReadingProgress, AudioProgress
 
+class HealthEndpointTests(TestCase):
+    def test_liveness_and_readiness_are_available(self):
+        health=self.client.get(reverse('healthz'))
+        ready=self.client.get(reverse('readyz'))
+        self.assertEqual(health.status_code,200)
+        self.assertEqual(ready.status_code,200)
+        self.assertEqual(health.json()['status'],'ok')
+        self.assertEqual(ready.json()['status'],'ready')
+        self.assertEqual(health['Cache-Control'],'no-store')
+        self.assertEqual(ready['Cache-Control'],'no-store')
+
+
 class PrivateMediaConfigurationTests(TestCase):
     def test_private_media_root_rejects_public_media_root_or_children(self):
         from core.settings import validate_private_media_root
