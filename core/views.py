@@ -8,6 +8,7 @@ from articles.models import Article, ArticleCategory
 from shop.models import Entitlement, Subscription
 from reader.models import ReadingProgress, AudioProgress, Review
 from django.db.models import Q, Count
+from django.db import connection
 from django.utils import timezone
 
 
@@ -67,6 +68,26 @@ def home(request):
         response['Vary']='Cookie'
     return response
 
+
+
+def healthz(request):
+    response=JsonResponse({'status':'ok'})
+    response['Cache-Control']='no-store'
+    return response
+
+
+def readyz(request):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+            cursor.fetchone()
+    except Exception:
+        response=JsonResponse({'status':'unavailable'},status=503)
+        response['Cache-Control']='no-store'
+        return response
+    response=JsonResponse({'status':'ready'})
+    response['Cache-Control']='no-store'
+    return response
 
 def admin_logout(request):
     logout(request)
