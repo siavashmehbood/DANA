@@ -1,7 +1,11 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator, FileExtensionValidator
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from django.utils import timezone
 from django.utils.text import slugify
+
+private_book_storage=FileSystemStorage(location=settings.PRIVATE_MEDIA_ROOT,base_url=None)
 class Author(models.Model):
     name=models.CharField(max_length=200); bio=models.TextField(blank=True); avatar=models.ImageField(upload_to='authors/',blank=True,null=True)
     def __str__(self): return self.name
@@ -13,7 +17,7 @@ class Level(models.Model):
     def __str__(self): return self.name
 class Book(models.Model):
     VIS=[('public','عمومی'),('private','خصوصی'),('password','رمزدار')]; STATUS=[('draft','پیش‌نویس'),('scheduled','زمان‌بندی‌شده'),('published','منتشر شده')]
-    name=models.CharField(max_length=250); slug=models.SlugField(max_length=250,unique=True,blank=True,allow_unicode=True); summary=models.TextField(blank=True); description=models.TextField(blank=True); author=models.ForeignKey(Author,on_delete=models.PROTECT,related_name='books'); category=models.ForeignKey(Category,null=True,blank=True,on_delete=models.SET_NULL); level=models.ForeignKey(Level,null=True,blank=True,on_delete=models.SET_NULL); price=models.DecimalField(max_digits=14,decimal_places=0,default=0,validators=[MinValueValidator(0)]); old_price=models.DecimalField(max_digits=14,decimal_places=0,default=0,validators=[MinValueValidator(0)]); cover=models.ImageField(upload_to='covers/',blank=True,null=True); pdf=models.FileField(upload_to='books/pdf/',blank=True,null=True,validators=[FileExtensionValidator(['pdf'])]); audio=models.FileField(upload_to='books/audio/',blank=True,null=True,validators=[FileExtensionValidator(['mp3','m4a','aac','ogg','wav'])]); visibility=models.CharField(max_length=20,choices=VIS,default='public'); subscription_included=models.BooleanField(default=False, verbose_name='شامل اشتراک'); featured=models.BooleanField(default=False, verbose_name='پیشنهاد ویژه'); access_password=models.CharField(max_length=128,blank=True); status=models.CharField(max_length=20,choices=STATUS,default='draft'); publish_at=models.DateTimeField(null=True,blank=True); preview_percent=models.PositiveSmallIntegerField(default=10,validators=[MaxValueValidator(100)]); created_at=models.DateTimeField(auto_now_add=True); updated_at=models.DateTimeField(auto_now=True)
+    name=models.CharField(max_length=250); slug=models.SlugField(max_length=250,unique=True,blank=True,allow_unicode=True); summary=models.TextField(blank=True); description=models.TextField(blank=True); author=models.ForeignKey(Author,on_delete=models.PROTECT,related_name='books'); category=models.ForeignKey(Category,null=True,blank=True,on_delete=models.SET_NULL); level=models.ForeignKey(Level,null=True,blank=True,on_delete=models.SET_NULL); price=models.DecimalField(max_digits=14,decimal_places=0,default=0,validators=[MinValueValidator(0)]); old_price=models.DecimalField(max_digits=14,decimal_places=0,default=0,validators=[MinValueValidator(0)]); cover=models.ImageField(upload_to='covers/',blank=True,null=True); pdf=models.FileField(upload_to='books/pdf/',storage=private_book_storage,blank=True,null=True,validators=[FileExtensionValidator(['pdf'])]); audio=models.FileField(upload_to='books/audio/',storage=private_book_storage,blank=True,null=True,validators=[FileExtensionValidator(['mp3','m4a','aac','ogg','wav'])]); visibility=models.CharField(max_length=20,choices=VIS,default='public'); subscription_included=models.BooleanField(default=False, verbose_name='شامل اشتراک'); featured=models.BooleanField(default=False, verbose_name='پیشنهاد ویژه'); access_password=models.CharField(max_length=128,blank=True); status=models.CharField(max_length=20,choices=STATUS,default='draft'); publish_at=models.DateTimeField(null=True,blank=True); preview_percent=models.PositiveSmallIntegerField(default=10,validators=[MaxValueValidator(100)]); created_at=models.DateTimeField(auto_now_add=True); updated_at=models.DateTimeField(auto_now=True)
     def clean(self):
         from django.core.exceptions import ValidationError
         if self.visibility == 'password' and not self.access_password:
@@ -42,7 +46,7 @@ class Book(models.Model):
             self.slug=candidate
         super().save(*args,**kwargs)
 class Chapter(models.Model):
-    book=models.ForeignKey(Book,on_delete=models.CASCADE,related_name='chapters'); title=models.CharField(max_length=250); order=models.PositiveIntegerField(); text=models.TextField(blank=True); audio=models.FileField(upload_to='chapters/audio/',blank=True,null=True,validators=[FileExtensionValidator(['mp3','m4a','aac','ogg','wav'])]); duration=models.PositiveIntegerField(default=0)
+    book=models.ForeignKey(Book,on_delete=models.CASCADE,related_name='chapters'); title=models.CharField(max_length=250); order=models.PositiveIntegerField(); text=models.TextField(blank=True); audio=models.FileField(upload_to='chapters/audio/',storage=private_book_storage,blank=True,null=True,validators=[FileExtensionValidator(['mp3','m4a','aac','ogg','wav'])]); duration=models.PositiveIntegerField(default=0)
     def __str__(self): return f'{self.book} — {self.title}'
     class Meta:
         ordering=['order']
