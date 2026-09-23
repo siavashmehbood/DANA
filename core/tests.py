@@ -9,6 +9,18 @@ from books.models import Author, Book
 from shop.models import Entitlement, Subscription, SubscriptionPlan
 from reader.models import Review, ReadingProgress, AudioProgress
 
+class PrivateStorageIsolationTests(TestCase):
+    def test_protected_book_files_have_no_public_media_url(self):
+        from books.models import Book, Chapter
+        for field_name in ('pdf','audio'):
+            storage=Book._meta.get_field(field_name).storage
+            self.assertIsNone(storage.base_url)
+            self.assertNotEqual(storage.location, str(__import__('django').conf.settings.MEDIA_ROOT))
+        chapter_storage=Chapter._meta.get_field('audio').storage
+        self.assertIsNone(chapter_storage.base_url)
+        self.assertNotEqual(chapter_storage.location, str(__import__('django').conf.settings.MEDIA_ROOT))
+
+
 class ProtectedMediaTests(TestCase):
     def setUp(self):
         self.user=User.objects.create_user(username='reader',password='pass12345')
