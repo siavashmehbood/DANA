@@ -22,7 +22,14 @@ if DB_ENGINE=='postgresql':
 else: DATABASES={'default':{'ENGINE':'django.db.backends.sqlite3','NAME':BASE_DIR/'db.sqlite3'}}
 AUTH_USER_MODEL='accounts.User'; LOGIN_URL='/login/'; LOGIN_REDIRECT_URL='/'
 LANGUAGE_CODE='fa-ir'; TIME_ZONE=os.getenv('TIME_ZONE','Asia/Tehran'); USE_I18N=True; USE_TZ=True
-STATIC_URL='/static/'; STATIC_ROOT=BASE_DIR/'staticfiles'; STATICFILES_DIRS=[BASE_DIR/'static']; MEDIA_URL='/media/'; MEDIA_ROOT=BASE_DIR/'media'; PRIVATE_MEDIA_ROOT=Path(os.getenv('PRIVATE_MEDIA_ROOT',str(BASE_DIR/'private_media'))); DEFAULT_AUTO_FIELD='django.db.models.BigAutoField'
+STATIC_URL='/static/'; STATIC_ROOT=BASE_DIR/'staticfiles'; STATICFILES_DIRS=[BASE_DIR/'static']; MEDIA_URL='/media/'; MEDIA_ROOT=BASE_DIR/'media'
+def validate_private_media_root(media_root, private_root):
+    public_root=Path(media_root).resolve()
+    protected_root=Path(private_root).resolve()
+    if protected_root == public_root or public_root in protected_root.parents:
+        raise RuntimeError('PRIVATE_MEDIA_ROOT must be outside MEDIA_ROOT so protected book files cannot be served by the public media alias.')
+    return protected_root
+PRIVATE_MEDIA_ROOT=validate_private_media_root(MEDIA_ROOT,os.getenv('PRIVATE_MEDIA_ROOT',str(BASE_DIR/'private_media'))); DEFAULT_AUTO_FIELD='django.db.models.BigAutoField'
 FILE_UPLOAD_MAX_MEMORY_SIZE=int(os.getenv('FILE_UPLOAD_MAX_MEMORY_SIZE',str(20*1024*1024)))
 CSRF_COOKIE_SECURE=env_bool('CSRF_COOKIE_SECURE',not DEBUG); SESSION_COOKIE_SECURE=env_bool('SESSION_COOKIE_SECURE',not DEBUG); SESSION_COOKIE_HTTPONLY=True; SESSION_COOKIE_SAMESITE='Lax'; CSRF_COOKIE_HTTPONLY=env_bool('CSRF_COOKIE_HTTPONLY',False)
 SECURE_CONTENT_TYPE_NOSNIFF=True; SECURE_REFERRER_POLICY='same-origin'; X_FRAME_OPTIONS='DENY'; SECURE_SSL_REDIRECT=env_bool('SECURE_SSL_REDIRECT',not DEBUG)
