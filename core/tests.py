@@ -1,6 +1,7 @@
 from io import BytesIO
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 from django.urls import reverse
@@ -15,7 +16,7 @@ class PrivateStorageIsolationTests(TestCase):
         for field_name in ('pdf','audio'):
             storage=Book._meta.get_field(field_name).storage
             self.assertIsNone(storage.base_url)
-            self.assertNotEqual(storage.location, str(__import__('django').conf.settings.MEDIA_ROOT))
+            self.assertNotEqual(storage.location, str(settings.MEDIA_ROOT))
         chapter_storage=Chapter._meta.get_field('audio').storage
         self.assertIsNone(chapter_storage.base_url)
         self.assertNotEqual(chapter_storage.location, str(__import__('django').conf.settings.MEDIA_ROOT))
