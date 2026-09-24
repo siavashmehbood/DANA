@@ -253,7 +253,7 @@ def translate_article(article, full_text=False, force=False, provider='mymemory+
         if full_text and source_text:
             locked.full_text=source_text
             locked.full_text_fa=content_fa
-        locked.translation_status='translated'
+        locked.translation_status='original_only' if (not full_text and bool(locked.full_text)) else 'translated'
         locked.translation_hash=source_hash
         locked.translation_version=next_version
         locked.translation_quality=100
