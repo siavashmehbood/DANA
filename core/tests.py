@@ -534,6 +534,8 @@ class PersianAdminEndToEndLabelsTests(TestCase):
         self.client.force_login(self.admin)
 
     def test_book_admin_changelist_uses_persian_model_and_column_labels(self):
+        author=Author.objects.create(name='Admin Persian Author')
+        Book.objects.create(name='Admin Persian Book',slug='admin-persian-book',author=author,status='published')
         response=self.client.get('/admin/books/book/')
         self.assertEqual(response.status_code,200)
         self.assertContains(response,'کتاب‌ها')
