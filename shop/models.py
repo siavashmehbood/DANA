@@ -26,7 +26,7 @@ class CartItem(models.Model):
 
 
 class Order(models.Model):
-    STATUS = [('pending', 'Pending'), ('paid', 'Paid'), ('cancelled', 'Cancelled'), ('gift', 'Gift')]
+    STATUS = [('pending', 'در انتظار پرداخت'), ('paid', 'پرداخت‌شده'), ('cancelled', 'لغوشده'), ('gift', 'هدیه')]
     user = models.ForeignKey(User, on_delete=models.PROTECT)
     subtotal = models.DecimalField(max_digits=14, decimal_places=0)
     discount = models.DecimalField(max_digits=14, decimal_places=0)
@@ -59,7 +59,7 @@ class Entitlement(models.Model):
 
 
 class WalletTransaction(models.Model):
-    TYPES = [('credit', 'Credit'), ('debit', 'Debit'), ('refund', 'Refund'), ('reward', 'Reward')]
+    TYPES = [('credit', 'واریز'), ('debit', 'برداشت'), ('refund', 'بازپرداخت'), ('reward', 'پاداش')]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='wallet_transactions')
     amount = models.DecimalField(max_digits=14, decimal_places=0, validators=[MinValueValidator(0)])
     type = models.CharField(max_length=20, choices=TYPES)
@@ -82,7 +82,7 @@ class CheckoutRequest(models.Model):
 
 
 class Payment(models.Model):
-    STATUS = [('pending', 'Pending'), ('successful', 'Successful'), ('failed', 'Failed'), ('cancelled', 'Cancelled'), ('refunded', 'Refunded')]
+    STATUS = [('pending', 'در انتظار'), ('successful', 'موفق'), ('failed', 'ناموفق'), ('cancelled', 'لغوشده'), ('refunded', 'بازپرداخت‌شده')]
     user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='payments')
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='payments')
     provider = models.CharField(max_length=50, default='wallet')
