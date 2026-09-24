@@ -13,7 +13,6 @@ _processing_lock = threading.Lock()
 
 def _process_article(article_id):
     try:
-        close_old_connections()
         article = Article.objects.get(pk=article_id)
         if not article.published:
             return
@@ -46,9 +45,20 @@ def _process_article(article_id):
     except Exception:
         logger.exception('Automatic article processing failed for %s', article_id)
     finally:
-        close_old_connections()
         with _processing_lock:
             _processing.discard(article_id)
+
+
+def _article_worker(article_id):
+    # Connection lifecycle belongs to the background-thread boundary, not the
+    # processing primitive itself. Keeping it here prevents direct/synchronous
+    # callers (including PostgreSQL regression tests and future workers) from
+    # unexpectedly closing their active Django connection.
+    close_old_connections()
+    try:
+        _process_article(article_id)
+    finally:
+        close_old_connections()
 
 
 def schedule_article_processing(article_id):
@@ -57,7 +67,7 @@ def schedule_article_processing(article_id):
             return False
         _processing.add(article_id)
     worker = threading.Thread(
-        target=_process_article,
+        target=_article_worker,
         args=(article_id,),
         name=f'article-processing-{article_id}',
         daemon=True,
