@@ -4,6 +4,9 @@ from .views import home, admin_logout, pwa_manifest, service_worker, protected_b
 from .admin_localization import apply_admin_localization
 
 apply_admin_localization()
+admin.site.site_header='مدیریت دانا'
+admin.site.site_title='دانا | مدیریت'
+admin.site.index_title='پنل مدیریت دانا'
 
 urlpatterns = [
     path('healthz/', healthz, name='healthz'),
