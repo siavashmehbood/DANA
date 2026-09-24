@@ -47,7 +47,7 @@
 
 ## Remaining production work
 - PostgreSQL 17 CI now runs migration checks, applies migrations, and executes the full regression suite on every PR. Production restore rehearsal remains an external deployment operation.
-- **EXTERNAL RELEASE REQUIREMENT:** provision real Zarinpal staging/production credentials and run a provider smoke verification. Request/callback/verify, callback-payment authority binding, amount integrity, duplicate-success idempotency, and retry-safe transient verification failures are covered in-repo. A provider refund adapter remains Post-RC unless automated refunds are required for V1.
+- **EXTERNAL RELEASE REQUIREMENT:** provision real Zarinpal staging/production credentials and run a provider smoke verification. Request/callback/verify, callback-payment authority binding, amount integrity, duplicate-success idempotency, serialized success/cancellation finalization, and retry-safe transient verification failures are covered in-repo. A provider refund adapter remains Post-RC unless automated refunds are required for V1.
 - Protected book PDF/audio/chapter-audio use `PRIVATE_MEDIA_ROOT` outside public `MEDIA_ROOT`, expose no storage URL, and are served only through entitlement-aware endpoints with audio Range support. **EXTERNAL RELEASE REQUIREMENT:** production web-server/object-storage configuration must keep `PRIVATE_MEDIA_ROOT` unpublished and migrate legacy private files out of public media.
 - **EXTERNAL RELEASE REQUIREMENT:** configure real transactional email/SMS/push credentials and verify delivery in the deployment environment; asynchronous processing remains Post-RC unless deployment volume requires it.
 - Add full browser/mobile automated QA and visual regression coverage.
