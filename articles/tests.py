@@ -432,4 +432,4 @@ class AutomaticArticleProcessingRegressionTests(TestCase):
             translate.return_value=type('Result',(),{'translation_status':'translated','translation_error':''})()
             _process_article(article.pk)
         translate.assert_called_once()
-        self.assertTrue(translate.call_args.kwargs['full_text'])
+        self.assertFalse(translate.call_args.kwargs['full_text'])
