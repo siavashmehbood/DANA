@@ -11,6 +11,7 @@ class GatewayResult:
     authority: str = ''
     url: str = ''
     message: str = ''
+    retryable: bool = False
 
 
 class ZarinpalGateway:
@@ -53,7 +54,7 @@ class ZarinpalGateway:
                 return GatewayResult(True, authority=authority, url=self.start_url.format(authority=authority))
             return GatewayResult(False, message=str(data.get('message') or 'درخواست درگاه رد شد.'))
         except (requests.RequestException, ValueError) as exc:
-            return GatewayResult(False, message=f'ارتباط با درگاه ناموفق بود: {exc}')
+            return GatewayResult(False, message=f'ارتباط با درگاه ناموفق بود: {exc}', retryable=True)
 
     def verify(self, order, payment=None):
         if not self.enabled:
@@ -73,7 +74,7 @@ class ZarinpalGateway:
                 return GatewayResult(True, authority=data.get('ref_id', '') or payment.authority)
             return GatewayResult(False, authority=data.get('ref_id', '') or '', message=str(data.get('message') or 'پرداخت تأیید نشد.'))
         except (requests.RequestException, ValueError) as exc:
-            return GatewayResult(False, message=f'تأیید پرداخت ناموفق بود: {exc}')
+            return GatewayResult(False, message=f'تأیید پرداخت ناموفق بود: {exc}', retryable=True)
 
 
 def gateway():
