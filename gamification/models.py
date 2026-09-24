@@ -34,6 +34,7 @@ class XPEvent(models.Model):
     amount = models.IntegerField()
     reason = models.CharField(max_length=200)
     source = models.CharField(max_length=40, blank=True)
+    reference = models.CharField(max_length=120, blank=True, null=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 class PointLedger(models.Model):
