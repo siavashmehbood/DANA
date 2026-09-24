@@ -404,3 +404,18 @@ class ArticleFullTextCoverageRegressionTests(TestCase):
         self.assertEqual(result.full_text_fa,'متن فارسی کامل')
         self.assertEqual(result.translation_status,'translated')
         self.assertEqual(translate.call_count,1)
+
+
+class ArticleTranslationStateDisplayTests(TestCase):
+    def test_failed_translation_keeps_original_and_explains_failure(self):
+        article=Article.objects.create(title='Failed Persian',slug='failed-persian-display',abstract='English abstract remains readable',translation_status='failed',translation_error='provider unavailable',published=True)
+        response=self.client.get(reverse('article_detail',args=[article.slug]),{'lang':'fa'})
+        self.assertEqual(response.status_code,200)
+        self.assertContains(response,'ترجمه فارسی ناموفق بود؛ متن اصلی محفوظ است')
+        self.assertContains(response,'English abstract remains readable')
+
+    def test_pending_translation_keeps_original_available(self):
+        article=Article.objects.create(title='Pending Persian',slug='pending-persian-display',abstract='Original content available',translation_status='pending',published=True)
+        response=self.client.get(reverse('article_detail',args=[article.slug]),{'lang':'fa'})
+        self.assertEqual(response.status_code,200)
+        self.assertContains(response,'Original content available')
