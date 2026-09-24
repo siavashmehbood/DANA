@@ -335,11 +335,13 @@ def audio_progress(request, pk):
     audio_complete=completed and chapter is None
     if chapter is not None and completed:
         audio_chapter_ids=list(book.chapters.exclude(audio='').values_list('id',flat=True))
-        audio_complete=bool(audio_chapter_ids) and not AudioProgress.objects.filter(user=request.user,book=book,chapter_id__in=audio_chapter_ids,completed=False).exists() and AudioProgress.objects.filter(user=request.user,book=book,chapter_id__in=audio_chapter_ids,completed=True).count()==len(audio_chapter_ids)
+        audio_complete=bool(audio_chapter_ids) and AudioProgress.objects.filter(user=request.user,book=book,chapter_id__in=audio_chapter_ids,completed=True).count()==len(audio_chapter_ids)
     if aggregate is None:
         aggregate=ReadingProgress.objects.create(user=request.user,book=book,current_chapter=chapter,progress=100 if audio_complete else 0)
     else:
         if chapter is not None: aggregate.current_chapter=chapter
         if audio_complete: aggregate.progress=100
         aggregate.save(update_fields=['current_chapter','progress','updated_at'])
-    return JsonResponse({'ok':True,'position':item.position_seconds,'duration':item.duration_seconds,'completed':item.completed})
+    response=JsonResponse({'ok':True,'position':item.position_seconds,'duration':item.duration_seconds,'completed':item.completed})
+    response['Cache-Control']='private, no-store'
+    return response
