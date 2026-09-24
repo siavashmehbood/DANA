@@ -120,7 +120,7 @@ class ChapterAdmin(ModelAdmin):
 
 @admin.register(MediaAsset)
 class MediaAssetAdmin(ModelAdmin):
-    # MediaAsset uses public MEDIA storage and is for non-entitlement assets only.\n    # Protected book/chapter PDF/audio files are managed through their private-storage fields.\n    list_display = ('title', 'kind', 'created_at')
+    list_display = ('title', 'kind', 'created_at')
     date_hierarchy = 'created_at'
     list_filter = ('kind', 'created_at')
     search_fields = ('title', 'kind')
