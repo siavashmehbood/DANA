@@ -169,12 +169,14 @@ def research_library(request):
     if q:
         items = items.filter(Q(article__title__icontains=q) | Q(article__title_fa__icontains=q) | Q(article__authors__icontains=q) | Q(article__journal__icontains=q))
     annotations = ArticleAnnotation.objects.filter(user=request.user, article__published=True).select_related('article')
-    stats = {
-        'total': ArticleLibraryItem.objects.filter(user=request.user, article__published=True).count(),
-        'reading': ArticleLibraryItem.objects.filter(user=request.user, article__published=True, status='reading').count(),
-        'read': ArticleLibraryItem.objects.filter(user=request.user, article__published=True, status='read').count(),
-        'favorites': ArticleLibraryItem.objects.filter(user=request.user, article__published=True, favorite=True).count(),
-    }
+    # One aggregate replaces four near-identical COUNT queries on every library hit.
+    from django.db.models import Count
+    stats = ArticleLibraryItem.objects.filter(user=request.user, article__published=True).aggregate(
+        total=Count('id'),
+        reading=Count('id', filter=Q(status='reading')),
+        read=Count('id', filter=Q(status='read')),
+        favorites=Count('id', filter=Q(favorite=True)),
+    )
     page_obj = Paginator(items, 30).get_page(request.GET.get('page', 1))
     return render(request, 'articles/library.html', {'items': page_obj.object_list, 'page_obj': page_obj, 'annotations': annotations[:40], 'stats': stats, 'status': status, 'favorite': favorite, 'query': q})
 
