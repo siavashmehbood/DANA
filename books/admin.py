@@ -14,7 +14,7 @@ class ChapterInline(admin.TabularInline):
 class BookAdmin(ModelAdmin):
     actions = ('publish_selected','unpublish_selected','feature_selected','unfeature_selected')
     readonly_fields = ('created_at','updated_at')
-    list_display = ('name', 'author', 'category', 'price', 'old_price', 'status', 'visibility', 'featured', 'subscription_included', 'publish_at', 'has_pdf', 'has_audio')
+    list_display = ('name', 'author_fa', 'category', 'price', 'old_price', 'status', 'visibility', 'featured', 'subscription_included', 'publish_at', 'has_pdf', 'has_audio')
     list_select_related = ('author','category','level')
     date_hierarchy = 'created_at'
     list_filter = ('status', 'visibility', 'featured', 'subscription_included', 'category', 'level')
@@ -65,6 +65,10 @@ class BookAdmin(ModelAdmin):
     @admin.action(description='بازگرداندن کتاب‌های انتخاب‌شده به پیش‌نویس')
     def unpublish_selected(self, request, queryset):
         queryset.update(status='draft', publish_at=None)
+
+    @admin.display(ordering='author__name', description='نویسنده')
+    def author_fa(self, obj):
+        return obj.author
 
     @admin.display(boolean=True, description='PDF')
     def has_pdf(self, obj):
