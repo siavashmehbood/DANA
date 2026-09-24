@@ -126,7 +126,7 @@ class TranslationHistoryTests(TestCase):
         self.article.refresh_from_db()
         self.assertEqual(self.article.title_fa, 'ترجمه سالم')
         self.assertEqual(self.article.full_text_fa, 'متن سالم')
-        self.assertEqual(self.article.translation_status, 'failed')
+        self.assertEqual(self.article.translation_status, 'provider_failed')
         self.assertIn('provider unavailable', self.article.translation_error)
 
 
@@ -225,7 +225,7 @@ class ArticleFallbackTests(TestCase):
         article.refresh_from_db()
         self.assertEqual(article.title_fa,'ترجمه سالم قبلی')
         self.assertEqual(article.translation_version,1)
-        self.assertEqual(article.translation_status,'failed')
+        self.assertEqual(article.translation_status,'validation_failed')
 
 
 class ArticleDownloadSecurityTests(TestCase):
