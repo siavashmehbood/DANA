@@ -27,6 +27,24 @@ class ProtectedMediaTests(TestCase):
         url=reverse('chapter_secure_audio',args=[other.pk,self.chapter.pk])
         self.assertEqual(self.client.get(url).status_code,404)
 
+    def test_audio_range_is_preserved_for_authorized_user(self):
+        from django.core.files.base import ContentFile
+        self.book.audio.save('range.mp3',ContentFile(b'0123456789'),save=True)
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        self.client.force_login(self.user)
+        response=self.client.get(reverse('book_secure_file',args=[self.book.pk,'audio']),HTTP_RANGE='bytes=2-5')
+        self.assertEqual(response.status_code,206)
+        self.assertEqual(response['Content-Range'],'bytes 2-5/10')
+        self.assertEqual(response.content,b'2345')
+
+    def test_expired_entitlement_denies_protected_media(self):
+        from django.core.files.base import ContentFile
+        self.book.pdf.save('expired.pdf',ContentFile(b'%PDF-1.4'),save=True)
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase',expires_at=timezone.now()-timedelta(seconds=1))
+        self.client.force_login(self.user)
+        self.assertEqual(self.client.get(reverse('book_secure_file',args=[self.book.pk,'pdf'])).status_code,403)
+
+
 
 class DiscoveryTests(TestCase):
     def setUp(self):
