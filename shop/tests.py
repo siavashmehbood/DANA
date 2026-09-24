@@ -539,6 +539,25 @@ class ShopFlowTests(TestCase):
 
     @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
     @patch('shop.bank.gateway')
+    def test_cancelled_callback_does_not_override_successful_payment(self, gateway_factory):
+        CartItem.objects.create(user=self.user,book=self.book)
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='CANCEL-RACE',url='https://gateway.example/pay',message='')
+        gateway.verify.return_value=Mock(ok=True,authority='CANCEL-REF',message='',retryable=False)
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        success=self.client.get(reverse('payment_callback'),{'Authority':'CANCEL-RACE','Status':'OK'})
+        cancelled=self.client.get(reverse('payment_callback'),{'Authority':'CANCEL-RACE','Status':'NOK'})
+        payment=Payment.objects.get(authority='CANCEL-RACE'); payment.order.refresh_from_db()
+        self.assertEqual(success.status_code,200)
+        self.assertEqual(cancelled.status_code,200)
+        self.assertEqual(payment.status,'successful')
+        self.assertEqual(payment.order.status,'paid')
+        self.assertTrue(Entitlement.objects.filter(user=self.user,book=self.book).exists())
+
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
     def test_successful_callback_still_verifies_once_after_serialization(self, gateway_factory):
         CartItem.objects.create(user=self.user,book=self.book)
         gateway=Mock(); gateway.enabled=True
