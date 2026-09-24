@@ -246,7 +246,7 @@ class RecommendationTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('home'))
         recs=list(response.context['recommendations'])
-        self.assertIn(accessible,recs)
+        self.assertNotIn(accessible,recs)
         self.assertIn(candidate,recs)
 
 
