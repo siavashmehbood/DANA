@@ -1,5 +1,4 @@
 import logging
-from django.conf import settings
 
 from .models import Article
 from .translation import download_article_pdf, extract_pdf_text, translate_article
