@@ -629,3 +629,12 @@ class PersianPresentationRegressionTests(TestCase):
         response=self.client.get(reverse('dashboard'))
         self.assertContains(response,'در انتظار')
         self.assertNotContains(response,'>pending<')
+
+
+class PageAssetScopingTests(TestCase):
+    def test_global_base_does_not_load_reader_or_article_bundles(self):
+        response=self.client.get(reverse('home'))
+        body=response.content.decode()
+        self.assertNotIn('reader-premium.css',body)
+        self.assertNotIn('reader-controller.js',body)
+        self.assertNotIn('article-detail-overhaul.css',body)
