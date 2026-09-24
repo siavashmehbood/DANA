@@ -54,8 +54,6 @@ class ArticleLibraryItem(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'آیتم کتابخانه مقاله'
-        verbose_name_plural = 'آیتم‌های کتابخانه مقاله'
         constraints = [models.UniqueConstraint(fields=['user', 'article'], name='unique_article_library_item')]
         ordering = ['-updated_at']
         indexes = [models.Index(fields=['user', 'status']), models.Index(fields=['user', 'favorite'])]
@@ -77,8 +75,6 @@ class ArticleAnnotation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'یادداشت مقاله'
-        verbose_name_plural = 'یادداشت‌های مقاله'
         ordering = ['-created_at']
         indexes = [models.Index(fields=['user', 'article']), models.Index(fields=['user', 'page'])]
 
@@ -160,8 +156,6 @@ class ArticleTranslationVersion(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = 'نسخه ترجمه'
-        verbose_name_plural = 'نسخه‌های ترجمه'
         ordering = ['-version']
         constraints = [models.UniqueConstraint(fields=['article', 'version'], name='unique_article_translation_version')]
 
