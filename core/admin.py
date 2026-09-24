@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from django.contrib import admin
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
@@ -44,6 +44,8 @@ def dana_dashboard_stats():
     pending_payments = Payment.objects.filter(status='pending').count()
     failed_payments = Payment.objects.filter(status='failed').count()
     open_tickets = Ticket.objects.exclude(status__in=['resolved', 'closed']).count()
+    translation_backlog = Article.objects.filter(published=True).filter(Q(translation_status__in=['not_requested','pending','translating','failed','provider_failed','validation_failed','retry_pending','original_only']) | Q(title_fa='') | Q(abstract__gt='', abstract_fa='') | Q(full_text__gt='', full_text_fa='')).distinct().count()
+    translation_failures = Article.objects.filter(published=True, translation_status__in=['failed','provider_failed','validation_failed']).count()
     return {
         'users': User.objects.filter(is_active=True, is_deactivated=False).count(),
         'books': Book.objects.filter(status='published').count(),
@@ -59,6 +61,8 @@ def dana_dashboard_stats():
         'pending_payments': pending_payments,
         'failed_payments': failed_payments,
         'open_tickets': open_tickets,
+        'translation_backlog': translation_backlog,
+        'translation_failures': translation_failures,
         'wallet': wallet,
     }
 
@@ -89,6 +93,8 @@ def _dana_index(request, extra_context=None):
         {'label': 'پرداخت‌های ناموفق', 'count': stats['failed_payments'], 'url': reverse('admin:shop_payment_changelist'), 'tone': 'danger'},
         {'label': 'سفارش‌های در انتظار', 'count': stats['pending_orders'], 'url': reverse('admin:shop_order_changelist'), 'tone': 'warning'},
         {'label': 'تیکت‌های باز', 'count': stats['open_tickets'], 'url': reverse('admin:support_ticket_changelist'), 'tone': 'info'},
+        {'label': 'صف ترجمه مقالات', 'count': stats['translation_backlog'], 'url': reverse('admin:articles_article_changelist') + '?translation_health=backlog', 'tone': 'warning'},
+        {'label': 'خطاهای ترجمه', 'count': stats['translation_failures'], 'url': reverse('admin:articles_article_changelist') + '?translation_health=backlog', 'tone': 'danger'},
     ]
 
     context.update({
