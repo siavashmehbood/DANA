@@ -59,12 +59,15 @@ def listing(request):
     for article in page_obj.object_list:
         article.display_title = article.title_fa or rough_translate(article.title)
         article.display_abstract = article.abstract_fa or rough_translate(article.abstract)
-    return render(request, 'articles/list.html', {
+    response=render(request, 'articles/list.html', {
         'articles': page_obj.object_list, 'page_obj': page_obj,
         'categories': ArticleCategory.objects.filter(is_active=True),
         'query': query, 'selected_category': category,
         'selected_sort': sort, 'article_count': paginator.count, 'saved_only': saved_only,
     })
+    response['Cache-Control']='private, no-store' if request.user.is_authenticated else 'public, max-age=60'
+    if request.user.is_authenticated: response['Vary']='Cookie'
+    return response
 
 
 def article_download(request, slug):
@@ -110,6 +113,8 @@ def detail(request, slug):
     if request.user.is_authenticated:
         response['Cache-Control']='private, no-store'
         response['Vary']='Cookie'
+    else:
+        response['Cache-Control']='public, max-age=120'
     return response
 
 
