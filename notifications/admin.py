@@ -15,11 +15,14 @@ class PushSubscriptionAdmin(ModelAdmin):
     search_fields=('user__username','user__phone','endpoint')
     readonly_fields=('endpoint','p256dh','auth','created_at')
     list_per_page=50
+    @admin.display(description='وضعیت')
+    def status_fa(self,obj):
+        return {'queued':'در صف','sent':'ارسال‌شده','delivered':'تحویل‌شده','failed':'ناموفق'}.get(obj.status,obj.status)
     def has_add_permission(self,request): return False
     def has_delete_permission(self,request,obj=None): return False
 @admin.register(EmailLog)
 class EmailLogAdmin(ModelAdmin):
-    list_display=('email','subject','status','created_at')
+    list_display=('email','subject','status_fa','created_at')
     list_filter=('status','created_at')
     search_fields=('email','subject','user__username','user__phone')
     readonly_fields=('user','email','subject','status','created_at')
