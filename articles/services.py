@@ -22,15 +22,6 @@ def _process_article(article_id):
         if article.source_id and not article.source.allow_full_republish:
             translate_article(article, full_text=False)
             return
-        if not article.pdf_url:
-            try:
-                resolved = resolve_pdf_url(article)
-                if resolved:
-                    article.pdf_url = resolved
-                    article.access = 'open'
-                    article.save(update_fields=['pdf_url', 'access', 'updated_at'])
-            except Exception as exc:
-                logger.info('PDF source discovery failed for article %s: %s', article_id, exc)
         if not article.pdf and article.pdf_url:
             try:
                 download_article_pdf(article)
