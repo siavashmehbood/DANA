@@ -537,6 +537,49 @@ class ShopFlowTests(TestCase):
         self.assertEqual(Entitlement.objects.filter(user=self.user,book=self.book).count(),1)
 
 
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_transient_verify_failure_keeps_payment_retryable(self, gateway_factory):
+        CartItem.objects.create(user=self.user,book=self.book)
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='RETRY-AUTH',url='https://gateway.example/pay',message='',retryable=False)
+        gateway.verify.side_effect=[
+            Mock(ok=False,authority='',message='temporary timeout',retryable=True),
+            Mock(ok=True,authority='REF-RETRY',message='',retryable=False),
+        ]
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        first=self.client.get(reverse('payment_callback'),{'Authority':'RETRY-AUTH','Status':'OK'})
+        payment=Payment.objects.get(authority='RETRY-AUTH'); payment.order.refresh_from_db()
+        self.assertEqual(first.status_code,302)
+        self.assertEqual(payment.status,'pending')
+        self.assertEqual(payment.order.status,'pending')
+        self.assertTrue(CartItem.objects.filter(user=self.user,book=self.book).exists())
+        second=self.client.get(reverse('payment_callback'),{'Authority':'RETRY-AUTH','Status':'OK'})
+        payment.refresh_from_db(); payment.order.refresh_from_db()
+        self.assertEqual(second.status_code,200)
+        self.assertEqual(payment.status,'successful')
+        self.assertEqual(payment.order.status,'paid')
+        self.assertTrue(Entitlement.objects.filter(user=self.user,book=self.book).exists())
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_transient_request_failure_keeps_coupon_reserved_and_order_pending(self, gateway_factory):
+        coupon=Coupon.objects.create(code='RETRY10',percent=10,capacity=2)
+        CartItem.objects.create(user=self.user,book=self.book)
+        session=self.client.session; session['checkout_coupon']=coupon.code; session.save()
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=False,authority='',url='',message='connection timeout',retryable=True)
+        gateway_factory.return_value=gateway
+        response=self.client.post(reverse('bank_checkout'))
+        payment=Payment.objects.get(user=self.user,provider='zarinpal')
+        payment.order.refresh_from_db(); coupon.refresh_from_db()
+        self.assertRedirects(response,reverse('orders'))
+        self.assertEqual(payment.status,'pending')
+        self.assertEqual(payment.order.status,'pending')
+        self.assertEqual(coupon.used,1)
+
+
 class BankCheckoutIdempotencyProductTests(TestCase):
     def setUp(self):
         self.user=User.objects.create_user(username='bank-repeat',password='pass12345')
