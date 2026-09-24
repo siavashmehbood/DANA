@@ -46,13 +46,13 @@
 - `git diff --check`: PASS
 
 ## Remaining production work
-- Configure a real PostgreSQL instance and run migration/restore tests against it.
-- Provision production Zarinpal credentials and run sandbox/production smoke verification; request/callback/verify and idempotent finalization are implemented. A provider refund adapter remains if automated refunds are required.
-- Configure private object/file storage at the web-server layer so `/media/` cannot expose private book files directly; the application reader already uses a protected endpoint.
-- Add real transactional email/SMS providers and asynchronous job processing where needed.
+- PostgreSQL 17 CI now runs migration checks, applies migrations, and executes the full regression suite on every PR. Production restore rehearsal remains an external deployment operation.
+- **EXTERNAL RELEASE REQUIREMENT:** provision real Zarinpal staging/production credentials and run a provider smoke verification. Request/callback/verify, callback-payment authority binding, amount integrity, duplicate-success idempotency, and retry-safe transient verification failures are covered in-repo. A provider refund adapter remains Post-RC unless automated refunds are required for V1.
+- Protected book PDF/audio/chapter-audio use `PRIVATE_MEDIA_ROOT` outside public `MEDIA_ROOT`, expose no storage URL, and are served only through entitlement-aware endpoints with audio Range support. **EXTERNAL RELEASE REQUIREMENT:** production web-server/object-storage configuration must keep `PRIVATE_MEDIA_ROOT` unpublished and migrate legacy private files out of public media.
+- **EXTERNAL RELEASE REQUIREMENT:** configure real transactional email/SMS/push credentials and verify delivery in the deployment environment; asynchronous processing remains Post-RC unless deployment volume requires it.
 - Add full browser/mobile automated QA and visual regression coverage.
 - Add real PWA raster icons if store/install requirements demand them.
-- Add production monitoring/alerting and backup/restore automation.
+- **EXTERNAL RELEASE REQUIREMENT:** configure production monitoring/alerting and a real backup destination, then rehearse restore against production-like infrastructure.
 
 ## Safety note
 No force push, destructive reset, repository deletion or production data deletion was performed.
