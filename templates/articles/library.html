@@ -1,4 +1,8 @@
 {% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/article-library-pro.css' %}">
+{% endblock %}
 {% block title %}کتابخانه پژوهشی من | DANA{% endblock %}
 {% block content %}
 <section class="page-hero"><div><span class="eyebrow">DANA RESEARCH WORKSPACE</span><h1>کتابخانه پژوهشی من</h1><p>مقاله‌ها، پیشرفت مطالعه و یادداشت‌های تحقیقاتی در یک فضای واحد.</p></div></section>
