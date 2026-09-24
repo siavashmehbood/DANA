@@ -6,7 +6,7 @@
 <section class="section audio-shell" dir="rtl">
   <div class="audio-hero">
     <div>{% if book.cover %}<img class="audio-cover" src="{{book.cover.url}}" alt="جلد {{book.name}}">{% endif %}</div>
-    <div><span class="shelf-label">DANA AUDIOBOOK</span><h1>{{book.name}}</h1><p>{{book.author.name}}</p>{% if has_text %}<a class="btn secondary" href="{% url 'reader' book.pk %}">نسخه متنی / Reader</a>{% endif %}</div>
+    <div><span class="shelf-label">کتاب صوتی دانا</span><h1>{{book.name}}</h1><p>{{book.author.name}}</p>{% if has_text %}<a class="btn secondary" href="{% url 'reader' book.pk %}">نسخه متنی / مطالعه</a>{% endif %}</div>
   </div>
   <div class="panel audio-player-panel">
     <div id="audio-title" aria-live="polite">آماده پخش</div><div id="audio-status" class="muted"></div><div id="audio-alert" class="sr-only" role="status" aria-live="polite"></div>
