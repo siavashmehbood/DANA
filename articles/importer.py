@@ -182,14 +182,8 @@ def discover_articles(query, limit=20, providers=None):
     return rows[: int(limit)]
 
 
-def import_discovered(query, limit=20, category=None, providers=None, translate=True):
-    """Import readable discoveries and immediately attempt the free Persian translation.
-
-    Translation failure never blocks or removes the imported original. This keeps
-    discovery useful while ensuring newly imported English articles enter the
-    translation/history pipeline instead of silently accumulating as backlog.
-    """
-    created = updated = translated = translation_failed = 0
+def import_discovered(query, limit=20, category=None, providers=None):
+    created = updated = 0
     source_cache = {}
     discovered = discover_articles(query, limit, providers)
     for item in discovered:
@@ -232,31 +226,9 @@ def import_discovered(query, limit=20, category=None, providers=None, translate=
             updated += 1
         else:
             defaults['last_discovered_at'] = datetime.now(timezone.utc)
-            obj = Article.objects.create(**defaults)
+            Article.objects.create(**defaults)
             created += 1
-        if translate and obj.original_language.lower().startswith('en'):
-            needs_translation = (
-                not obj.title_fa
-                or (bool(obj.abstract) and not obj.abstract_fa)
-                or obj.translation_status in {'pending', 'failed'}
-            )
-            if needs_translation:
-                try:
-                    # Local import avoids coupling provider discovery to translation
-                    # module initialization and uses the existing no-key free/fallback path.
-                    from .translation import translate_article
-                    result = translate_article(obj, full_text=False)
-                    if result.translation_status in {'translated', 'reviewed'}:
-                        translated += 1
-                    else:
-                        translation_failed += 1
-                except Exception as exc:
-                    translation_failed += 1
-                    logger.warning('article translation failed after import for %s: %s', obj.pk, exc)
-    return {
-        'created': created, 'updated': updated, 'discovered': len(discovered),
-        'translated': translated, 'translation_failed': translation_failed,
-    }
+    return {'created': created, 'updated': updated, 'discovered': len(discovered)}
 
 
 # Backwards-compatible API used by the existing management command.
