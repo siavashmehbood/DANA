@@ -497,11 +497,19 @@ class TranslationBacklogCommandTests(TestCase):
     @patch('articles.management.commands.translate_articles.translate_article')
     def test_retry_lifecycle_states_are_processed(self, translate):
         from django.core.management import call_command
-        states=['provider_failed','validation_failed','retry_pending','original_only']
+        states=['provider_failed','validation_failed','retry_pending']
         rows=[Article.objects.create(title=f'Retry {i}',slug=f'retry-{i}',translation_status=state,published=True) for i,state in enumerate(states)]
         translate.side_effect=lambda article,**kwargs: article
         call_command('translate_articles')
         self.assertEqual({call.args[0].pk for call in translate.call_args_list},{row.pk for row in rows})
+
+    @patch('articles.management.commands.translate_articles.translate_article')
+    def test_rights_limited_original_only_is_terminal(self, translate):
+        from django.core.management import call_command
+        source=ArticleSource.objects.create(name='Metadata only source',allow_full_republish=False)
+        Article.objects.create(title='Rights limited',slug='rights-limited',title_fa='عنوان فارسی',abstract='English abstract',abstract_fa='چکیده فارسی',full_text='Original body',translation_status='original_only',source=source,published=True)
+        call_command('translate_articles')
+        translate.assert_not_called()
 
 
 class MetadataOnlyTranslationStatusTests(TestCase):
