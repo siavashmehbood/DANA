@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.db.models import Sum, Q
-from django.db.models.functions import Coalesce
+
 from django.utils import timezone
 from datetime import timedelta
 from accounts.models import User
@@ -41,11 +41,11 @@ def leaderboard(request):
     start=period_start(period)
     people=User.objects.filter(is_active=True,leaderboard_public=True)
     if metric=='study_hours':
-        people=people.annotate(reading_seconds=Coalesce(Sum('readingactivity__seconds',filter=Q(readingactivity__created_at__gte=start)),0),listening_seconds=Coalesce(Sum('listeningactivity__seconds',filter=Q(listeningactivity__created_at__gte=start)),0))
-        rows=[{'user':u,'level':level_for(u),'value':round((u.reading_seconds+u.listening_seconds)/3600,1)} for u in people]
+        people=people.annotate(reading_seconds=Sum('readingactivity__seconds',filter=Q(readingactivity__created_at__gte=start)),listening_seconds=Sum('listeningactivity__seconds',filter=Q(listeningactivity__created_at__gte=start)))
+        rows=[{'user':u,'level':level_for(u),'value':round(((u.reading_seconds or 0)+(u.listening_seconds or 0))/3600,1)} for u in people]
     elif metric=='admin_score':
-        people=people.annotate(score_total=Coalesce(Sum('review__admin_score',filter=Q(review__created_at__gte=start,review__admin_score__isnull=False)),0))
-        rows=[{'user':u,'level':level_for(u),'value':u.score_total} for u in people]
+        people=people.annotate(score_total=Sum('review__admin_score',filter=Q(review__created_at__gte=start,review__admin_score__isnull=False)))
+        rows=[{'user':u,'level':level_for(u),'value':u.score_total or 0} for u in people]
     else:
         rows=[{'user':u,'level':u.level,'value':u.level} for u in people]
     rows.sort(key=lambda x:(x['value'],x['user'].xp),reverse=True)
