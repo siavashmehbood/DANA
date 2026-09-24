@@ -605,3 +605,16 @@ class PlatformQualityRegressionTests(TestCase):
         self.assertContains(response,'Disallow: /protected/')
         self.assertContains(response,'Disallow: /reader/')
         self.assertContains(response,'Sitemap: ')
+
+
+class ObservabilityEndpointTests(TestCase):
+    def test_health_is_non_cacheable(self):
+        response=self.client.get(reverse('healthz'))
+        self.assertEqual(response.json(),{'status':'ok'})
+        self.assertEqual(response['Cache-Control'],'no-store')
+
+    def test_readiness_reports_database_dependency(self):
+        response=self.client.get(reverse('readyz'))
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json(),{'status':'ready','database':'ok'})
+        self.assertEqual(response['Cache-Control'],'no-store')
