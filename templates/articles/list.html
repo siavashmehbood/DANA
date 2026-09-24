@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}مقالات | DANA{% endblock %}
 {% block content %}
-<section class="page-hero"><div><span class="eyebrow">DANA ACADEMIC</span><h1>کتابخانه مقالات</h1><p>{{ article_count }} مقاله علمی برای مطالعه آنلاین</p></div></section>
+<section class="page-hero"><div><span class="eyebrow">مقالات علمی دانا</span><h1>کتابخانه مقالات</h1><p>{{ article_count }} مقاله علمی برای مطالعه آنلاین</p></div></section>
 <form class="search-box" method="get" role="search">
 <label class="sr-only" for="article-search">جست‌وجوی مقاله</label><input id="article-search" name="q" value="{{ query }}" placeholder="عنوان، نویسنده، ژورنال، DOI یا موضوع..."><input type="hidden" name="category" value="{{ selected_category }}">
 <label class="sr-only" for="article-sort">مرتب‌سازی مقاله‌ها</label><select id="article-sort" name="sort"><option value="top" {% if selected_sort == 'top' %}selected{% endif %}>۱۰۰ مقاله برتر</option><option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>جدیدترین</option><option value="popular" {% if selected_sort == 'popular' %}selected{% endif %}>پربازدیدترین</option><option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>قدیمی‌ترین</option></select><button class="btn primary">جست‌وجو</button>
