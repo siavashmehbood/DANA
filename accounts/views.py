@@ -215,10 +215,15 @@ def library(request):
     owned=list(Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=now)).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=now)).select_related('book__author','book__category').prefetch_related('book__chapters').order_by('-granted_at'))
     active_subscription=Subscription.objects.filter(user=user,status='active',starts_at__lte=now,expires_at__gt=now,plan__grants_catalog_access=True).select_related('plan').first()
     entitled_ids={item.book_id for item in owned}
+    entitlement_source={item.book_id:item.source for item in owned}
     books=[item.book for item in owned]
     if active_subscription:
         subscription_books=Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=now),subscription_included=True).exclude(pk__in=entitled_ids).select_related('author','category').prefetch_related('chapters').order_by('-created_at')[:500]
         books.extend(subscription_books)
+    existing_ids={book.id for book in books}
+    free_books=Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=now),visibility='public',price=0).exclude(pk__in=existing_ids).select_related('author','category').prefetch_related('chapters').order_by('-created_at')[:500]
+    books.extend(free_books)
+    free_ids={book.id for book in free_books}
     book_ids=[book.id for book in books]
     pmap={p.book_id:p for p in ReadingProgress.objects.filter(user=user,book_id__in=book_ids)}
     amap={}
@@ -234,14 +239,16 @@ def library(request):
             latest_kind='audio' if audio_progress and (not progress or audio_progress.updated_at > progress.updated_at) else 'text'
             if latest_kind=='text' and not has_text and has_audio:
                 latest_kind='audio'
-        rows.append({'book':book,'progress':progress,'audio_progress':audio_progress,'latest_kind':latest_kind,'has_audio':has_audio,'has_text':has_text,'source':'purchased' if book.id in entitled_ids else 'subscription'})
+        entitlement_kind=entitlement_source.get(book.id)
+        access_source='purchased' if entitlement_kind=='purchase' else 'subscription' if entitlement_kind=='subscription' or (book.id not in entitled_ids and book.id not in free_ids) else 'free' if book.id in free_ids else 'granted'
+        rows.append({'book':book,'progress':progress,'audio_progress':audio_progress,'latest_kind':latest_kind,'has_audio':has_audio,'has_text':has_text,'source':access_source})
     state=request.GET.get('state','all')
     kind=request.GET.get('kind','all')
     source=request.GET.get('source','all')
     sort=request.GET.get('sort','recent')
     if state not in {'all','reading','completed','unread'}: state='all'
     if kind not in {'all','audio','text'}: kind='all'
-    if source not in {'all','purchased','subscription'}: source='all'
+    if source not in {'all','purchased','subscription','free','granted'}: source='all'
     if sort not in {'recent','title','progress'}: sort='recent'
     def effective_progress(row):
         reading=float(row['progress'].progress) if row['progress'] else 0
@@ -258,11 +265,11 @@ def library(request):
     else:
         rows.sort(key=lambda row: (row['audio_progress'].updated_at if row['latest_kind']=='audio' and row['audio_progress'] else row['progress'].updated_at if row['progress'] else timezone.make_aware(datetime(1970,1,1))),reverse=True)
     visible_count=len(rows)
-    preferred_categories={book.category_id for book in books if book.category_id}
+    preferred_categories={item.book.category_id for item in owned if item.source != 'subscription' and item.book.category_id}
     # Exclude books the reader already owns or has engaged with. An active
     # subscription is access to a catalog, not ownership of every title; excluding
     # the whole catalog made recommendations disappear for subscribers.
-    excluded_recommendation_ids=set(Entitlement.objects.filter(user=user).values_list('book_id',flat=True))
+    excluded_recommendation_ids=set(Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=now)).values_list('book_id',flat=True))
     excluded_recommendation_ids.update(ReadingProgress.objects.filter(user=user).values_list('book_id',flat=True))
     excluded_recommendation_ids.update(AudioProgress.objects.filter(user=user).values_list('book_id',flat=True))
     if not preferred_categories:
