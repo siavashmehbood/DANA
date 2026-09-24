@@ -129,6 +129,11 @@ def bank_checkout(request):
             payment = Payment.objects.create(user=user, order=order, provider='zarinpal', amount=total, status='pending', idempotency_key=f'bank:{order.pk}', callback_payload={'coupon_code': coupon.code if coupon else '', 'coupon_reserved': bool(coupon and discount > 0)})
         result = gateway().request(order, request)
         if not result.ok:
+            if getattr(result, 'retryable', False):
+                payment.callback_payload = {**payment.callback_payload, 'request_error': result.message}
+                payment.save(update_fields=['callback_payload'])
+                messages.error(request, result.message + ' وضعیت پرداخت نامشخص است؛ پیش از تلاش دوباره سفارش‌های خود را بررسی کنید.')
+                return redirect('orders')
             payment.status = 'failed'
             payment.callback_payload = {**payment.callback_payload, 'error': result.message}
             payment.save(update_fields=['status', 'callback_payload'])
@@ -194,6 +199,11 @@ def payment_callback(request):
             payment.save(update_fields=['status', 'reference_id', 'callback_payload'])
             finalize_bank_order(payment.order, payment)
         return render(request, 'shop/success.html', {'order': payment.order})
+    if getattr(result, 'retryable', False):
+        payment.callback_payload = {**payment.callback_payload, 'verify_error': result.message}
+        payment.save(update_fields=['callback_payload'])
+        messages.warning(request, 'تأیید پرداخت موقتاً در دسترس نیست؛ تراکنش نهایی نشده و می‌توانید دوباره وضعیت آن را بررسی کنید.')
+        return redirect('orders')
     payment.status = 'failed'
     payment.callback_payload = {**payment.callback_payload, 'verify_error': result.message}
     payment.save(update_fields=['status', 'callback_payload'])
