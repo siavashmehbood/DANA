@@ -44,7 +44,7 @@ def dana_dashboard_stats():
     pending_payments = payment_totals['pending']
     failed_payments = payment_totals['failed']
     open_tickets = Ticket.objects.exclude(status__in=['resolved', 'closed']).count()
-    translation_backlog = Article.objects.filter(published=True).filter(Q(translation_status__in=['not_requested','pending','translating','failed','provider_failed','validation_failed','retry_pending','original_only']) | Q(title_fa='') | Q(abstract__gt='', abstract_fa='') | Q(full_text__gt='', full_text_fa='')).distinct().count()
+    translation_backlog = Article.objects.filter(published=True).filter(Q(translation_status__in=['not_requested','pending','translating','failed','provider_failed','validation_failed','retry_pending']) | Q(title_fa='') | Q(abstract__gt='', abstract_fa='') | (Q(full_text__gt='', full_text_fa='') & (Q(source__isnull=True) | Q(source__allow_full_republish=True)))).distinct().count()
     translation_failures = Article.objects.filter(published=True, translation_status__in=['failed','provider_failed','validation_failed']).count()
     return {
         'users': User.objects.filter(is_active=True, is_deactivated=False).count(),
