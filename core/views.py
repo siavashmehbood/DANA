@@ -71,7 +71,7 @@ def home(request):
         # reading/listening signals above, so evaluating them separately only
         # added database round-trips without changing recommendation categories.
         preferred_categories=set(owned_categories)|set(rated_categories)|set(active_categories)|set(audio_categories)
-        recommendations=list(base.filter(category_id__in=preferred_categories).exclude(id__in=owned_ids|consumed_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at').distinct()[:8])
+        recommendations=list(base.filter(category_id__in=preferred_categories).exclude(id__in=access_ids|consumed_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at').distinct()[:8])
         if not recommendations:
             recommendations=list(base.exclude(id__in=owned_ids|consumed_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8])
     response=render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
