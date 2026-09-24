@@ -42,7 +42,10 @@ def listing(request):
         variants={query,query.replace('ی','ي').replace('ک','ك')}
         search_q=Q()
         for term in variants:
-            search_q |= Q(title__icontains=term)|Q(title_fa__icontains=term)|Q(authors__icontains=term)|Q(abstract__icontains=term)|Q(abstract_fa__icontains=term)|Q(full_text__icontains=term)|Q(full_text_fa__icontains=term)|Q(journal__icontains=term)|Q(doi__icontains=term)
+            # Listing search intentionally targets metadata/abstracts. Scanning both
+            # potentially multi-megabyte full-text columns with ILIKE on every
+            # request was a major unindexed catalog bottleneck.
+            search_q |= Q(title__icontains=term)|Q(title_fa__icontains=term)|Q(authors__icontains=term)|Q(abstract__icontains=term)|Q(abstract_fa__icontains=term)|Q(journal__icontains=term)|Q(doi__icontains=term)
         articles=articles.filter(search_q)
     if category:
         articles = articles.filter(category__slug=category)
