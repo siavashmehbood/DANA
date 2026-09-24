@@ -87,6 +87,10 @@ class UserAdmin(BaseUserAdmin):
                 )
                 messages.success(request, f'{topup:,.0f} تومان به کیف پول کاربر اضافه شد.')
             obj.wallet_balance = locked.wallet_balance
+            # Financial/gamification counters are derived state. Never let a stale
+            # admin form overwrite values changed by concurrent product flows.
+            for field in ('xp','points','purchase_points','study_points'):
+                setattr(obj, field, getattr(locked, field))
             super().save_model(request, obj, form, change)
 
 
