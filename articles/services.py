@@ -1,5 +1,7 @@
 import logging
 
+from django.utils import timezone
+
 from .models import Article
 from .translation import download_article_pdf, extract_pdf_text, translate_article
 
@@ -12,6 +14,7 @@ def _process_article(article_id):
         if not article.published:
             return
         if article.source_id and not article.source.is_active:
+            Article.objects.filter(pk=article_id).update(translation_status='not_requested', translation_error='منبع مقاله غیرفعال است.', updated_at=timezone.now())
             return
         if article.source_id and not article.source.allow_full_republish:
             result=translate_article(article, full_text=False)
@@ -37,7 +40,8 @@ def _process_article(article_id):
             logger.warning('Automatic translation failed for article %s: %s', article_id, result.translation_error)
     except Article.DoesNotExist:
         return
-    except Exception:
+    except Exception as exc:
+        Article.objects.filter(pk=article_id).update(translation_status='retry_pending', translation_error=str(exc)[:1000], updated_at=timezone.now())
         logger.exception('Automatic article processing failed for %s', article_id)
 
 
