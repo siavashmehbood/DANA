@@ -187,15 +187,7 @@ def payment_callback(request):
         payment.order.save(update_fields=['status'])
         messages.error(request, 'مبلغ تراکنش با سفارش همخوانی ندارد؛ پرداخت تأیید نشد.')
         return redirect('checkout')
-    result = gateway().verify(payment.order, payment=payment)
-    if result.ok:
-        with transaction.atomic():
-            payment = Payment.objects.select_for_update().select_related('order').get(pk=payment.pk)
-            if payment.status == 'successful':
-                return render(request, 'shop/success.html', {'order': payment.order})
-            if payment.status != 'pending':
-                messages.error(request, 'این تراکنش قبلاً نهایی شده است.')
-                return redirect('cart')
+    # Serialize callbacks before contacting the provider. This prevents two concurrent\n    # callbacks for the same authority from both issuing an external verify request.\n    # The transaction intentionally spans verify: correctness is more important than\n    # callback throughput and the lock is scoped to this single payment row.\n    with transaction.atomic():\n        payment = Payment.objects.select_for_update().select_related('order').get(pk=payment.pk)\n        if payment.status == 'successful':\n            return render(request, 'shop/success.html', {'order': payment.order})\n        if payment.status != 'pending':\n            messages.error(request, 'این تراکنش قبلاً نهایی شده است.')\n            return redirect('cart')\n        result = gateway().verify(payment.order, payment=payment)\n        if result.ok:
             payment.status = 'successful'
             payment.reference_id = result.authority
             payment.callback_payload = {**payment.callback_payload, 'ref_id': result.authority}
