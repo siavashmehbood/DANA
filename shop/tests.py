@@ -687,3 +687,14 @@ class BankPaymentRecoveryUxTests(TestCase):
         response=self.client.get(reverse('payment_callback'),{'Authority':'RECOVERY-AUTH','Status':'NOK'},follow=True)
         self.assertTrue(CartItem.objects.filter(user=user,book=book).exists())
         self.assertContains(response,'سبد خرید شما حفظ شده')
+
+
+class SubscriptionAdminIntegrityTests(TestCase):
+    def test_subscription_admin_is_auditable_and_not_directly_mutable(self):
+        from django.contrib.admin.sites import AdminSite
+        from .admin import SubscriptionAdmin
+        admin=SubscriptionAdmin(Subscription,AdminSite())
+        self.assertFalse(admin.has_add_permission(None))
+        self.assertFalse(admin.has_delete_permission(None))
+        for field in ('user','plan','status','starts_at','expires_at','created_at'):
+            self.assertIn(field,admin.readonly_fields)
