@@ -1,4 +1,10 @@
 {% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reader-premium.css' %}">
+<link rel="stylesheet" href="{% static 'css/reader-pages.css' %}">
+<link rel="stylesheet" href="{% static 'css/reader-fix.css' %}">
+{% endblock %}
 {% block title %}{{ book.name }} | مطالعه | دانا{% endblock %}
 {% block description %}محیط مطالعه خصوصی کتاب {{ book.name }} در دانا.{% endblock %}
 {% block content %}
@@ -23,3 +29,5 @@ document.querySelector('[data-note]')?.addEventListener('click',()=>{const page=
 document.querySelectorAll('[data-delete-url]').forEach(button=>button.addEventListener('click',()=>{if(!confirm('این مورد حذف شود؟'))return;fetch(button.dataset.deleteUrl,{method:'POST',headers:{'X-CSRFToken':csrftoken}}).then(response=>{if(response.ok)location.reload()})}));
 </script>{% endif %}
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/reader-controller.js' %}?v=31"></script>{% endblock %}
