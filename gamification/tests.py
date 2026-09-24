@@ -7,8 +7,8 @@ from django.utils import timezone
 from accounts.models import User
 from books.models import Author, Book
 from reader.models import ListeningActivity, ReadingActivity, ReadingProgress
-from .models import PointLedger
-from .services import add_points
+from .models import PointLedger, XPEvent
+from .services import add_points, add_xp
 
 
 class PointLedgerTests(TestCase):
@@ -69,3 +69,15 @@ class LeaderboardActivityTests(TestCase):
     def test_progress_snapshot_does_not_inflate_study_hours(self):
         ReadingProgress.objects.create(user=self.user,book=self.book,seconds=36000,progress=50)
         self.assertEqual(self._value('week'),0)
+
+
+class XPEventIntegrityTests(TestCase):
+    def test_reference_makes_xp_award_idempotent(self):
+        user=User.objects.create_user(username='xp-user',password='pass12345')
+        first=add_xp(user,100,'mission','mission',reference='mission:42:user')
+        second=add_xp(user,100,'mission','mission',reference='mission:42:user')
+        user.refresh_from_db()
+        self.assertIsNotNone(first)
+        self.assertIsNone(second)
+        self.assertEqual(user.xp,100)
+        self.assertEqual(XPEvent.objects.filter(reference='mission:42:user').count(),1)
