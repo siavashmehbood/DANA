@@ -37,13 +37,14 @@
 <header class="site-header"><nav class="main-nav" aria-label="ناوبری اصلی">
 <a class="brand" href="{% url 'home' %}" aria-label="دانا، صفحه اصلی">دانا</a>
 <div class="header-search"><form action="{% url 'books' %}" method="get"><input name="q" placeholder="جستجوی کتاب، نویسنده یا موضوع..." aria-label="جستجوی کتاب"><button type="submit" aria-label="جستجو">⌕</button></form></div>
-<div class="header-links">
+<div class="header-links" aria-label="دسترسی‌های دسکتاپ">
 <a href="{% url 'home' %}">خانه</a><a href="{% url 'books' %}">کشف کتاب</a><a href="{% url 'books' %}?kind=audio">کتاب صوتی</a><a href="{% url 'subscriptions' %}">اشتراک</a><a href="{% url 'article_list' %}">مجله دانا</a>
 {% if user.is_authenticated %}<a href="{% url 'dashboard' %}">داشبورد</a><a href="{% url 'library' %}">کتابخانه من</a><a href="{% url 'leaderboard' %}">رتبه‌بندی</a>{% endif %}
 </div>
 {% if user.is_authenticated %}<details class="header-more"><summary aria-label="باز کردن منوی حساب">بیشتر</summary><div class="header-more-menu"><a href="{% url 'notifications' %}">اعلان‌ها</a><a href="{% url 'tickets' %}">پشتیبانی</a><a href="{% url 'orders' %}">سفارش‌ها</a><a href="{% url 'wallet' %}">کیف پول</a><a href="{% url 'cart' %}" class="header-cart">سبد خرید</a><a href="{% url 'profile' %}">پروفایل</a>{% if user.is_staff %}<a class="admin-link" href="/admin/">⚙ مدیریت</a>{% endif %}<a href="{% url 'logout' %}">خروج</a></div></details>{% endif %}
 <div class="header-auth">{% if user.is_authenticated %}<a class="auth-action" href="{% url 'profile' %}" aria-label="پروفایل کاربری">پروفایل</a>{% else %}<a class="auth-action" href="{% url 'login' %}">ورود / ثبت‌نام</a>{% endif %}</div>
 </nav></header>
+<nav class="mobile-primary-nav" aria-label="ناوبری اصلی موبایل"><a href="{% url 'home' %}">خانه</a><a href="{% url 'books' %}">کشف</a>{% if user.is_authenticated %}<a href="{% url 'library' %}">کتابخانه</a><a href="{% url 'cart' %}">سبد</a><a href="{% url 'profile' %}">پروفایل</a>{% else %}<a href="{% url 'article_list' %}">مجله</a><a href="{% url 'subscriptions' %}">اشتراک</a><a href="{% url 'login' %}">ورود</a>{% endif %}</nav>
 {% for m in messages %}<div class="msg">{{ m }}</div>{% endfor %}
 <main id="main-content">{% block content %}{% endblock %}</main>
 <footer class="dana-footer"><div class="dana-footer-inner"><div><a class="dana-footer-brand" href="{% url 'home' %}">✦ دانا</a><p>کتاب، مطالعه و یادگیری؛ در یک تجربه یکپارچه.</p></div><div class="dana-footer-links"><a href="{% url 'books' %}">کتابخانه</a><a href="{% url 'article_list' %}">مقالات</a><a href="{% url 'tickets' %}">پشتیبانی</a><a href="{% url 'home' %}">درباره دانا</a></div><div class="dana-footer-copy">© دانا · کتابخانه دیجیتال</div></div></footer>
