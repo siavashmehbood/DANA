@@ -86,4 +86,4 @@ No force push, destructive reset, repository deletion or production data deletio
 - Catalog performance: normal listing/search avoids duplicate full COUNT work before pagination.
 - Admin localization: operational field and financial choice labels are Persian across the primary management apps without introducing schema migrations.
 - Regression coverage expanded for article processing boundaries, translation fallback/source-rights behavior, and Admin Persian labels.
-- Final validation target: DANA CI #1467 on HEAD `c125d293038564791d52b9c5a7f0187ec093ee35`. Repository verdict remains conditional until both default and PostgreSQL jobs pass.
+- Final validation target: the latest DANA CI run on the current branch HEAD. Repository verdict remains conditional until both default and PostgreSQL jobs pass.
