@@ -638,6 +638,10 @@ class PageAssetScopingTests(TestCase):
         self.assertNotIn('reader-premium.css',body)
         self.assertNotIn('reader-controller.js',body)
         self.assertNotIn('article-detail-overhaul.css',body)
+        self.assertIn('css/app.css',body)
+        self.assertNotIn('theme-final.css',body)
+        self.assertNotIn('ui-overhaul.css',body)
+        self.assertNotIn('site-unified.css',body)
 
 
 class RecommendationEntitlementSemanticsTests(TestCase):
