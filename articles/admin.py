@@ -2,7 +2,7 @@ from django.contrib import admin
 from unfold.admin import ModelAdmin
 from django.utils import timezone
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Max, Q
 
 from .models import Article, ArticleCategory, ArticleSource, ArticleTranslationVersion
 from .translation import extract_pdf_text, translate_article
@@ -101,10 +101,22 @@ def extract_full_text(modeladmin, request, queryset):
     modeladmin.message_user(request, f'متن {success} مقاله استخراج شد.')
 
 
+class TranslationBacklogFilter(admin.SimpleListFilter):
+    title='سلامت ترجمه'
+    parameter_name='translation_health'
+    def lookups(self,request,model_admin):
+        return (('backlog','نیازمند ترجمه/ترمیم'),('healthy','ترجمه سالم'))
+    def queryset(self,request,queryset):
+        backlog=Q(translation_status__in=['pending','failed','translating'])|Q(title_fa='')|Q(abstract__gt='',abstract_fa='')|Q(full_text__gt='',full_text_fa='')
+        if self.value()=='backlog': return queryset.filter(backlog).distinct()
+        if self.value()=='healthy': return queryset.exclude(backlog).distinct()
+        return queryset
+
+
 @admin.register(Article)
 class ArticleAdmin(ModelAdmin):
-    list_display = ('title', 'year', 'category', 'source', 'published', 'featured', 'translation_status', 'translation_version', 'text_status', 'translated_at')
-    list_filter = ('published', 'featured', 'access', 'category', 'source', 'year', 'translation_status')
+    list_display = ('title', 'year', 'category', 'source', 'published', 'featured', 'translation_status', 'translation_health', 'translation_version', 'text_status', 'translated_at')
+    list_filter = (TranslationBacklogFilter, 'published', 'featured', 'access', 'category', 'source', 'year', 'translation_status')
     search_fields = ('title', 'title_fa', 'authors', 'abstract', 'abstract_fa', 'doi', 'journal', 'source_url')
     prepopulated_fields = {'slug': ('title',)}
     list_editable = ('featured', 'published')
@@ -117,6 +129,14 @@ class ArticleAdmin(ModelAdmin):
         ('انتشار و طبقه‌بندی', {'fields': ('slug', 'category', 'access', 'featured', 'published', 'cover', 'pdf', 'pdf_url')}),
         ('اطلاعات سیستمی', {'fields': ('external_id', 'citation_count', 'relevance_score', 'last_discovered_at', 'downloads', 'created_at', 'updated_at'), 'classes': ('collapse',)}),
     )
+
+    @admin.display(description='سلامت ترجمه')
+    def translation_health(self,obj):
+        if obj.translation_status in {'failed','translating','pending'}:
+            return 'نیازمند ترجمه'
+        if not obj.title_fa or (obj.abstract and not obj.abstract_fa) or (obj.full_text and not obj.full_text_fa):
+            return 'ترجمه ناقص'
+        return 'سالم'
 
     @admin.display(description='متن')
     def text_status(self, obj):
