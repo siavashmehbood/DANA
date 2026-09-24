@@ -99,7 +99,7 @@ def readyz(request):
         response=JsonResponse({'status':'unavailable'},status=503)
         response['Cache-Control']='no-store'
         return response
-    response=JsonResponse({'status':'ready'})
+    response=JsonResponse({'status':'ready','database':'ok'})
     response['Cache-Control']='no-store'
     return response
 
