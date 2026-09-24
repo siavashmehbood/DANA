@@ -23,6 +23,20 @@ class BookAdmin(ModelAdmin):
     list_per_page = 25
     autocomplete_fields = ('author', 'category', 'level')
     list_editable = ('status', 'featured', 'subscription_included')
+    # Password visibility has no product unlock flow in V1. Keep the legacy
+    # model value readable, but prevent Admin from publishing a dead-end mode.
+    def get_readonly_fields(self, request, obj=None):
+        fields=list(super().get_readonly_fields(request,obj))
+        if obj and obj.visibility == 'password':
+            fields.extend(['visibility','access_password'])
+        return tuple(dict.fromkeys(fields))
+
+    def save_model(self, request, obj, form, change):
+        if obj.visibility == 'password' and obj.status in {'published','scheduled'}:
+            obj.status='draft'
+            obj.publish_at=None
+            self.message_user(request,'کتاب رمزدار تا زمان پیاده‌سازی Unlock Flow در V1 فقط به‌صورت پیش‌نویس نگه داشته می‌شود.',level='warning')
+        super().save_model(request,obj,form,change)
     inlines = (ChapterInline,)
     fieldsets = (
         ('مشخصات کتاب', {'fields': ('name', 'slug', 'author', 'category', 'level', 'cover', 'summary', 'description')}),
