@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.urls import path, include
 from .views import home, admin_logout, pwa_manifest, service_worker, protected_book_pdf, robots_txt, sitemap_xml, healthz, readyz
+from .admin_localization import apply_admin_localization
+
+apply_admin_localization()
 
 urlpatterns = [
     path('healthz/', healthz, name='healthz'),
