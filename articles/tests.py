@@ -480,3 +480,14 @@ class LegacyDownloaderSecurityRegressionTests(TestCase):
         with self.assertRaises(ValueError):
             download_pdf(article)
         get.assert_not_called()
+
+
+class TranslationFailureClassificationTests(TestCase):
+    @patch('articles.translation.translate_text', return_value='english only result')
+    def test_quality_failure_is_not_marked_translated(self, _translate):
+        from articles.translation import translate_article
+        article=Article.objects.create(title='Quality source',slug='quality-source',abstract='Useful source abstract',published=True)
+        result=translate_article(article)
+        self.assertEqual(result.translation_status,'validation_failed')
+        self.assertNotEqual(result.translation_status,'translated')
+        self.assertEqual(result.translation_version,0)
