@@ -689,6 +689,15 @@ class BankPaymentRecoveryUxTests(TestCase):
         self.assertContains(response,'سبد خرید شما حفظ شده')
 
 
+class EntitlementAdminIntegrityTests(TestCase):
+    def test_entitlement_source_is_admin_managed_provenance(self):
+        from django.contrib.admin.sites import AdminSite
+        from .admin import EntitlementAdmin
+        admin=EntitlementAdmin(Entitlement,AdminSite())
+        self.assertIn('source',admin.readonly_fields)
+        self.assertIn('order',admin.readonly_fields)
+
+
 class SubscriptionAdminIntegrityTests(TestCase):
     def test_subscription_admin_is_auditable_and_not_directly_mutable(self):
         from django.contrib.admin.sites import AdminSite
