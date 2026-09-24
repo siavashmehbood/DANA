@@ -9,6 +9,7 @@ import pymupdf
 import requests
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.db.models import Max
 from django.utils import timezone
 
 from .models import ArticleTranslationVersion
@@ -234,7 +235,7 @@ def translate_article(article, full_text=False, force=False, provider='mymemory+
             locked.translation_error='منبع مقاله هنگام ترجمه تغییر کرد؛ ترجمه باید دوباره اجرا شود.'
             locked.save(update_fields=['translation_status','translation_error','updated_at'])
             return locked
-        next_version=(locked.translation_versions.aggregate(max_version=__import__('django').db.models.Max('version'))['max_version'] or 0)+1
+        next_version=(locked.translation_versions.aggregate(max_version=Max('version'))['max_version'] or 0)+1
         ArticleTranslationVersion.objects.create(
             article=locked,version=next_version,title_fa=title_fa,abstract_fa=abstract_fa,
             content_fa=content_fa,provider=provider,quality_score=100,source_hash=source_hash,
