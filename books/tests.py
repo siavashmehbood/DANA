@@ -545,3 +545,13 @@ class CatalogSearchScopeRegressionTests(TestCase):
         Book.objects.create(name='Summary title',slug='summary-scope',author=author,status='published',visibility='public',summary='specialsummarytoken')
         response=self.client.get(reverse('books'),{'q':'specialsummarytoken'})
         self.assertContains(response,'Summary title')
+
+
+class CatalogSearchRelevanceRegressionTests(TestCase):
+    def test_default_search_prioritizes_exact_title_over_author_match(self):
+        exact_author=Author.objects.create(name='Other Author')
+        matching_author=Author.objects.create(name='Target Query')
+        exact=Book.objects.create(name='Target Query',slug='target-query-exact',author=exact_author,status='published',visibility='public')
+        Book.objects.create(name='Newest unrelated title',slug='target-query-author',author=matching_author,status='published',visibility='public')
+        response=self.client.get(reverse('books'),{'q':'Target Query'})
+        self.assertEqual(list(response.context['books'])[0],exact)
