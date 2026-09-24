@@ -120,12 +120,12 @@ def detail(request,slug):
     book=get_object_or_404(_published_books().select_related('author','category','level').prefetch_related('chapters'),slug=slug)
     if book.visibility == 'password':
         raise Http404
-    if book.visibility == 'private' and not book.subscription_included and not _has_book_access(request.user,book):
+    has_access = _has_book_access(request.user, book)
+    if book.visibility == 'private' and not book.subscription_included and not has_access:
         raise Http404
     approved_reviews=book.review_set.filter(approved=True).select_related('user').order_by('-created_at')[:8]
     review_stats=book.review_set.filter(approved=True).aggregate(avg=Avg('rating'),count=Count('id'))
     related=_published_books().filter(visibility='public',category=book.category).exclude(pk=book.pk).select_related('author','category')[:4] if book.category else Book.objects.none()
-    has_access = _has_book_access(request.user, book)
     has_audio = bool(book.audio) or any(ch.audio for ch in book.chapters.all())
     has_text = bool(book.pdf) or any(bool(ch.text and ch.text.strip()) for ch in book.chapters.all())
     saved_audio_seconds=0
