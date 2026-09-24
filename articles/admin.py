@@ -107,7 +107,7 @@ class TranslationBacklogFilter(admin.SimpleListFilter):
     def lookups(self,request,model_admin):
         return (('backlog','نیازمند ترجمه/ترمیم'),('healthy','ترجمه سالم'))
     def queryset(self,request,queryset):
-        backlog=Q(translation_status__in=['not_requested','pending','failed','provider_failed','validation_failed','retry_pending','original_only','translating'])|Q(title_fa='')|Q(abstract__gt='',abstract_fa='')|Q(full_text__gt='',full_text_fa='')
+        backlog=Q(translation_status__in=['not_requested','pending','failed','provider_failed','validation_failed','retry_pending','translating'])|Q(title_fa='')|Q(abstract__gt='',abstract_fa='')|Q(full_text__gt='',full_text_fa='',source__allow_full_republish=True)
         if self.value()=='backlog': return queryset.filter(backlog).distinct()
         if self.value()=='healthy': return queryset.exclude(backlog).distinct()
         return queryset
@@ -132,9 +132,9 @@ class ArticleAdmin(ModelAdmin):
 
     @admin.display(description='سلامت ترجمه')
     def translation_health(self,obj):
-        if obj.translation_status in {'not_requested','failed','provider_failed','validation_failed','retry_pending','original_only','translating','pending'}:
+        if obj.translation_status in {'not_requested','failed','provider_failed','validation_failed','retry_pending','translating','pending'}:
             return 'نیازمند ترجمه'
-        if not obj.title_fa or (obj.abstract and not obj.abstract_fa) or (obj.full_text and not obj.full_text_fa):
+        if not obj.title_fa or (obj.abstract and not obj.abstract_fa) or (obj.full_text and not obj.full_text_fa and (not obj.source or obj.source.allow_full_republish)):
             return 'ترجمه ناقص'
         return 'سالم'
 
