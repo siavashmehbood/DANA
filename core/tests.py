@@ -564,3 +564,19 @@ class MobileNavigationRegressionTests(TestCase):
         response=self.client.get(reverse('home'))
         for label in ('خانه','کشف','کتابخانه','سبد','پروفایل'):
             self.assertContains(response,label)
+
+
+class ArticleTranslationLifecycleMarkupTests(TestCase):
+    def test_validation_failure_keeps_original_and_explains_quality_failure(self):
+        from articles.models import Article
+        article=Article.objects.create(title='Quality fallback',slug='quality-fallback',abstract='Readable original abstract',translation_status='validation_failed',published=True)
+        response=self.client.get(reverse('article_detail',args=[article.slug]),{'lang':'fa'})
+        self.assertEqual(response.status_code,200)
+        self.assertContains(response,'ترجمه در کنترل کیفیت تأیید نشد؛ متن اصلی محفوظ است')
+        self.assertContains(response,'Readable original abstract')
+
+    def test_original_only_state_is_explicit(self):
+        from articles.models import Article
+        article=Article.objects.create(title='Original only',slug='original-only-state',abstract='Original remains available',translation_status='original_only',published=True)
+        response=self.client.get(reverse('article_detail',args=[article.slug]),{'lang':'fa'})
+        self.assertContains(response,'فعلاً فقط متن اصلی ارائه می‌شود')
