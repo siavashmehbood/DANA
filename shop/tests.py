@@ -539,6 +539,26 @@ class ShopFlowTests(TestCase):
 
     @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
     @patch('shop.bank.gateway')
+    def test_successful_callback_still_verifies_once_after_serialization(self, gateway_factory):
+        CartItem.objects.create(user=self.user,book=self.book)
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='SERIAL-AUTH',url='https://gateway.example/pay',message='')
+        gateway.verify.return_value=Mock(ok=True,authority='SERIAL-REF',message='',retryable=False)
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        first=self.client.get(reverse('payment_callback'),{'Authority':'SERIAL-AUTH','Status':'OK'})
+        second=self.client.get(reverse('payment_callback'),{'Authority':'SERIAL-AUTH','Status':'OK'})
+        payment=Payment.objects.get(authority='SERIAL-AUTH')
+        self.assertEqual(first.status_code,200)
+        self.assertEqual(second.status_code,200)
+        self.assertEqual(payment.status,'successful')
+        self.assertEqual(payment.reference_id,'SERIAL-REF')
+        self.assertEqual(gateway.verify.call_count,1)
+        self.assertEqual(Entitlement.objects.filter(user=self.user,book=self.book).count(),1)
+
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
     def test_transient_verify_failure_keeps_payment_retryable(self, gateway_factory):
         CartItem.objects.create(user=self.user,book=self.book)
         gateway=Mock(); gateway.enabled=True
