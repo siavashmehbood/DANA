@@ -60,5 +60,21 @@
 - Publisher/Translator/Tags metadata remains Post-RC; Author/Category/Level cover the current V1 catalog/admin journey and adding schema now is not a release blocker.
 - Transactional email/SMS/push delivery providers and background workers remain external/deployment work; in-app notifications are the V1 reliable notification surface.
 
+## Release Candidate gate — 2026-09-24
+- Critical repository-fixable remaining: **0 known**.
+- High repository-fixable remaining: **0 known**.
+- Default CI: **PASS** — DANA CI #1395 on `d2525810cc4dfa13f64abe64af059d043eb4df55`.
+- PostgreSQL 17 full regression: **PASS** — DANA CI #1395.
+- Migration check/apply: **PASS** — both CI jobs.
+- Deployment security check: **PASS**.
+- Payment: **staging-ready in repository**; real-provider smoke remains an EXTERNAL RELEASE REQUIREMENT above.
+- Private media: **production-safe in repository**; production serving/storage isolation and legacy migration remain EXTERNAL RELEASE REQUIREMENTs above.
+- Critical user/audio/subscription E2E: **covered by the green regression suite**.
+- Mobile/RTL and critical accessibility: **V1 usable / critical fixes complete**.
+- Admin journey: **operational**; finance, analytics, derived gamification/subscription state, entitlement provenance, and derived user counters are protected from unsafe direct mutation.
+- Production configuration: **fail-closed and repository-ready**; deployment secrets/domains/provider credentials/monitoring/backups remain external requirements.
+
+**Repository RC verdict:** PASS. The codebase is Release Candidate ready; production launch remains conditional on completing the explicitly listed EXTERNAL RELEASE REQUIREMENT items.
+
 ## Safety note
 No force push, destructive reset, repository deletion or production data deletion was performed.
