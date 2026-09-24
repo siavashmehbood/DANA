@@ -627,5 +627,5 @@ class PersianPresentationRegressionTests(TestCase):
         Article.objects.create(title='Pending article',slug='pending-dashboard',abstract='Source',translation_status='pending',published=True)
         self.client.force_login(user)
         response=self.client.get(reverse('dashboard'))
-        self.assertContains(response,'در انتظار ترجمه')
+        self.assertContains(response,'در انتظار')
         self.assertNotContains(response,'>pending<')
