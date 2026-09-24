@@ -746,3 +746,20 @@ class SubscriptionAdminIntegrityTests(TestCase):
         self.assertFalse(admin.has_delete_permission(None))
         for field in ('user','plan','status','starts_at','expires_at','created_at'):
             self.assertIn(field,admin.readonly_fields)
+
+
+class EntitlementProvenanceRegressionTests(TestCase):
+    def test_bank_purchase_upgrades_expired_subscription_entitlement(self):
+        from .bank import finalize_bank_order
+        user=User.objects.create_user(username='provenance-user',password='pass12345')
+        author=Author.objects.create(name='Provenance Author')
+        book=Book.objects.create(name='Provenance Book',slug='provenance-book',author=author,status='published',price=1000)
+        Entitlement.objects.create(user=user,book=book,source='subscription',expires_at=timezone.now()-timedelta(days=1))
+        order=Order.objects.create(user=user,subtotal=1000,discount=0,tax=0,total=1000,status='pending',tracking_code='PROV01')
+        OrderItem.objects.create(order=order,book=book,price=1000)
+        payment=Payment.objects.create(user=user,order=order,provider='zarinpal',amount=1000,status='successful',idempotency_key='provenance-payment')
+        self.assertTrue(finalize_bank_order(order,payment))
+        entitlement=Entitlement.objects.get(user=user,book=book)
+        self.assertEqual(entitlement.source,'purchase')
+        self.assertIsNone(entitlement.expires_at)
+        self.assertEqual(entitlement.order_id,order.pk)
