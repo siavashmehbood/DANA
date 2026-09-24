@@ -472,3 +472,26 @@ class AudioRecommendationSignalTests(TestCase):
         self.assertNotIn(current,list(response.context['recommendations']))
 
 
+
+
+class AdminPersianLocalizationTests(TestCase):
+    def test_management_apps_models_and_fields_have_persian_labels(self):
+        from django.apps import apps
+        from core.admin_localization import apply_admin_localization
+        apply_admin_localization()
+        expected_apps={'accounts':'کاربران و حساب‌ها','books':'کتاب‌ها و محتوا','shop':'فروش و اشتراک','reader':'مطالعه و یادداشت‌ها','gamification':'بازی‌وارسازی','analytics':'تحلیل و رویدادها','notifications':'اعلان‌ها','support':'پشتیبانی','articles':'مقالات'}
+        for app_label,label in expected_apps.items():
+            self.assertEqual(apps.get_app_config(app_label).verbose_name,label)
+        checks=[('accounts','User','phone','شماره تلفن'),('books','Book','price','قیمت'),('shop','Payment','authority','شناسه پرداخت'),('reader','ReadingProgress','progress','پیشرفت'),('gamification','XPEvent','reason','دلیل'),('analytics','Event','metadata','فراداده'),('notifications','Notification','read_at','زمان خواندن'),('support','Ticket','assigned_to','مسئول'),('articles','Article','translation_status','وضعیت ترجمه')]
+        for app_label,model_name,field_name,label in checks:
+            model=apps.get_model(app_label,model_name)
+            self.assertTrue(any('\u0600' <= ch <= '\u06ff' for ch in str(model._meta.verbose_name)))
+            self.assertEqual(model._meta.get_field(field_name).verbose_name,label)
+
+    def test_admin_translation_choice_labels_are_persian(self):
+        from django.apps import apps
+        from core.admin_localization import apply_admin_localization
+        apply_admin_localization()
+        choices=dict(apps.get_model('articles','Article')._meta.get_field('translation_status').choices)
+        self.assertEqual(choices['pending'],'در انتظار')
+        self.assertEqual(choices['failed'],'ناموفق')
