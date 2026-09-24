@@ -117,6 +117,9 @@ def bank_checkout(request):
         if reusable:
             order=reusable
             payment=order.payments.filter(provider='zarinpal',status='pending').order_by('-id').first()
+            if payment and not payment.authority and (payment.callback_payload or {}).get('request_error'):
+                messages.info(request,'وضعیت درخواست قبلی درگاه نامشخص است؛ برای جلوگیری از پرداخت تکراری ابتدا وضعیت سفارش را بررسی کنید.')
+                return redirect('orders')
             if payment and payment.authority:
                 messages.info(request,'یک پرداخت بانکی در انتظار نتیجه دارید؛ وضعیت آن را از سفارش‌های من بررسی کنید.')
                 return redirect('orders')
