@@ -638,3 +638,20 @@ class PageAssetScopingTests(TestCase):
         self.assertNotIn('reader-premium.css',body)
         self.assertNotIn('reader-controller.js',body)
         self.assertNotIn('article-detail-overhaul.css',body)
+
+
+class RecommendationEntitlementSemanticsTests(TestCase):
+    def test_active_subscription_entitlement_does_not_seed_category_and_is_excluded(self):
+        category=Category.objects.create(name='Subscription only signal',slug='subscription-only-signal')
+        other=Category.objects.create(name='Other signal',slug='other-signal')
+        author=Author.objects.create(name='Subscription Signal Author')
+        accessible=Book.objects.create(name='Subscription entitlement',slug='subscription-entitlement',author=author,category=category,status='published')
+        same_category=Book.objects.create(name='Same category candidate',slug='same-category-candidate',author=author,category=category,status='published')
+        fallback=Book.objects.create(name='Fallback candidate',slug='fallback-candidate',author=author,category=other,status='published')
+        user=User.objects.create_user(username='subscription-entitlement-user',password='pass12345')
+        Entitlement.objects.create(user=user,book=accessible,source='subscription',expires_at=timezone.now()+timedelta(days=1))
+        self.client.force_login(user)
+        recs=list(self.client.get(reverse('home')).context['recommendations'])
+        self.assertNotIn(accessible,recs)
+        self.assertIn(same_category,recs)
+        self.assertIn(fallback,recs)
