@@ -581,3 +581,27 @@ class ArticleTranslationLifecycleMarkupTests(TestCase):
         article=Article.objects.create(title='Original only',slug='original-only-state',abstract='Original remains available',translation_status='original_only',published=True)
         response=self.client.get(reverse('article_detail',args=[article.slug]),{'lang':'fa'})
         self.assertContains(response,'فعلاً فقط متن اصلی ارائه می‌شود')
+
+
+class PlatformQualityRegressionTests(TestCase):
+    def test_pwa_manifest_is_persian_rtl_and_scoped(self):
+        response=self.client.get(reverse('pwa_manifest'))
+        payload=response.json()
+        self.assertEqual(payload['lang'],'fa')
+        self.assertEqual(payload['dir'],'rtl')
+        self.assertEqual(payload['scope'],'/')
+        self.assertEqual(payload['display'],'standalone')
+
+    def test_service_worker_only_caches_static_gets(self):
+        response=self.client.get(reverse('service_worker'))
+        body=response.content.decode()
+        self.assertIn("event.request.method!=='GET'",body)
+        self.assertIn("url.pathname.startsWith('/static/')",body)
+        self.assertIn("includes('private')",body)
+
+    def test_robots_blocks_private_surfaces_and_points_to_sitemap(self):
+        response=self.client.get(reverse('robots_txt'))
+        self.assertContains(response,'Disallow: /admin/')
+        self.assertContains(response,'Disallow: /protected/')
+        self.assertContains(response,'Disallow: /reader/')
+        self.assertContains(response,'Sitemap: ')
