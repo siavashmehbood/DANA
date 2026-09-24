@@ -228,7 +228,9 @@ def translate_article(article, full_text=False, force=False, provider='mymemory+
         if full_text and source_text and not quality_ok(source_text,content_fa):
             raise ValueError('Translation quality validation failed for content')
     except Exception as exc:
-        model.objects.filter(pk=article.pk).update(translation_status='failed',translation_error=str(exc)[:4000],updated_at=timezone.now())
+        message=str(exc)
+        status='validation_failed' if message.startswith('Translation quality validation failed') else 'provider_failed'
+        model.objects.filter(pk=article.pk).update(translation_status=status,translation_error=message[:4000],updated_at=timezone.now())
         return model.objects.get(pk=article.pk)
 
     with transaction.atomic():
