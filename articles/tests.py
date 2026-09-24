@@ -305,3 +305,52 @@ class ArticleLanguageFallbackTests(TestCase):
         article=Article.objects.create(title='Persian only',slug='persian-only',published=True,abstract_fa='خلاصه فارسی')
         response=self.client.get(reverse('article_detail',args=[article.slug]),{'lang':'en'})
         self.assertEqual(response.context['language_mode'],'fa')
+
+
+class TranslationPipelineRegressionTests(TestCase):
+    @patch('articles.translation.time.sleep',return_value=None)
+    @patch('articles.translation.requests.get')
+    def test_translation_provider_retries_then_uses_success(self,get,sleep):
+        from .translation import translate_text
+        import requests
+        success=type('Response',(),{'status_code':200,'raise_for_status':lambda self:None,'json':lambda self:{'responseData':{'translatedText':'ترجمه فارسی معتبر'}}})()
+        get.side_effect=[requests.ConnectionError('temporary'),success]
+        self.assertEqual(translate_text('research',retries=2),'ترجمه فارسی معتبر')
+        self.assertEqual(get.call_count,2)
+
+    @patch('articles.translation.time.sleep',return_value=None)
+    @patch('articles.translation.requests.get')
+    def test_free_fallback_is_used_when_provider_fails(self,get,sleep):
+        from .translation import translate_text
+        import requests
+        get.side_effect=requests.ConnectionError('offline')
+        result=translate_text('machine learning',retries=1)
+        self.assertIn('یادگیری ماشین',result)
+
+    def test_existing_failed_and_partial_articles_are_in_default_backlog(self):
+        from django.core.management import call_command
+        from io import StringIO
+        failed=Article.objects.create(title='Failed source',slug='failed-backlog',abstract='Abstract',translation_status='failed',published=True)
+        partial=Article.objects.create(title='Partial source',slug='partial-backlog',title_fa='عنوان فارسی',abstract='Needs translation',translation_status='translated',published=True)
+        out,err=StringIO(),StringIO()
+        with patch('articles.management.commands.translate_articles.translate_article') as translate:
+            def healthy(article,**kwargs):
+                article.translation_status='translated'
+                article.translation_error=''
+                return article
+            translate.side_effect=healthy
+            call_command('translate_articles',stdout=out,stderr=err)
+        processed={call.args[0].pk for call in translate.call_args_list}
+        self.assertIn(failed.pk,processed)
+        self.assertIn(partial.pk,processed)
+
+    def test_partial_candidate_never_replaces_healthy_translation(self):
+        from .translation import translate_article
+        article=Article.objects.create(title='Source title',slug='partial-candidate',abstract='Source abstract',title_fa='عنوان سالم',abstract_fa='چکیده سالم',translation_status='reviewed',translation_version=1,published=True)
+        with patch('articles.translation.translate_text',side_effect=['عنوان جدید','English only abstract']):
+            translate_article(article,force=True)
+        article.refresh_from_db()
+        self.assertEqual(article.title_fa,'عنوان سالم')
+        self.assertEqual(article.abstract_fa,'چکیده سالم')
+        self.assertEqual(article.translation_version,1)
+        self.assertEqual(article.translation_status,'failed')
