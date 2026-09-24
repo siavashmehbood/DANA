@@ -450,7 +450,7 @@ class AudiobookExperienceTests(TestCase):
     def test_expired_entitlement_cannot_save_audio_progress(self):
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase',expires_at=timezone.now()-timedelta(seconds=1))
         response=self.client.post(reverse('audio_progress',args=[self.book.pk]),{'chapter_id':self.chapter.pk,'position':'20','duration':'100'})
-        self.assertEqual(response.status_code,403)
+        self.assertRedirects(response,reverse('book_detail',kwargs={'slug':book.slug}))
         self.assertFalse(AudioProgress.objects.filter(user=self.user,book=self.book).exists())
 
     def test_audio_progress_rejects_chapter_from_other_book(self):
@@ -636,4 +636,4 @@ class AudioAccessRecoveryTests(TestCase):
         Entitlement.objects.create(user=user,book=book,expires_at=timezone.now()-timezone.timedelta(seconds=1))
         self.client.force_login(user)
         response=self.client.get(reverse('audio_player',args=[book.pk]))
-        self.assertEqual(response.status_code,403)
+        self.assertRedirects(response,reverse('book_detail',kwargs={'slug':book.slug}))
