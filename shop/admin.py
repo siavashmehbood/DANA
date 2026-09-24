@@ -84,7 +84,7 @@ class EntitlementAdmin(ModelAdmin):
     search_fields = ('user__username', 'user__phone', 'book__name')
     list_filter = ('source', 'granted_at', 'expires_at')
     autocomplete_fields = ('user', 'book')
-    readonly_fields = ('granted_at', 'order')
+    readonly_fields = ('granted_at', 'order', 'source')
 
     def save_model(self, request, obj, form, change):
         if not change:
