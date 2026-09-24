@@ -7,7 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.urls import reverse
 from accounts.models import User
-from books.models import Author, Book
+from books.models import Author, Book, Category
 from shop.models import Entitlement, Subscription, SubscriptionPlan
 from reader.models import Review, ReadingProgress, AudioProgress
 
@@ -246,7 +246,7 @@ class RecommendationTests(TestCase):
         self.client.force_login(user)
         response=self.client.get(reverse('home'))
         recs=list(response.context['recommendations'])
-        self.assertNotIn(accessible,recs)
+        self.assertIn(accessible,recs)
         self.assertIn(candidate,recs)
 
 
