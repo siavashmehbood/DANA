@@ -142,8 +142,12 @@ class ArticleAdmin(ModelAdmin):
     def text_status(self, obj):
         if obj.full_text_fa:
             return 'ترجمه آماده'
-        if obj.translation_status == 'failed':
+        if obj.translation_status in {'failed','provider_failed','validation_failed'}:
             return 'ترجمه ناموفق؛ اصل مقاله محفوظ است'
+        if obj.translation_status == 'retry_pending':
+            return 'ترجمه در صف تلاش مجدد'
+        if obj.translation_status == 'original_only':
+            return 'فقط اصل مقاله؛ ترجمه کامل منتشر نشده'
         if obj.full_text:
             return 'اصل مقاله آماده؛ ترجمه در انتظار'
         if obj.pdf_url:
