@@ -38,7 +38,7 @@ def _process_article(article_id):
                 logger.info('PDF extraction failed for article %s: %s', article_id, exc)
         article.refresh_from_db(fields=['full_text'])
         result=translate_article(article, full_text=bool(article.full_text))
-        if result.translation_status == 'failed':
+        if result.translation_status in {'failed','provider_failed','validation_failed'}:
             logger.warning('Automatic translation failed for article %s: %s', article_id, result.translation_error)
     except Article.DoesNotExist:
         return
