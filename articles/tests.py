@@ -502,3 +502,14 @@ class TranslationBacklogCommandTests(TestCase):
         translate.side_effect=lambda article,**kwargs: article
         call_command('translate_articles')
         self.assertEqual({call.args[0].pk for call in translate.call_args_list},{row.pk for row in rows})
+
+
+class MetadataOnlyTranslationStatusTests(TestCase):
+    @patch('articles.translation.translate_text')
+    def test_metadata_only_translation_is_not_labeled_full_translation(self, translate):
+        from articles.translation import translate_article
+        translate.side_effect=['عنوان فارسی مناسب','چکیده فارسی مناسب و معتبر']
+        article=Article.objects.create(title='English title',slug='metadata-only-status',abstract='English abstract content',full_text='English full body',published=True)
+        result=translate_article(article,full_text=False)
+        self.assertEqual(result.translation_status,'original_only')
+        self.assertFalse(result.full_text_fa)
