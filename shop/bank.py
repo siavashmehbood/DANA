@@ -53,6 +53,8 @@ def finalize_bank_order(order, payment):
     payment = Payment.objects.select_for_update().get(pk=payment.pk)
     if order.status == 'paid':
         return True
+    if payment.amount != order.total:
+        return False
     if payment.status not in ('successful',):
         return False
     items = list(order.items.select_related('book'))
@@ -166,7 +168,18 @@ def payment_callback(request):
     if payment.status != 'pending':
         messages.error(request, 'این تراکنش قبلاً نهایی شده است.')
         return redirect('cart')
-    result = gateway().verify(payment.order)
+    # Verify exactly the payment selected by the callback.  Never let a later
+    # payment on the same order substitute its authority/amount.
+    if payment.amount != payment.order.total:
+        payment.status = 'failed'
+        payment.callback_payload = {**payment.callback_payload, 'verify_error': 'payment_amount_mismatch'}
+        payment.save(update_fields=['status', 'callback_payload'])
+        _release_coupon_reservation(payment)
+        payment.order.status = 'cancelled'
+        payment.order.save(update_fields=['status'])
+        messages.error(request, 'مبلغ تراکنش با سفارش همخوانی ندارد؛ پرداخت تأیید نشد.')
+        return redirect('checkout')
+    result = gateway().verify(payment.order, payment=payment)
     if result.ok:
         with transaction.atomic():
             payment = Payment.objects.select_for_update().select_related('order').get(pk=payment.pk)
