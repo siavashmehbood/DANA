@@ -515,3 +515,14 @@ class PublicDiscoveryCacheTests(TestCase):
             response=self.client.get(path)
             self.assertIn('private',response['Cache-Control'])
             self.assertIn('no-store',response['Cache-Control'])
+
+
+class PersianAdminDashboardTests(TestCase):
+    def test_custom_dashboard_is_active_and_persian(self):
+        user=User.objects.create_superuser(username='dashboard-admin',password='pass12345',email='dash@example.com')
+        self.client.force_login(user)
+        response=self.client.get('/admin/')
+        self.assertEqual(response.status_code,200)
+        self.assertContains(response,'داشبورد مدیریت دانا')
+        self.assertContains(response,'کتاب‌ها')
+        self.assertContains(response,'فروشگاه')
