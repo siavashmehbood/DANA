@@ -59,7 +59,7 @@ def finalize_bank_order(order, payment):
         return False
     items = list(order.items.select_related('book'))
     for item in items:
-        Entitlement.objects.get_or_create(user=order.user, book=item.book, defaults={'order': order, 'source': 'purchase'})
+        Entitlement.objects.update_or_create(user=order.user, book=item.book, defaults={'order': order, 'source': 'purchase', 'expires_at': None})
     coupon_code = (payment.callback_payload or {}).get('coupon_code', '')
     if coupon_code and not (payment.callback_payload or {}).get('coupon_reserved'):
         Coupon.objects.select_for_update().filter(code=coupon_code, active=True).update(used=F('used') + 1)
