@@ -78,3 +78,12 @@
 
 ## Safety note
 No force push, destructive reset, repository deletion or production data deletion was performed.
+
+
+## Post-RC quality gate — 2026-09-24
+- Article automatic processing: fixed undefined PDF resolver path, prevented internal translation/status saves from re-queuing processing, and preserved source-field reprocessing.
+- Article translation: abstract-only processing avoids unnecessary full-text work; restricted-republish sources translate metadata/abstract without republishing full text; failures remain observable while original content stays available.
+- Catalog performance: normal listing/search avoids duplicate full COUNT work before pagination.
+- Admin localization: operational field and financial choice labels are Persian across the primary management apps without introducing schema migrations.
+- Regression coverage expanded for article processing boundaries, translation fallback/source-rights behavior, and Admin Persian labels.
+- Final validation target: DANA CI #1467 on HEAD `c125d293038564791d52b9c5a7f0187ec093ee35`. Repository verdict remains conditional until both default and PostgreSQL jobs pass.
