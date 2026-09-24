@@ -200,7 +200,12 @@ def translate_article(article, full_text=False, force=False, provider='mymemory+
         source_text=extract_pdf_text(article)
     source_title, source_abstract = article.title, article.abstract
     source_hash=hashlib.sha256(f'{source_title}\n{source_abstract}\n{source_text}'.encode('utf-8')).hexdigest()
-    if not force and article.translation_hash == source_hash and article.translation_status in {'translated','reviewed'}:
+    coverage_complete = (
+        bool(article.title_fa)
+        and (not source_abstract or bool(article.abstract_fa))
+        and (not full_text or not source_text or bool(article.full_text_fa))
+    )
+    if not force and coverage_complete and article.translation_hash == source_hash and article.translation_status in {'translated','reviewed'}:
         return article
 
     model.objects.filter(pk=article.pk).update(translation_status='translating',translation_error='')
