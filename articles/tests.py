@@ -469,3 +469,14 @@ class RestrictedSourceTranslationRegressionTests(TestCase):
             _process_article(article.pk)
         translate.assert_called_once()
         self.assertFalse(translate.call_args.kwargs['full_text'])
+
+
+class LegacyDownloaderSecurityRegressionTests(TestCase):
+    @patch('articles.translation.socket.getaddrinfo', return_value=[(None,None,None,None,('127.0.0.1',80))])
+    @patch('articles.translation.requests.get')
+    def test_legacy_downloader_rejects_private_network_target(self, get, _dns):
+        from articles.downloader import download_pdf
+        article=Article.objects.create(title='SSRF guard',slug='ssrf-guard',pdf_url='http://internal.example/private.pdf',published=True)
+        with self.assertRaises(ValueError):
+            download_pdf(article)
+        get.assert_not_called()
