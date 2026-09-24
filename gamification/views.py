@@ -41,8 +41,9 @@ def leaderboard(request):
     start=period_start(period)
     people=User.objects.filter(is_active=True,leaderboard_public=True)
     if metric=='study_hours':
-        people=people.annotate(reading_seconds=Sum('readingactivity__seconds',filter=Q(readingactivity__created_at__gte=start)),listening_seconds=Sum('listeningactivity__seconds',filter=Q(listeningactivity__created_at__gte=start)))
-        rows=[{'user':u,'level':level_for(u),'value':round(((u.reading_seconds or 0)+(u.listening_seconds or 0))/3600,1)} for u in people]
+        reading=dict(ReadingActivity.objects.filter(user__in=people,created_at__gte=start).values('user_id').annotate(v=Sum('seconds')).values_list('user_id','v'))
+        listening=dict(ListeningActivity.objects.filter(user__in=people,created_at__gte=start).values('user_id').annotate(v=Sum('seconds')).values_list('user_id','v'))
+        rows=[{'user':u,'level':level_for(u),'value':round(((reading.get(u.pk) or 0)+(listening.get(u.pk) or 0))/3600,1)} for u in people]
     elif metric=='admin_score':
         people=people.annotate(score_total=Sum('review__admin_score',filter=Q(review__created_at__gte=start,review__admin_score__isnull=False)))
         rows=[{'user':u,'level':level_for(u),'value':u.score_total or 0} for u in people]
