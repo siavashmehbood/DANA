@@ -636,4 +636,4 @@ class AudioAccessRecoveryTests(TestCase):
         Entitlement.objects.create(user=user,book=book,expires_at=timezone.now()-timezone.timedelta(seconds=1))
         self.client.force_login(user)
         response=self.client.get(reverse('audio_player',args=[book.pk]))
-        self.assertRedirects(response,reverse('book_detail',kwargs={'slug':book.slug}))
+        self.assertRedirects(response,reverse('book_detail',kwargs={'slug':book.slug}),fetch_redirect_response=False)
