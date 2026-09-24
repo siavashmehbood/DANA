@@ -14,9 +14,9 @@ from django.utils import timezone
 
 def home(request):
     base = Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now()),visibility='public').select_related('author', 'category')
-    featured = base.filter(featured=True).order_by('-created_at')[:6]
-    if not featured.exists():
-        featured = base.order_by('-created_at')[:6]
+    featured = list(base.filter(featured=True).order_by('-created_at')[:6])
+    if not featured:
+        featured = list(base.order_by('-created_at')[:6])
     newest = base.order_by('-created_at')[:8]
     popular = base.annotate(approved_reviews=Count('review', filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
     recommendations = base.none()
@@ -57,15 +57,17 @@ def home(request):
         recent_text_categories=list(ReadingProgress.objects.filter(user=request.user,book__category__isnull=False).order_by('-updated_at').values_list('book__category_id',flat=True)[:12])
         recent_audio_categories=list(AudioProgress.objects.filter(user=request.user,book__category__isnull=False).order_by('-updated_at').values_list('book__category_id',flat=True)[:12])
         preferred_categories=set(owned_categories)|set(rated_categories)|set(active_categories)|set(audio_categories)|set(completed_categories)|set(recent_text_categories)|set(recent_audio_categories)
-        recommendations=base.filter(category_id__in=preferred_categories).exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at').distinct()[:8]
-        if not recommendations.exists():
-            recommendations=base.exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
+        recommendations=list(base.filter(category_id__in=preferred_categories).exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at').distinct()[:8])
+        if not recommendations:
+            recommendations=list(base.exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8])
     response=render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
         'latest_articles': article_base.order_by('-created_at')[:8], 'featured_articles': article_base.filter(featured=True)[:4],
         'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading, 'continue_listening':continue_listening, 'continue_item':continue_item, 'audio_books': audio_books, 'recommendations': recommendations})
     if request.user.is_authenticated:
         response['Cache-Control']='private, no-store'
         response['Vary']='Cookie'
+    else:
+        response['Cache-Control']='public, max-age=60'
     return response
 
 
