@@ -495,3 +495,23 @@ class AdminPersianLocalizationTests(TestCase):
         choices=dict(apps.get_model('articles','Article')._meta.get_field('translation_status').choices)
         self.assertEqual(choices['pending'],'در انتظار')
         self.assertEqual(choices['failed'],'ناموفق')
+
+
+class PublicDiscoveryCacheTests(TestCase):
+    def test_anonymous_discovery_pages_are_short_lived_public_cacheable(self):
+        author=Author.objects.create(name='Cache Author')
+        book=Book.objects.create(name='Cache Book',slug='cache-book',author=author,status='published',visibility='public')
+        from articles.models import Article
+        article=Article.objects.create(title='Cache Article',slug='cache-article',abstract='Readable abstract',published=True)
+        for path in (reverse('home'),reverse('books'),reverse('book_detail',args=[book.slug]),reverse('article_list'),reverse('article_detail',args=[article.slug])):
+            response=self.client.get(path)
+            self.assertEqual(response.status_code,200)
+            self.assertIn('public',response['Cache-Control'])
+
+    def test_authenticated_catalog_is_not_shared_cacheable(self):
+        user=User.objects.create_user(username='cache-auth',password='pass12345')
+        self.client.force_login(user)
+        for path in (reverse('home'),reverse('books'),reverse('article_list')):
+            response=self.client.get(path)
+            self.assertIn('private',response['Cache-Control'])
+            self.assertIn('no-store',response['Cache-Control'])
