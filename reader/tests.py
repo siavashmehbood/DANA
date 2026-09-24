@@ -430,7 +430,7 @@ class AudiobookExperienceTests(TestCase):
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
         response=self.client.get(reverse('audio_player',args=[self.book.pk]))
         self.assertEqual(response.status_code,200)
-        self.assertNotContains(response,'نسخه متنی / Reader')
+        self.assertNotContains(response,'نسخه متنی / مطالعه')
 
     def test_secure_audio_denies_cross_book_access(self):
         other=Book.objects.create(name='Other Audio',slug='other-audio',author=self.book.author,status='published',visibility='private')
