@@ -433,3 +433,25 @@ class AutomaticArticleProcessingRegressionTests(TestCase):
             _process_article(article.pk)
         translate.assert_called_once()
         self.assertFalse(translate.call_args.kwargs['full_text'])
+
+
+class ArticleProcessingSignalRegressionTests(TestCase):
+    def test_internal_translation_status_save_does_not_requeue_processing(self):
+        article=Article.objects.create(title='Signal guard',slug='signal-guard',abstract='Readable',published=False)
+        article.published=True
+        with patch('articles.signals.schedule_article_processing') as schedule:
+            with self.captureOnCommitCallbacks(execute=True):
+                article.save(update_fields=['published'])
+            self.assertEqual(schedule.call_count,1)
+            schedule.reset_mock()
+            with self.captureOnCommitCallbacks(execute=True):
+                Article.objects.filter(pk=article.pk).update(translation_status='translating')
+            schedule.assert_not_called()
+
+    def test_source_text_update_requeues_processing(self):
+        article=Article.objects.create(title='Signal source',slug='signal-source',abstract='Readable',published=True)
+        with patch('articles.signals.schedule_article_processing') as schedule:
+            article.abstract='Updated readable abstract'
+            with self.captureOnCommitCallbacks(execute=True):
+                article.save(update_fields=['abstract'])
+            schedule.assert_called_once_with(article.pk)
