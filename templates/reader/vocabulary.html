@@ -1,4 +1,8 @@
 {% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reader-pages.css' %}">
+{% endblock %}
 {% block title %}لغات من | دانا{% endblock %}
 {% block description %}واژه‌ها و عبارت‌های ذخیره‌شده هنگام مطالعه در دانا.{% endblock %}
 {% block content %}
@@ -18,3 +22,5 @@
   {% else %}<div class="empty-state">هنوز کلمه‌ای ذخیره نکرده‌ای.</div>{% endif %}
 </section>
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/reader-controller.js' %}?v=31"></script>{% endblock %}
