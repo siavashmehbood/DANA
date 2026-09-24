@@ -82,3 +82,15 @@ progress{width:100%;min-height:12px;accent-color:var(--dana-accent)}
   .brand{font-size:20px!important}
   .auth-action,.header-more summary{padding-inline:8px!important;font-size:12px!important}
 }
+
+
+/* Mobile primary navigation: fixed, touch-friendly destinations without horizontal scrolling. */
+.mobile-primary-nav{display:none}
+@media(max-width:900px){
+  body{padding-bottom:72px}
+  .header-links{display:none!important}
+  .mobile-primary-nav{position:fixed;z-index:90;inset-inline:0;bottom:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));min-height:64px;padding:6px max(6px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));background:rgba(9,10,16,.96);border-top:1px solid var(--dana-line);backdrop-filter:blur(18px)}
+  .mobile-primary-nav a{display:flex;min-width:0;min-height:48px;align-items:center;justify-content:center;padding:6px 4px;border-radius:10px;color:var(--dana-muted);font-size:12px;font-weight:700;text-decoration:none;text-align:center}
+  .mobile-primary-nav a:hover,.mobile-primary-nav a:focus-visible{background:var(--dana-panel-2);color:var(--dana-text)}
+}
+@media(min-width:901px){body{padding-bottom:0}}
