@@ -52,26 +52,27 @@ def home(request):
             continue_item={'book':latest_reading.book,'kind':'text' if has_text or not has_audio else 'audio'}
         owned_categories={category_id for _,category_id in valid_entitlements if category_id is not None}
         owned_ids={book_id for book_id,_ in valid_entitlements}
+        consumed_ids=set()
         # Subscription access is not ownership. Keep unengaged catalog titles
         # eligible for recommendations while excluding anything already started.
         signal_rows=ReadingProgress.objects.filter(user=request.user).values_list('book_id','book__category_id','progress')
         audio_signal_rows=AudioProgress.objects.filter(user=request.user).values_list('book_id','book__category_id','position_seconds')
         active_categories=set()
         for book_id, category_id, progress in signal_rows:
-            owned_ids.add(book_id)
+            if progress > 0: consumed_ids.add(book_id)
             if progress > 0 and category_id is not None: active_categories.add(category_id)
         audio_categories=set()
         for book_id, category_id, position in audio_signal_rows:
-            owned_ids.add(book_id)
+            if position > 0: consumed_ids.add(book_id)
             if position > 0 and category_id is not None: audio_categories.add(category_id)
         rated_categories=Review.objects.filter(user=request.user,approved=True,rating__gte=4,book__category__isnull=False).values_list('book__category_id',flat=True)
         # Recent/completed category queries were strict subsets of the active
         # reading/listening signals above, so evaluating them separately only
         # added database round-trips without changing recommendation categories.
         preferred_categories=set(owned_categories)|set(rated_categories)|set(active_categories)|set(audio_categories)
-        recommendations=list(base.filter(category_id__in=preferred_categories).exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at').distinct()[:8])
+        recommendations=list(base.filter(category_id__in=preferred_categories).exclude(id__in=owned_ids|consumed_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at').distinct()[:8])
         if not recommendations:
-            recommendations=list(base.exclude(id__in=owned_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8])
+            recommendations=list(base.exclude(id__in=owned_ids|consumed_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8])
     response=render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
         'latest_articles': article_base.order_by('-created_at')[:8], 'featured_articles': article_base.filter(featured=True)[:4],
         'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading, 'continue_listening':continue_listening, 'continue_item':continue_item, 'audio_books': audio_books, 'recommendations': recommendations})
