@@ -381,3 +381,26 @@ class ArticleCatalogSearchPerformanceTests(TestCase):
         response=self.client.get(reverse('article_list'), {'q':'Metadata Needle'})
         self.assertContains(response,'Metadata Needle')
         self.assertNotContains(response,'Other Article')
+
+
+class ArticleFullTextCoverageRegressionTests(TestCase):
+    def test_full_translation_fills_missing_body_even_when_metadata_hash_matches(self):
+        import hashlib
+        from .translation import translate_article
+        article=Article.objects.create(
+            title='Coverage source', slug='coverage-source', abstract='Source abstract',
+            full_text='Source body requiring Persian translation',
+            title_fa='عنوان موجود', abstract_fa='چکیده موجود',
+            translation_status='translated', published=True,
+        )
+        source_hash=hashlib.sha256(
+            f'{article.title}\n{article.abstract}\n{article.full_text}'.encode('utf-8')
+        ).hexdigest()
+        Article.objects.filter(pk=article.pk).update(translation_hash=source_hash)
+        article.refresh_from_db()
+        with patch('articles.translation.translate_text',return_value='متن فارسی کامل') as translate:
+            result=translate_article(article,full_text=True)
+        result.refresh_from_db()
+        self.assertEqual(result.full_text_fa,'متن فارسی کامل')
+        self.assertEqual(result.translation_status,'translated')
+        self.assertEqual(translate.call_count,1)
