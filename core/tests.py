@@ -549,3 +549,18 @@ class PersianAdminEndToEndLabelsTests(TestCase):
         self.assertContains(response,'مقالات')
         self.assertContains(response,'سلامت ترجمه')
         self.assertContains(response,'وضعیت ترجمه')
+
+
+class MobileNavigationRegressionTests(TestCase):
+    def test_anonymous_mobile_navigation_has_five_primary_destinations(self):
+        response=self.client.get(reverse('home'))
+        self.assertContains(response,'class="mobile-primary-nav"')
+        for label in ('خانه','کشف','مجله','اشتراک','ورود'):
+            self.assertContains(response,label)
+
+    def test_authenticated_mobile_navigation_prioritizes_personal_destinations(self):
+        user=get_user_model().objects.create_user(username='mobile-nav-user',password='safe-pass-123')
+        self.client.force_login(user)
+        response=self.client.get(reverse('home'))
+        for label in ('خانه','کشف','کتابخانه','سبد','پروفایل'):
+            self.assertContains(response,label)
