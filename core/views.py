@@ -5,10 +5,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from books.models import Book, Category
 from articles.models import Article, ArticleCategory
 from shop.models import Entitlement
+from django.db.models import Q
+from django.utils import timezone
 
 
 def home(request):
-    base = Book.objects.filter(status__in=['published', 'scheduled']).select_related('author', 'category')
+    base = Book.objects.filter(status='published').filter(
+        Q(publish_at__isnull=True) | Q(publish_at__lte=timezone.now())
+    ).select_related('author', 'category')
     featured = base.order_by('-created_at')[:6]
     newest = base.order_by('-created_at')[:8]
     popular = base.order_by('-id')[:8]
@@ -42,8 +46,17 @@ def pwa_manifest(request):
 
 
 def service_worker(request):
-    js = """const CACHE='dana-v3'; const CORE=['/','/books/','/articles/'];
+    js = """const CACHE='dana-v4'; const CORE=['/','/books/','/articles/'];
+const PUBLIC=new Set(['/','/books/','/articles/']);
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;event.respondWith(fetch(event.request).then(response=>{if(response.ok&&new URL(event.request.url).origin===location.origin){const copy=response.clone();caches.open(CACHE).then(c=>c.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request).then(r=>r||caches.match('/'))));});"""
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET') return;
+  const url=new URL(event.request.url);
+  if(url.origin!==location.origin || !PUBLIC.has(url.pathname)) return;
+  event.respondWith(fetch(event.request).then(response=>{
+    if(response.ok){const copy=response.clone();caches.open(CACHE).then(c=>c.put(event.request,copy));}
+    return response;
+  }).catch(()=>caches.match(event.request)));
+});"""
     return HttpResponse(js, content_type='application/javascript')

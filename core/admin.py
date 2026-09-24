@@ -4,6 +4,27 @@ from django.db.models import Sum
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
+from django.core.signals import request_started
+
+from core import admin_labels  # noqa: F401
+
+
+def _apply_persian_admin_labels(*args, **kwargs):
+    from core.admin_labels import MODEL_LABELS, FIELD_LABELS, CHOICE_LABELS
+    for model_class in admin.site._registry:
+        label = MODEL_LABELS.get(model_class.__name__)
+        if label:
+            singular = label[:-3] if label.endswith('‌ها') else label[:-2] if label.endswith('ها') else label
+            model_class._meta.verbose_name = singular
+            model_class._meta.verbose_name_plural = label
+        for field in model_class._meta.fields:
+            if field.name in FIELD_LABELS:
+                field.verbose_name = FIELD_LABELS[field.name]
+            if getattr(field, 'choices', None):
+                field.choices = [(v, CHOICE_LABELS.get(str(v), lbl)) for v, lbl in field.choices]
+
+
+request_started.connect(_apply_persian_admin_labels, dispatch_uid='dana-admin-persian-labels')
 
 from accounts.models import User
 from articles.models import Article
@@ -27,11 +48,24 @@ ADMIN_LABELS = {
 
 
 def _persianize_app_list(app_list):
+    from core.admin_labels import MODEL_LABELS, SINGULAR_LABELS, FIELD_LABELS, CHOICE_LABELS
+    registered = {m._meta.model_name: m for m in admin.site._registry}
     for app in app_list:
         app['name'] = ADMIN_LABELS.get(app['app_url'].rstrip('/').split('/')[-1], app['name'])
         for model in app.get('models', []):
-            # model verbose_name is already localized by core.admin_labels.
-            model['name'] = str(model['name'])
+            model_name = model.get('admin_url', '').rstrip('/').split('/')[-1]
+            model_class = next((m for m in admin.site._registry if m._meta.model_name == model_name), None)
+            if model_class:
+                label = MODEL_LABELS.get(model_class.__name__)
+                if label:
+                    model_class._meta.verbose_name = SINGULAR_LABELS.get(model_class.__name__, label)
+                    model_class._meta.verbose_name_plural = label
+                for field in model_class._meta.fields:
+                    if field.name in FIELD_LABELS:
+                        field.verbose_name = FIELD_LABELS[field.name]
+                    if getattr(field, 'choices', None):
+                        field.choices = [(v, CHOICE_LABELS.get(str(v), lbl)) for v, lbl in field.choices]
+                model['name'] = model_class._meta.verbose_name_plural
     return app_list
 
 
@@ -68,6 +102,19 @@ def _quick_link(label, url_name, icon):
 
 
 def _dana_index(request, extra_context=None):
+    from core.admin_labels import MODEL_LABELS, FIELD_LABELS, CHOICE_LABELS
+    for model_class in admin.site._registry:
+        label = MODEL_LABELS.get(model_class.__name__)
+        if label:
+            singular = label[:-3] if label.endswith('‌ها') else label[:-2] if label.endswith('ها') else label
+            model_class._meta.verbose_name = singular
+            model_class._meta.verbose_name_plural = label
+        for field in model_class._meta.fields:
+            if field.name in FIELD_LABELS:
+                field.verbose_name = FIELD_LABELS[field.name]
+            if getattr(field, 'choices', None):
+                field.choices = [(v, CHOICE_LABELS.get(str(v), lbl)) for v, lbl in field.choices]
+
     context = admin.site.each_context(request)
     context.update(extra_context or {})
     stats = dana_dashboard_stats()

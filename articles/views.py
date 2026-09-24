@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.template.defaultfilters import linebreaks
 
 from .models import Article, ArticleCategory, ArticleLibraryItem, ArticleAnnotation
+from core.text_utils import search_variants
 logger = logging.getLogger(__name__)
 
 
@@ -35,13 +36,16 @@ def listing(request):
     if saved_only:
         articles = articles.filter(library_items__user=request.user)
     if query:
-        articles = articles.filter(
-            Q(title__icontains=query) | Q(title_fa__icontains=query) |
-            Q(authors__icontains=query) | Q(abstract__icontains=query) |
-            Q(abstract_fa__icontains=query) | Q(full_text__icontains=query) |
-            Q(full_text_fa__icontains=query) | Q(journal__icontains=query) |
-            Q(doi__icontains=query)
-        )
+        search_q = Q()
+        for variant in search_variants(query):
+            search_q |= (
+                Q(title__icontains=variant) | Q(title_fa__icontains=variant) |
+                Q(authors__icontains=variant) | Q(abstract__icontains=variant) |
+                Q(abstract_fa__icontains=variant) | Q(full_text__icontains=variant) |
+                Q(full_text_fa__icontains=variant) | Q(journal__icontains=variant) |
+                Q(doi__icontains=variant)
+            )
+        articles = articles.filter(search_q).distinct()
     if category:
         articles = articles.filter(category__slug=category)
     if sort == 'popular':
@@ -52,7 +56,7 @@ def listing(request):
         articles = articles.order_by('year', 'created_at')
     else:
         articles = articles.order_by('-created_at')
-    paginator = Paginator(articles, 100)
+    paginator = Paginator(articles, 24)
     page_obj = paginator.get_page(request.GET.get('page', 1))
     for article in page_obj.object_list:
         article.display_title = article.title_fa or rough_translate(article.title)

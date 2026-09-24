@@ -48,7 +48,11 @@ def finalize_bank_order(order, payment):
         Entitlement.objects.get_or_create(user=order.user, book=item.book, defaults={'order': order})
     coupon_code = (payment.callback_payload or {}).get('coupon_code', '')
     if coupon_code:
-        Coupon.objects.select_for_update().filter(code=coupon_code, active=True).update(used=__import__('django.db.models', fromlist=['F']).F('used') + 1)
+        coupon = Coupon.objects.select_for_update().filter(code=coupon_code, active=True).first()
+        if coupon and _coupon_discount(coupon, order.subtotal) > 0:
+            Coupon.objects.filter(pk=coupon.pk, used__lt=coupon.capacity).update(
+                used=__import__('django.db.models', fromlist=['F']).F('used') + 1
+            )
     add_points(order.user, PointLedger.PURCHASE, purchase_points_for_amount(order.total), 'Purchase points', reference=f'order:{order.pk}')
     referral = Referral.objects.select_for_update().select_related('inviter').filter(invitee=order.user, rewarded=False).first()
     if referral:
@@ -84,10 +88,28 @@ def bank_checkout(request):
     tax = ((subtotal - discount) * Decimal('0.10')).quantize(Decimal('1'))
     total = subtotal - discount + tax
 
+    bank_key = request.session.get('bank_checkout_key')
+    if not bank_key:
+        bank_key = secrets.token_urlsafe(24)
+        request.session['bank_checkout_key'] = bank_key
+
     if request.method == 'POST':
         if not gateway().enabled:
             messages.error(request, 'درگاه بانکی هنوز پیکربندی نشده است.')
             return redirect('checkout')
+        submitted_key = request.POST.get('idempotency_key', '').strip()
+        if not submitted_key or submitted_key != bank_key:
+            messages.error(request, 'درخواست پرداخت منقضی شده است؛ دوباره وارد پرداخت شوید.')
+            request.session.pop('bank_checkout_key', None)
+            return redirect('checkout')
+        existing_payment = Payment.objects.select_related('order').filter(
+            idempotency_key=f'bank:{bank_key}', user=request.user
+        ).first()
+        if existing_payment and existing_payment.status == 'pending' and existing_payment.authority:
+            return redirect(gateway().start_url.format(authority=existing_payment.authority))
+        if existing_payment and existing_payment.status == 'successful':
+            request.session.pop('bank_checkout_key', None)
+            return render(request, 'shop/success.html', {'order': existing_payment.order})
         with transaction.atomic():
             user = User.objects.select_for_update().get(pk=request.user.pk)
             locked_items = list(CartItem.objects.select_for_update().filter(user=user).select_related('book'))
@@ -100,7 +122,11 @@ def bank_checkout(request):
             total = subtotal - discount + tax
             order = Order.objects.create(user=user, subtotal=subtotal, discount=discount, tax=tax, total=total, status='pending', tracking_code=_tracking_code())
             OrderItem.objects.bulk_create([OrderItem(order=order, book=i.book, price=i.book.price) for i in locked_items])
-            payment = Payment.objects.create(user=user, order=order, provider='zarinpal', amount=total, status='pending', idempotency_key=f'bank:{order.pk}', callback_payload={'coupon_code': coupon.code if coupon else ''})
+            payment = Payment.objects.create(
+                user=user, order=order, provider='zarinpal', amount=total,
+                status='pending', idempotency_key=f'bank:{bank_key}',
+                callback_payload={'coupon_code': coupon.code if coupon else ''},
+            )
             result = gateway().request(order, request)
             if not result.ok:
                 payment.status = 'failed'
@@ -108,13 +134,14 @@ def bank_checkout(request):
                 payment.save(update_fields=['status', 'callback_payload'])
                 order.status = 'cancelled'
                 order.save(update_fields=['status'])
+                request.session.pop('bank_checkout_key', None)
                 messages.error(request, result.message)
                 return redirect('checkout')
             payment.authority = result.authority
             payment.save(update_fields=['authority'])
         return redirect(result.url)
 
-    return render(request, 'shop/bank_checkout.html', {'subtotal': subtotal, 'discount': discount, 'tax': tax, 'total': total, 'gateway_enabled': gateway().enabled})
+    return render(request, 'shop/bank_checkout.html', {'subtotal': subtotal, 'discount': discount, 'tax': tax, 'total': total, 'gateway_enabled': gateway().enabled, 'bank_key': bank_key})
 
 
 @login_required
@@ -133,6 +160,7 @@ def payment_callback(request):
         payment.save(update_fields=['status', 'callback_payload'])
         payment.order.status = 'cancelled'
         payment.order.save(update_fields=['status'])
+        request.session.pop('bank_checkout_key', None)
         messages.warning(request, 'پرداخت توسط کاربر لغو شد.')
         return redirect('checkout')
 

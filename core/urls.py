@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from .views import home, admin_logout, pwa_manifest, service_worker, protected_book_pdf
+from . import admin as dana_admin  # noqa: F401  # Load DANA admin dashboard/localization.
 
 urlpatterns = [
     path('admin/logout/', admin_logout, name='admin_logout'),

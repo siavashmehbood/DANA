@@ -6,6 +6,7 @@
   <div class="checkout-layout">
     <form class="panel checkout-form" method="post">
       {% csrf_token %}
+      <input type="hidden" name="idempotency_key" value="{{ bank_key }}">
       {% if not gateway_enabled %}<p class="muted">درگاه هنوز در محیط فعلی پیکربندی نشده است.</p>{% endif %}
       <button class="btn checkout-pay" type="submit" {% if not gateway_enabled %}disabled{% endif %}>ادامه به درگاه ←</button>
     </form>

@@ -50,7 +50,8 @@ class ShopFlowTests(TestCase):
         response_data=Mock(); response_data.raise_for_status.return_value=None; response_data.json.return_value={'data':{'code':100,'authority':'A123'}}
         post.return_value=response_data
         CartItem.objects.create(user=self.user,book=self.book)
-        response=self.client.post(reverse('bank_checkout'))
+        self.client.get(reverse('bank_checkout'))
+        response=self.client.post(reverse('bank_checkout'), {'idempotency_key': self.client.session.get('bank_checkout_key')})
         self.assertEqual(response.status_code,302)
         self.assertEqual(response['Location'],'https://payment.zarinpal.com/pg/StartPay/A123')
         payment=Payment.objects.get(order__user=self.user,provider='zarinpal')
@@ -59,12 +60,29 @@ class ShopFlowTests(TestCase):
 
     @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
     @patch('shop.payment.requests.post')
+    def test_bank_payment_is_idempotent_for_double_submit(self, post):
+        request_response=Mock(); request_response.raise_for_status.return_value=None; request_response.json.return_value={'data':{'code':100,'authority':'A999'}}
+        post.return_value=request_response
+        CartItem.objects.create(user=self.user,book=self.book)
+        self.client.get(reverse('bank_checkout'))
+        key=self.client.session.get('bank_checkout_key')
+        first=self.client.post(reverse('bank_checkout'), {'idempotency_key': key})
+        self.assertEqual(first.status_code,302)
+        key=self.client.session.get('bank_checkout_key')
+        second=self.client.post(reverse('bank_checkout'), {'idempotency_key': key})
+        self.assertEqual(second.status_code,302)
+        self.assertEqual(Order.objects.filter(user=self.user, status='pending').count(),1)
+        self.assertEqual(Payment.objects.filter(user=self.user, provider='zarinpal').count(),1)
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.payment.requests.post')
     def test_bank_callback_verifies_and_grants_entitlement(self, post):
         request_response=Mock(); request_response.raise_for_status.return_value=None; request_response.json.return_value={'data':{'code':100,'authority':'A456'}}
         verify_response=Mock(); verify_response.raise_for_status.return_value=None; verify_response.json.return_value={'data':{'code':100,'ref_id':'999'}}
         post.side_effect=[request_response,verify_response]
         CartItem.objects.create(user=self.user,book=self.book)
-        start=self.client.post(reverse('bank_checkout'))
+        self.client.get(reverse('bank_checkout'))
+        start=self.client.post(reverse('bank_checkout'), {'idempotency_key': self.client.session.get('bank_checkout_key')})
         self.assertEqual(start.status_code,302)
         callback=self.client.get(reverse('payment_callback'),{'Authority':'A456','Status':'OK'})
         self.assertEqual(callback.status_code,200)

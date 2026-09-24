@@ -282,20 +282,6 @@ CHOICE_LABELS = {
     'debit': 'برداشت',
 }
 
-for app_config in apps.get_app_configs():
-    if app_config.label in APP_LABELS:
-        app_config.verbose_name = APP_LABELS[app_config.label]
-
-for model in apps.get_models():
-    label = MODEL_LABELS.get(model.__name__)
-    if label:
-        model._meta.verbose_name = label.rstrip('ها') if label.endswith('ها') else label
-        model._meta.verbose_name_plural = label
-    for field in model._meta.fields:
-        if field.name in FIELD_LABELS:
-            field.verbose_name = FIELD_LABELS[field.name]
-        if getattr(field, 'choices', None):
-            field.choices = [
-                (value, CHOICE_LABELS.get(str(value), label))
-                for value, label in field.choices
-            ]
+# Labels are applied by the admin request hook in core.admin, not at import time.
+# Keeping model metadata untouched here prevents Django's migration detector from
+# treating UI-only translations as schema changes.
