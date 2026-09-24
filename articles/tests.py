@@ -491,3 +491,14 @@ class TranslationFailureClassificationTests(TestCase):
         self.assertEqual(result.translation_status,'validation_failed')
         self.assertNotEqual(result.translation_status,'translated')
         self.assertEqual(result.translation_version,0)
+
+
+class TranslationBacklogCommandTests(TestCase):
+    @patch('articles.management.commands.translate_articles.translate_article')
+    def test_retry_lifecycle_states_are_processed(self, translate):
+        from django.core.management import call_command
+        states=['provider_failed','validation_failed','retry_pending','original_only']
+        rows=[Article.objects.create(title=f'Retry {i}',slug=f'retry-{i}',translation_status=state,published=True) for i,state in enumerate(states)]
+        translate.side_effect=lambda article,**kwargs: article
+        call_command('translate_articles')
+        self.assertEqual({call.args[0].pk for call in translate.call_args_list},{row.pk for row in rows})
