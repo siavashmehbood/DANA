@@ -6,6 +6,7 @@ from django.utils import timezone
 from datetime import timedelta
 from accounts.models import User
 from .models import GamificationLevel
+from reader.models import ReadingActivity, ListeningActivity
 
 PERIODS=[('week','این هفته'),('month','این ماه'),('year','امسال')]
 METRICS=[('level','لول'),('study_hours','ساعت مطالعه'),('admin_score','امتیاز مدیر')]
