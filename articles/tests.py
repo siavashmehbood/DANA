@@ -419,3 +419,17 @@ class ArticleTranslationStateDisplayTests(TestCase):
         response=self.client.get(reverse('article_detail',args=[article.slug]),{'lang':'fa'})
         self.assertEqual(response.status_code,200)
         self.assertContains(response,'Original content available')
+
+
+class AutomaticArticleProcessingRegressionTests(TestCase):
+    def test_processing_article_without_pdf_url_still_translates(self):
+        from articles.services import _process_article
+        article=Article.objects.create(
+            title='Abstract only processing', slug='abstract-only-processing',
+            abstract='Readable abstract', published=True,
+        )
+        with patch('articles.services.translate_article') as translate:
+            translate.return_value=type('Result',(),{'translation_status':'translated','translation_error':''})()
+            _process_article(article.pk)
+        translate.assert_called_once()
+        self.assertFalse(translate.call_args.kwargs['full_text'] is False)
