@@ -265,7 +265,7 @@ def library(request):
     # Exclude books the reader already owns or has engaged with. An active
     # subscription is access to a catalog, not ownership of every title; excluding
     # the whole catalog made recommendations disappear for subscribers.
-    excluded_recommendation_ids=set(Entitlement.objects.filter(user=user).filter(Q(expires_at__isnull=True)|Q(expires_at__gt=now)).values_list('book_id',flat=True))
+    excluded_recommendation_ids=set(Entitlement.objects.filter(user=user).values_list('book_id',flat=True))
     excluded_recommendation_ids.update(ReadingProgress.objects.filter(user=user).values_list('book_id',flat=True))
     excluded_recommendation_ids.update(AudioProgress.objects.filter(user=user).values_list('book_id',flat=True))
     if not preferred_categories:
