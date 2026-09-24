@@ -8,15 +8,17 @@ from .models import XPEvent, PointLedger, UserStreak
 
 
 @transaction.atomic
-def add_xp(user, amount, reason, source=''):
+def add_xp(user, amount, reason, source='', reference=''):
     from accounts.models import User
     user = User.objects.select_for_update().get(pk=user.pk)
     amount = int(amount)
     if not amount:
-        return
+        return None
+    if reference and XPEvent.objects.filter(reference=reference).exists():
+        return None
     user.xp = max(0, user.xp + amount)
     user.save(update_fields=['xp'])
-    XPEvent.objects.create(user=user, amount=amount, reason=reason, source=source)
+    return XPEvent.objects.create(user=user, amount=amount, reason=reason, source=source, reference=reference or None)
 
 
 @transaction.atomic
