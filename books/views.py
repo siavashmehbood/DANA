@@ -203,10 +203,11 @@ def secure_file(request, pk, kind, chapter_id=None):
     if kind != 'pdf': response['Accept-Ranges']='bytes'
     extension=field.name.rsplit('.',1)[-1].lower() if '.' in field.name else 'bin'
     response['Content-Disposition'] = f'inline; filename="book-{book.pk}-{kind}.{extension}"'
-    try:
-        response['Content-Length'] = str(field.size)
-    except (OSError, ValueError):
-        pass
+    if response.status_code != 206:
+        try:
+            response['Content-Length'] = str(field.size)
+        except (OSError, ValueError):
+            pass
     response['Cache-Control'] = 'private, no-store'
     response['Vary'] = 'Cookie'
     response['Content-Security-Policy'] = "default-src 'none'; media-src 'self'; frame-ancestors 'self'; sandbox" if kind != 'pdf' else "default-src 'none'; frame-ancestors 'self'; sandbox"
