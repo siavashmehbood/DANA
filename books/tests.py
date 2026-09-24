@@ -515,3 +515,17 @@ class PasswordBookV1SafetyTests(TestCase):
         self.assertEqual(book.status,'draft')
         self.assertIsNone(book.publish_at)
 
+    def test_admin_bulk_publish_skips_all_password_books(self):
+        from django.contrib.admin.sites import AdminSite
+        from django.contrib.messages.storage.fallback import FallbackStorage
+        from django.test import RequestFactory
+        from .admin import BookAdmin
+        author=Author.objects.create(name='Bulk Password Author')
+        book=Book.objects.create(name='Bulk Password',slug='bulk-password',author=author,status='draft',visibility='password',access_password='secret')
+        request=RequestFactory().post('/admin/books/book/')
+        request.session={}
+        request._messages=FallbackStorage(request)
+        BookAdmin(Book,AdminSite()).publish_selected(request,Book.objects.filter(pk=book.pk))
+        book.refresh_from_db()
+        self.assertEqual(book.status,'draft')
+
