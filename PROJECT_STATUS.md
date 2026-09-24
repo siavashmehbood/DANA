@@ -54,5 +54,11 @@
 - Add real PWA raster icons if store/install requirements demand them.
 - **EXTERNAL RELEASE REQUIREMENT:** configure production monitoring/alerting and a real backup destination, then rehearse restore against production-like infrastructure.
 
+## V1 scope decisions
+- Refund is intentionally Post-RC: no customer-facing refund workflow is exposed. Existing `refunded`/wallet audit primitives are retained for a future provider-aware, idempotent reversal workflow; no incomplete automatic refund is promised in V1.
+- Password-protected books are safe-disabled for V1 publication: Admin keeps this legacy visibility mode in draft until a complete unlock/session flow exists.
+- Publisher/Translator/Tags metadata remains Post-RC; Author/Category/Level cover the current V1 catalog/admin journey and adding schema now is not a release blocker.
+- Transactional email/SMS/push delivery providers and background workers remain external/deployment work; in-app notifications are the V1 reliable notification surface.
+
 ## Safety note
 No force push, destructive reset, repository deletion or production data deletion was performed.
