@@ -618,3 +618,14 @@ class ObservabilityEndpointTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.json(),{'status':'ready','database':'ok'})
         self.assertEqual(response['Cache-Control'],'no-store')
+
+
+class PersianPresentationRegressionTests(TestCase):
+    def test_dashboard_uses_translation_status_display_label(self):
+        user=get_user_model().objects.create_user(username='fa-dashboard',password='safe-pass-123')
+        from articles.models import Article
+        Article.objects.create(title='Pending article',slug='pending-dashboard',abstract='Source',translation_status='pending',published=True)
+        self.client.force_login(user)
+        response=self.client.get(reverse('dashboard'))
+        self.assertContains(response,'در انتظار ترجمه')
+        self.assertNotContains(response,'>pending<')
