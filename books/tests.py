@@ -496,3 +496,22 @@ class BookDetailLatestActivityTests(TestCase):
         response=self.client.get(reverse('book_detail',args=[book.slug]))
         self.assertEqual(response.context['continue_kind'],'audio')
         self.assertContains(response,'ادامه آخرین فعالیت: شنیدن')
+
+
+class PasswordBookV1SafetyTests(TestCase):
+    def test_admin_save_keeps_password_book_out_of_published_catalog(self):
+        from django.contrib.admin.sites import AdminSite
+        from django.contrib.messages.storage.fallback import FallbackStorage
+        from django.test import RequestFactory
+        from .admin import BookAdmin
+        author=Author.objects.create(name='Password Draft Author')
+        book=Book.objects.create(name='Password Draft',slug='password-draft',author=author,status='draft',visibility='password',access_password='secret')
+        request=RequestFactory().post('/admin/books/book/')
+        request.session={}
+        request._messages=FallbackStorage(request)
+        book.status='published'
+        BookAdmin(Book,AdminSite()).save_model(request,book,None,True)
+        book.refresh_from_db()
+        self.assertEqual(book.status,'draft')
+        self.assertIsNone(book.publish_at)
+
