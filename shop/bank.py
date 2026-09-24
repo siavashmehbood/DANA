@@ -161,15 +161,21 @@ def payment_callback(request):
     if payment.status == 'successful':
         return render(request, 'shop/success.html', {'order': payment.order})
     if status != 'OK':
-        if payment.status != 'pending':
-            messages.error(request, 'وضعیت این تراکنش قبلاً نهایی شده است.')
-            return redirect('cart')
-        payment.status = 'cancelled'
-        payment.callback_payload = {**payment.callback_payload, 'callback_status': status}
-        payment.save(update_fields=['status', 'callback_payload'])
-        _release_coupon_reservation(payment)
-        payment.order.status = 'cancelled'
-        payment.order.save(update_fields=['status'])
+        # Serialize cancellation with a simultaneous successful callback so a stale
+        # pre-lock status check cannot cancel a payment that was just verified.
+        with transaction.atomic():
+            payment = Payment.objects.select_for_update().select_related('order').get(pk=payment.pk)
+            if payment.status == 'successful':
+                return render(request, 'shop/success.html', {'order': payment.order})
+            if payment.status != 'pending':
+                messages.error(request, 'وضعیت این تراکنش قبلاً نهایی شده است.')
+                return redirect('cart')
+            payment.status = 'cancelled'
+            payment.callback_payload = {**payment.callback_payload, 'callback_status': status}
+            payment.save(update_fields=['status', 'callback_payload'])
+            _release_coupon_reservation(payment)
+            payment.order.status = 'cancelled'
+            payment.order.save(update_fields=['status'])
         messages.warning(request, 'پرداخت لغو شد؛ سبد خرید شما حفظ شده و می‌توانید دوباره تلاش کنید.')
         return redirect('checkout')
 
