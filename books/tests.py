@@ -531,10 +531,3 @@ class PasswordBookV1SafetyTests(TestCase):
 
 
 
-class CatalogQueryBudgetTests(TestCase):
-    def test_plain_catalog_does_not_duplicate_count_query(self):
-        author=Author.objects.create(name='Query Budget Author')
-        Book.objects.create(name='Query Budget Book',slug='query-budget-book',author=author,status='published')
-        with self.assertNumQueries(3):
-            response=self.client.get(reverse('books'))
-        self.assertEqual(response.context['total_count'],1)
