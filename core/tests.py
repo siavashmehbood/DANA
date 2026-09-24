@@ -526,3 +526,24 @@ class PersianAdminDashboardTests(TestCase):
         self.assertContains(response,'داشبورد مدیریت دانا')
         self.assertContains(response,'کتاب‌ها')
         self.assertContains(response,'فروشگاه')
+
+
+class PersianAdminEndToEndLabelsTests(TestCase):
+    def setUp(self):
+        self.admin=User.objects.create_superuser(username='fa-admin-e2e',password='pass12345',email='fa-admin@example.com')
+        self.client.force_login(self.admin)
+
+    def test_book_admin_changelist_uses_persian_model_and_column_labels(self):
+        response=self.client.get('/admin/books/book/')
+        self.assertEqual(response.status_code,200)
+        self.assertContains(response,'کتاب‌ها')
+        self.assertContains(response,'نویسنده')
+        self.assertContains(response,'قیمت')
+        self.assertContains(response,'وضعیت')
+
+    def test_article_admin_changelist_exposes_persian_translation_health(self):
+        response=self.client.get('/admin/articles/article/')
+        self.assertEqual(response.status_code,200)
+        self.assertContains(response,'مقالات')
+        self.assertContains(response,'سلامت ترجمه')
+        self.assertContains(response,'وضعیت ترجمه')
