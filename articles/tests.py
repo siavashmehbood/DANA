@@ -449,7 +449,9 @@ class ArticleProcessingSignalRegressionTests(TestCase):
             schedule.assert_not_called()
 
     def test_source_text_update_requeues_processing(self):
-        article=Article.objects.create(title='Signal source',slug='signal-source',abstract='Readable',published=True)
+        article=Article.objects.create(title='Signal source',slug='signal-source',abstract='Readable',published=False)
+        Article.objects.filter(pk=article.pk).update(published=True)
+        article.refresh_from_db()
         with patch('articles.signals.schedule_article_processing') as schedule:
             article.abstract='Updated readable abstract'
             with self.captureOnCommitCallbacks(execute=True):
