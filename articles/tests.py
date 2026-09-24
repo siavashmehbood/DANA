@@ -353,7 +353,7 @@ class TranslationPipelineRegressionTests(TestCase):
         self.assertEqual(article.title_fa,'عنوان سالم')
         self.assertEqual(article.abstract_fa,'چکیده سالم')
         self.assertEqual(article.translation_version,1)
-        self.assertEqual(article.translation_status,'failed')
+        self.assertEqual(article.translation_status,'validation_failed')
 
 
 class ArticleImporterTranslationTriggerTests(TestCase):
