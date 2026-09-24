@@ -546,3 +546,27 @@ class ProfileAccessAwareLifetimeStatsTests(TestCase):
         response=self.client.get(reverse('profile'))
         self.assertEqual(response.context['completed_books'],0)
         self.assertEqual(response.context['total_reading_minutes'],0)
+
+
+class AdminDerivedCounterIntegrityTests(TestCase):
+    def test_admin_edit_preserves_locked_financial_and_gamification_counters(self):
+        from django.contrib.admin.sites import AdminSite
+        from django.test import RequestFactory
+        from unittest.mock import Mock
+        from .admin import UserAdmin
+        user=User.objects.create_user(username='admin-integrity-user',password='pass12345')
+        User.objects.filter(pk=user.pk).update(wallet_balance=321,xp=11,points=12,purchase_points=13,study_points=14)
+        stale=User.objects.get(pk=user.pk)
+        stale.wallet_balance=0
+        stale.xp=0
+        stale.points=0
+        stale.purchase_points=0
+        stale.study_points=0
+        form=Mock()
+        form.cleaned_data={'wallet_topup':0}
+        request=RequestFactory().post('/admin/accounts/user/')
+        request.user=User.objects.create_superuser(username='integrity-admin',password='pass12345')
+        UserAdmin(User,AdminSite()).save_model(request,stale,form,True)
+        user.refresh_from_db()
+        self.assertEqual(user.wallet_balance,321)
+        self.assertEqual((user.xp,user.points,user.purchase_points,user.study_points),(11,12,13,14))
