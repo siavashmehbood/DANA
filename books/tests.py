@@ -38,6 +38,17 @@ class ProtectedMediaTests(TestCase):
         self.assertEqual(response['Content-Length'],'4')
         self.assertEqual(response.content,b'2345')
 
+    def test_invalid_audio_range_is_private_and_not_indexable(self):
+        from django.core.files.base import ContentFile
+        self.book.audio.save('invalid-range.mp3',ContentFile(b'0123456789'),save=True)
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        self.client.force_login(self.user)
+        response=self.client.get(reverse('book_secure_file',args=[self.book.pk,'audio']),HTTP_RANGE='bytes=20-30')
+        self.assertEqual(response.status_code,416)
+        self.assertEqual(response['Content-Range'],'bytes */10')
+        self.assertEqual(response['Cache-Control'],'private, no-store')
+        self.assertEqual(response['X-Robots-Tag'],'noindex, nofollow')
+
     def test_expired_entitlement_denies_protected_media(self):
         from django.core.files.base import ContentFile
         self.book.pdf.save('expired.pdf',ContentFile(b'%PDF-1.4'),save=True)
