@@ -1,14 +1,10 @@
 import logging
-import threading
-
-from django.db import close_old_connections
+from django.conf import settings
 
 from .models import Article
 from .translation import download_article_pdf, extract_pdf_text, translate_article
 
 logger = logging.getLogger(__name__)
-_processing = set()
-_processing_lock = threading.Lock()
 
 
 def _process_article(article_id):
@@ -44,33 +40,19 @@ def _process_article(article_id):
         return
     except Exception:
         logger.exception('Automatic article processing failed for %s', article_id)
-    finally:
-        with _processing_lock:
-            _processing.discard(article_id)
-
-
-def _article_worker(article_id):
-    # Connection lifecycle belongs to the background-thread boundary, not the
-    # processing primitive itself. Keeping it here prevents direct/synchronous
-    # callers (including PostgreSQL regression tests and future workers) from
-    # unexpectedly closing their active Django connection.
-    close_old_connections()
-    try:
-        _process_article(article_id)
-    finally:
-        close_old_connections()
 
 
 def schedule_article_processing(article_id):
-    with _processing_lock:
-        if article_id in _processing:
-            return False
-        _processing.add(article_id)
-    worker = threading.Thread(
-        target=_article_worker,
-        args=(article_id,),
-        name=f'article-processing-{article_id}',
-        daemon=True,
-    )
-    worker.start()
+    """Durably mark an article for the database-backed worker.
+
+    Web requests never own background threads; process_article_queue consumes
+    these rows safely and can be supervised by the deployment environment.
+    """
+    article=Article.objects.filter(pk=article_id,published=True).first()
+    if not article:
+        return False
+    if article.translation_status in {'translated','reviewed'} and article.translation_hash:
+        return False
+    if article.translation_status != 'pending':
+        Article.objects.filter(pk=article_id).update(translation_status='pending',translation_error='')
     return True
