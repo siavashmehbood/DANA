@@ -43,4 +43,30 @@ class MissionAdmin(ModelAdmin):
     list_filter = ('period', 'active')
     search_fields = ('title', 'description')
 
-admin.site.register([UserBadge, UserMission, UserStreak, HallOfFameRecord])
+@admin.register(UserBadge)
+class UserBadgeAdmin(ModelAdmin):
+    list_display=('user','badge','earned_at')
+    readonly_fields=('user','badge','earned_at')
+    def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
+
+@admin.register(UserMission)
+class UserMissionAdmin(ModelAdmin):
+    list_display=('user','mission','progress','period_key','completed_at')
+    readonly_fields=('user','mission','progress','period_key','completed_at')
+    def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
+
+@admin.register(UserStreak)
+class UserStreakAdmin(ModelAdmin):
+    list_display=('user','current_days','longest_days','last_activity_date')
+    readonly_fields=('user','current_days','longest_days','last_activity_date')
+    def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
+
+@admin.register(HallOfFameRecord)
+class HallOfFameRecordAdmin(ModelAdmin):
+    list_display=('user','category','value','period','created_at')
+    readonly_fields=('user','category','value','period','created_at')
+    def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
