@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from django.contrib import admin
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Count
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
@@ -38,11 +38,11 @@ def _persianize_app_list(app_list):
 def dana_dashboard_stats():
     now = timezone.now()
     paid = Order.objects.filter(status__in=['paid', 'gift'])
-    today = paid.filter(created_at__date=now.date())
-    week = paid.filter(created_at__gte=now - timezone.timedelta(days=7))
+    order_totals=paid.aggregate(orders=Count('id'),revenue=Sum('total'),today_revenue=Sum('total',filter=Q(created_at__date=now.date())),week_revenue=Sum('total',filter=Q(created_at__gte=now-timezone.timedelta(days=7))))
+    payment_totals=Payment.objects.aggregate(pending=Count('id',filter=Q(status='pending')),failed=Count('id',filter=Q(status='failed')))
     wallet = WalletTransaction.objects.filter(type='credit').aggregate(total=Sum('amount'))['total'] or 0
-    pending_payments = Payment.objects.filter(status='pending').count()
-    failed_payments = Payment.objects.filter(status='failed').count()
+    pending_payments = payment_totals['pending']
+    failed_payments = payment_totals['failed']
     open_tickets = Ticket.objects.exclude(status__in=['resolved', 'closed']).count()
     translation_backlog = Article.objects.filter(published=True).filter(Q(translation_status__in=['not_requested','pending','translating','failed','provider_failed','validation_failed','retry_pending','original_only']) | Q(title_fa='') | Q(abstract__gt='', abstract_fa='') | Q(full_text__gt='', full_text_fa='')).distinct().count()
     translation_failures = Article.objects.filter(published=True, translation_status__in=['failed','provider_failed','validation_failed']).count()
@@ -53,10 +53,10 @@ def dana_dashboard_stats():
         'translated_articles': Article.objects.filter(published=True).exclude(title_fa='').count(),
         'fulltext_articles': Article.objects.filter(published=True).exclude(full_text_fa='').count(),
         'pdf_articles': Article.objects.filter(published=True).exclude(pdf='').count(),
-        'orders': paid.count(),
-        'revenue': paid.aggregate(total=Sum('total'))['total'] or 0,
-        'today_revenue': today.aggregate(total=Sum('total'))['total'] or 0,
-        'week_revenue': week.aggregate(total=Sum('total'))['total'] or 0,
+        'orders': order_totals['orders'],
+        'revenue': order_totals['revenue'] or 0,
+        'today_revenue': order_totals['today_revenue'] or 0,
+        'week_revenue': order_totals['week_revenue'] or 0,
         'pending_orders': Order.objects.filter(status='pending').count(),
         'pending_payments': pending_payments,
         'failed_payments': failed_payments,
