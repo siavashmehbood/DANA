@@ -33,9 +33,9 @@ def home(request):
         valid_entitlements=list(
             Entitlement.objects.filter(user=request.user)
             .filter(Q(expires_at__isnull=True)|Q(expires_at__gt=now))
-            .values_list('book_id','book__category_id')
+            .values_list('book_id','book__category_id','source')
         )
-        valid_books=[book_id for book_id,_ in valid_entitlements]
+        valid_books=[book_id for book_id,_,_ in valid_entitlements]
         subscription_access=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=now,expires_at__gt=now,plan__grants_catalog_access=True).exists()
         readable_progress=Q(book_id__in=valid_books)|Q(book__visibility='public',book__price=0)
         if subscription_access:
@@ -50,8 +50,9 @@ def home(request):
             has_text=bool(latest_reading.book.pdf) or latest_reading.book.chapters.exclude(text='').exists()
             has_audio=bool(latest_reading.book.audio) or latest_reading.book.chapters.exclude(audio='').exists()
             continue_item={'book':latest_reading.book,'kind':'text' if has_text or not has_audio else 'audio'}
-        owned_categories={category_id for _,category_id in valid_entitlements if category_id is not None}
-        owned_ids={book_id for book_id,_ in valid_entitlements}
+        owned_categories={category_id for _,category_id,source in valid_entitlements if category_id is not None and source != 'subscription'}
+        owned_ids={book_id for book_id,_,source in valid_entitlements if source != 'subscription'}
+        access_ids={book_id for book_id,_,_ in valid_entitlements}
         consumed_ids=set()
         # Subscription access is not ownership. Keep unengaged catalog titles
         # eligible for recommendations while excluding anything already started.
