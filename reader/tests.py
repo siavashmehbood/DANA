@@ -422,7 +422,7 @@ class AudiobookExperienceTests(TestCase):
         self.client.force_login(self.user)
 
     def test_audio_player_requires_entitlement(self):
-        self.assertRedirects(self.client.get(reverse('audio_player',args=[self.book.pk])),reverse('book_detail',kwargs={'slug':self.book.slug}))
+        self.assertRedirects(self.client.get(reverse('audio_player',args=[self.book.pk])),reverse('book_detail',kwargs={'slug':self.book.slug}),fetch_redirect_response=False)
         Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
         self.assertEqual(self.client.get(reverse('audio_player',args=[self.book.pk])).status_code,200)
 
@@ -607,7 +607,7 @@ class ExpiredSubscriptionRecoveryTests(TestCase):
         Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=31),expires_at=timezone.now()-timedelta(days=1))
         self.client.force_login(user)
         response=self.client.get(reverse('reader',args=[book.pk]))
-        self.assertRedirects(response,reverse('book_detail',kwargs={'slug':book.slug}))
+        self.assertRedirects(response,reverse('book_detail',kwargs={'slug':book.slug}),fetch_redirect_response=False)
         detail=self.client.get(reverse('book_detail',kwargs={'slug':book.slug}))
         self.assertFalse(detail.context['has_access'])
         self.assertContains(detail,'بررسی اشتراک')
