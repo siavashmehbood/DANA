@@ -220,10 +220,6 @@ def library(request):
     if active_subscription:
         subscription_books=Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=now),subscription_included=True).exclude(pk__in=entitled_ids).select_related('author','category').prefetch_related('chapters').order_by('-created_at')[:500]
         books.extend(subscription_books)
-    existing_ids={book.id for book in books}
-    free_books=Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=now),visibility='public',price=0).exclude(pk__in=existing_ids).select_related('author','category').prefetch_related('chapters').order_by('-created_at')[:500]
-    books.extend(free_books)
-    free_ids={book.id for book in free_books}
     book_ids=[book.id for book in books]
     pmap={p.book_id:p for p in ReadingProgress.objects.filter(user=user,book_id__in=book_ids)}
     amap={}
@@ -240,7 +236,7 @@ def library(request):
             if latest_kind=='text' and not has_text and has_audio:
                 latest_kind='audio'
         entitlement_kind=entitlement_source.get(book.id)
-        access_source='purchased' if entitlement_kind=='purchase' else 'subscription' if entitlement_kind=='subscription' or (book.id not in entitled_ids and book.id not in free_ids) else 'free' if book.id in free_ids else 'granted'
+        access_source='free' if book.id in entitled_ids and book.visibility=='public' and book.price == 0 else 'purchased' if entitlement_kind=='purchase' else 'subscription' if entitlement_kind=='subscription' or book.id not in entitled_ids else 'granted'
         rows.append({'book':book,'progress':progress,'audio_progress':audio_progress,'latest_kind':latest_kind,'has_audio':has_audio,'has_text':has_text,'source':access_source})
     state=request.GET.get('state','all')
     kind=request.GET.get('kind','all')
