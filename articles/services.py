@@ -44,7 +44,9 @@ def _process_article(article_id):
                     article.save(update_fields=['full_text', 'updated_at'])
             except Exception as exc:
                 logger.info('PDF extraction failed for article %s: %s', article_id, exc)
-        translate_article(article, full_text=True)
+        result=translate_article(article, full_text=True)
+        if result.translation_status == 'failed':
+            logger.warning('Automatic translation failed for article %s: %s', article_id, result.translation_error)
     except Article.DoesNotExist:
         return
     except Exception:
