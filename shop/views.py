@@ -110,7 +110,9 @@ def remove_cart_item(request, pk):
 @login_required
 def checkout(request):
     items = [i for i in CartItem.objects.filter(user=request.user).select_related('book') if i.book.is_published]
-    items = [i for i in items if not Entitlement.objects.filter(user=request.user, book=i.book).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).exists()]
+    now=timezone.now()
+    owned_ids=set(Entitlement.objects.filter(user=request.user,book_id__in=[i.book_id for i in items]).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=now)).values_list('book_id',flat=True))
+    items = [i for i in items if i.book_id not in owned_ids]
     if not items:
         CartItem.objects.filter(user=request.user).delete()
         return redirect('cart')
