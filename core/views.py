@@ -51,7 +51,6 @@ def home(request):
             has_audio=bool(latest_reading.book.audio) or latest_reading.book.chapters.exclude(audio='').exists()
             continue_item={'book':latest_reading.book,'kind':'text' if has_text or not has_audio else 'audio'}
         owned_categories={category_id for _,category_id,source in valid_entitlements if category_id is not None and source != 'subscription'}
-        owned_ids={book_id for book_id,_,source in valid_entitlements if source != 'subscription'}
         access_ids={book_id for book_id,_,_ in valid_entitlements}
         consumed_ids=set()
         # Subscription access is not ownership. Keep unengaged catalog titles
@@ -73,7 +72,7 @@ def home(request):
         preferred_categories=set(owned_categories)|set(rated_categories)|set(active_categories)|set(audio_categories)
         recommendations=list(base.filter(category_id__in=preferred_categories).exclude(id__in=access_ids|consumed_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at').distinct()[:8])
         if not recommendations:
-            recommendations=list(base.exclude(id__in=owned_ids|consumed_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8])
+            recommendations=list(base.exclude(id__in=access_ids|consumed_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8])
     response=render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
         'latest_articles': article_base.order_by('-created_at')[:8], 'featured_articles': article_base.filter(featured=True)[:4],
         'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading, 'continue_listening':continue_listening, 'continue_item':continue_item, 'audio_books': audio_books, 'recommendations': recommendations})
