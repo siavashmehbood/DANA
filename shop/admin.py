@@ -139,5 +139,11 @@ class SubscriptionAdmin(ModelAdmin):
     list_filter=('status','plan')
     search_fields=('user__username','user__email','plan__name')
     autocomplete_fields=('user','plan')
-    readonly_fields=('created_at',)
+    readonly_fields=('user','plan','status','starts_at','expires_at','created_at')
     list_per_page=50
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
