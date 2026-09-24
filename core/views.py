@@ -29,13 +29,14 @@ def home(request):
     continue_listening=[]
     continue_item=None
     if request.user.is_authenticated:
+        now=timezone.now()
         valid_entitlements=list(
             Entitlement.objects.filter(user=request.user)
-            .filter(Q(expires_at__isnull=True)|Q(expires_at__gt=timezone.now()))
+            .filter(Q(expires_at__isnull=True)|Q(expires_at__gt=now))
             .values_list('book_id','book__category_id')
         )
         valid_books=[book_id for book_id,_ in valid_entitlements]
-        subscription_access=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__grants_catalog_access=True).exists()
+        subscription_access=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=now,expires_at__gt=now,plan__grants_catalog_access=True).exists()
         readable_progress=Q(book_id__in=valid_books)|Q(book__visibility='public',book__price=0)
         if subscription_access:
             readable_progress |= Q(book__subscription_included=True)
@@ -53,11 +54,17 @@ def home(request):
         owned_ids={book_id for book_id,_ in valid_entitlements}
         # Subscription access is not ownership. Keep unengaged catalog titles
         # eligible for recommendations while excluding anything already started.
-        owned_ids.update(ReadingProgress.objects.filter(user=request.user).values_list('book_id',flat=True))
-        owned_ids.update(AudioProgress.objects.filter(user=request.user).values_list('book_id',flat=True))
+        signal_rows=ReadingProgress.objects.filter(user=request.user).values_list('book_id','book__category_id','progress')
+        audio_signal_rows=AudioProgress.objects.filter(user=request.user).values_list('book_id','book__category_id','position_seconds')
+        active_categories=set()
+        for book_id, category_id, progress in signal_rows:
+            owned_ids.add(book_id)
+            if progress > 0 and category_id is not None: active_categories.add(category_id)
+        audio_categories=set()
+        for book_id, category_id, position in audio_signal_rows:
+            owned_ids.add(book_id)
+            if position > 0 and category_id is not None: audio_categories.add(category_id)
         rated_categories=Review.objects.filter(user=request.user,approved=True,rating__gte=4,book__category__isnull=False).values_list('book__category_id',flat=True)
-        active_categories=ReadingProgress.objects.filter(user=request.user,progress__gt=0,book__category__isnull=False).values_list('book__category_id',flat=True)
-        audio_categories=AudioProgress.objects.filter(user=request.user,position_seconds__gt=0,book__category__isnull=False).values_list('book__category_id',flat=True)
         # Recent/completed category queries were strict subsets of the active
         # reading/listening signals above, so evaluating them separately only
         # added database round-trips without changing recommendation categories.
