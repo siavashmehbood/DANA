@@ -457,3 +457,15 @@ class ArticleProcessingSignalRegressionTests(TestCase):
             with self.captureOnCommitCallbacks(execute=True):
                 article.save(update_fields=['abstract'])
             schedule.assert_called_once_with(article.pk)
+
+
+class RestrictedSourceTranslationRegressionTests(TestCase):
+    def test_restricted_source_still_translates_metadata_without_full_republish(self):
+        from articles.services import _process_article
+        source=ArticleSource.objects.create(name='Restricted source',source_type='api',allow_full_republish=False)
+        article=Article.objects.create(title='Restricted article',slug='restricted-article',abstract='Readable abstract',source=source,published=True)
+        with patch('articles.services.translate_article') as translate:
+            translate.return_value=type('Result',(),{'translation_status':'translated','translation_error':''})()
+            _process_article(article.pk)
+        translate.assert_called_once()
+        self.assertFalse(translate.call_args.kwargs['full_text'])
