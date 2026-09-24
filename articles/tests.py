@@ -521,3 +521,31 @@ class MetadataOnlyTranslationStatusTests(TestCase):
         result=translate_article(article,full_text=False)
         self.assertEqual(result.translation_status,'original_only')
         self.assertFalse(result.full_text_fa)
+
+
+class DurableArticleQueueRegressionTests(TestCase):
+    def test_worker_failure_returns_article_to_retry_queue(self):
+        from articles.services import _process_article
+        article=Article.objects.create(title='Retry worker',slug='retry-worker',abstract='Readable',published=True,translation_status='translating')
+        with patch('articles.services.translate_article',side_effect=RuntimeError('temporary provider failure')):
+            _process_article(article.pk)
+        article.refresh_from_db()
+        self.assertEqual(article.translation_status,'retry_pending')
+        self.assertIn('temporary provider failure',article.translation_error)
+
+    def test_stale_translating_article_is_reclaimed(self):
+        from django.core.management import call_command
+        from io import StringIO
+        article=Article.objects.create(title='Stale worker',slug='stale-worker',abstract='Readable',published=True,translation_status='translating')
+        Article.objects.filter(pk=article.pk).update(updated_at=timezone.now()-timedelta(minutes=20))
+        with patch('articles.management.commands.process_article_queue._process_article') as process:
+            call_command('process_article_queue',limit=1,stdout=StringIO())
+        process.assert_called_once_with(article.pk)
+
+    def test_recent_translating_article_is_not_double_claimed(self):
+        from django.core.management import call_command
+        from io import StringIO
+        article=Article.objects.create(title='Active worker',slug='active-worker',abstract='Readable',published=True,translation_status='translating')
+        with patch('articles.management.commands.process_article_queue._process_article') as process:
+            call_command('process_article_queue',limit=1,stdout=StringIO())
+        process.assert_not_called()
