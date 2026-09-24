@@ -18,7 +18,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         articles=Article.objects.filter(published=True).order_by('pk')
         if not options['all']:
-            backlog=Q(translation_status__in=['pending','failed','translating'])|Q(title_fa='')
+            backlog=Q(translation_status__in=['not_requested','pending','failed','provider_failed','validation_failed','retry_pending','original_only','translating'])|Q(title_fa='')
             backlog |= Q(abstract__gt='',abstract_fa='')
             if options['full']:
                 backlog |= Q(full_text__gt='',full_text_fa='')
