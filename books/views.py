@@ -1,5 +1,5 @@
 from django.shortcuts import render,get_object_or_404
-from django.db.models import Q, Avg, Count, F
+from django.db.models import Q, Avg, Count, F, Case, When, Value, IntegerField
 from django.core.paginator import Paginator
 import mimetypes
 import re
@@ -64,6 +64,8 @@ def listing(request):
         if sort=='popular': return qs.annotate(review_count=Count('review',filter=Q(review__approved=True))).order_by('-review_count','-created_at','-id')
         if sort=='rating': return qs.annotate(avg_rating=Avg('review__rating',filter=Q(review__approved=True))).order_by(F('avg_rating').desc(nulls_last=True),'-created_at','-id')
         if sort=='name': return qs.order_by('name','id')
+        if q:
+            return qs.annotate(search_priority=Case(When(name__iexact=q,then=Value(0)),When(name__icontains=q,then=Value(1)),When(author__name__icontains=q,then=Value(2)),default=Value(3),output_field=IntegerField())).order_by('search_priority','-created_at','-id')
         return qs.order_by('-created_at','-id')
     if q:
         variants=_search_variants(q)
