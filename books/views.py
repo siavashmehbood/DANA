@@ -73,11 +73,13 @@ def listing(request):
         books=books.filter(search_q)
     books=apply_filters(books)
     books=apply_sort(books)
-    total_count=books.count()
     page_number=request.GET.get('page','1')[:12]
     if not page_number.isdigit() or int(page_number) < 1: page_number='1'
     used_relaxed_search=False
-    if q and total_count == 0:
+    # Paginator already performs the catalog COUNT. Only probe for existence here
+    # to decide whether the relaxed fallback is needed, avoiding a duplicate full
+    # COUNT on every normal listing/search request.
+    if q and not books.exists():
         tokens=[t for t in q.split() if len(t)>1]
         relaxed=Q()
         for token in tokens:
@@ -85,17 +87,17 @@ def listing(request):
                 relaxed |= Q(name__icontains=term)|Q(author__name__icontains=term)|Q(category__name__icontains=term)|Q(summary__icontains=term)
         if relaxed:
             books=apply_sort(apply_filters(_published_books().filter(visibility='public').select_related('author','category').filter(relaxed)))
-            total_count=books.count()
-            used_relaxed_search=total_count > 0
-        if total_count == 0 and page_number == '1':
+            used_relaxed_search=books.exists()
+        if not used_relaxed_search and page_number == '1':
             Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_zero_result',metadata={'query':q,'kind':kind,'price':price,'access':access,'category':cat,'sort':sort})
+    paginator=Paginator(books,24)
+    page_obj=paginator.get_page(page_number)
+    total_count=paginator.count
     if q and page_number == '1':
         metadata={'query':q,'relaxed':used_relaxed_search,'kind':kind,'price':price,'access':access,'category':cat,'sort':sort}
         Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search',value=total_count,metadata=metadata)
         if total_count > 0:
             Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_success',value=total_count,metadata=metadata)
-    paginator=Paginator(books,24)
-    page_obj=paginator.get_page(page_number)
     response=render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'access':access,'categories':category_qs,'used_relaxed_search':used_relaxed_search,'query_was_normalized':bool(raw_q and raw_q != q)})
     response['Cache-Control']='private, no-store' if request.user.is_authenticated else 'public, max-age=60'
     if request.user.is_authenticated: response['Vary']='Cookie'
