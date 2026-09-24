@@ -55,12 +55,14 @@ class ZarinpalGateway:
         except (requests.RequestException, ValueError) as exc:
             return GatewayResult(False, message=f'ارتباط با درگاه ناموفق بود: {exc}')
 
-    def verify(self, order):
+    def verify(self, order, payment=None):
         if not self.enabled:
             return GatewayResult(False, message='درگاه بانکی پیکربندی نشده است.')
-        payment = order.payments.order_by('-created_at').first()
-        if not payment or not payment.authority:
+        payment = payment or order.payments.filter(provider='zarinpal').order_by('-created_at').first()
+        if not payment or payment.order_id != order.pk or payment.provider != 'zarinpal' or not payment.authority:
             return GatewayResult(False, message='شناسه تراکنش پیدا نشد.')
+        if Decimal(payment.amount) != Decimal(order.total):
+            return GatewayResult(False, message='مبلغ تراکنش با سفارش همخوانی ندارد.')
         payload = {'merchant_id': self.merchant_id, 'amount': self.amount(order), 'authority': payment.authority}
         try:
             response = requests.post(self.verify_url, json=payload, timeout=15)
