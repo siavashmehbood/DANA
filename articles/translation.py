@@ -185,58 +185,71 @@ def translate_text(text, delay=0.1, retries=2):
     return '\n\n'.join(result)
 
 
-@transaction.atomic
 def translate_article(article, full_text=False, force=False, provider='mymemory+fallback', created_by=None):
-    """Create a candidate translation first; publish it atomically and retain history."""
-    article = type(article).objects.select_for_update().get(pk=article.pk)
-    source_text = article.full_text
+    """Translate outside a DB transaction, then publish a validated version atomically.
+
+    Network translation used to run while holding select_for_update(), which could
+    block article/admin requests for many seconds.  Only the final version publish
+    is serialized now; source changes during translation are detected and retried.
+    """
+    model=type(article)
+    article=model.objects.get(pk=article.pk)
+    source_text=article.full_text
     if full_text and not source_text and article.pdf:
-        source_text = extract_pdf_text(article)
-    source_hash = hashlib.sha256(f'{article.title}\n{article.abstract}\n{source_text}'.encode('utf-8')).hexdigest()
-    if not force and article.translation_hash == source_hash and article.translation_status in {'translated', 'reviewed'}:
+        source_text=extract_pdf_text(article)
+    source_title, source_abstract = article.title, article.abstract
+    source_hash=hashlib.sha256(f'{source_title}\n{source_abstract}\n{source_text}'.encode('utf-8')).hexdigest()
+    if not force and article.translation_hash == source_hash and article.translation_status in {'translated','reviewed'}:
         return article
 
+    model.objects.filter(pk=article.pk).update(translation_status='translating',translation_error='')
     try:
-        title_fa = translate_text(article.title) if (force or not article.title_fa) else article.title_fa
-        abstract_fa = translate_text(article.abstract) if article.abstract and (force or not article.abstract_fa) else article.abstract_fa
-        content_fa = translate_text(source_text) if full_text and source_text and (force or not article.full_text_fa) else article.full_text_fa
-        if not title_fa.strip():
-            raise ValueError('Translation produced an empty Persian title')
+        title_fa=translate_text(source_title) if (force or not article.title_fa) else article.title_fa
+        abstract_fa=translate_text(source_abstract) if source_abstract and (force or not article.abstract_fa) else article.abstract_fa
+        content_fa=translate_text(source_text) if full_text and source_text and (force or not article.full_text_fa) else article.full_text_fa
+
         def quality_ok(source, translated):
-            if not source or not translated: return False
-            persian = len(re.findall(r'[\u0600-\u06FF]', translated))
-            letters = len(re.findall(r'[A-Za-z\u0600-\u06FF]', translated))
-            return letters > 0 and persian / letters >= 0.50 and len(translated.strip()) >= min(8, max(3, len(source.strip()) // 8))
-        if not quality_ok(article.title, title_fa):
+            if not source or not translated:
+                return False
+            persian=len(re.findall(r'[\u0600-\u06FF]',translated))
+            letters=len(re.findall(r'[A-Za-z\u0600-\u06FF]',translated))
+            return letters > 0 and persian / letters >= 0.50 and len(translated.strip()) >= min(8,max(3,len(source.strip())//8))
+
+        if not quality_ok(source_title,title_fa):
             raise ValueError('Translation quality validation failed for title')
-        if full_text and source_text and not content_fa.strip():
-            raise ValueError('Translation produced empty Persian content')
-        if abstract_fa and article.abstract and not quality_ok(article.abstract, abstract_fa):
+        if source_abstract and not quality_ok(source_abstract,abstract_fa):
             raise ValueError('Translation quality validation failed for abstract')
-        if full_text and source_text and not quality_ok(source_text, content_fa):
+        if full_text and source_text and not quality_ok(source_text,content_fa):
             raise ValueError('Translation quality validation failed for content')
     except Exception as exc:
-        article.translation_status = 'failed'
-        article.translation_error = str(exc)[:4000]
-        article.save(update_fields=['translation_status', 'translation_error', 'updated_at'])
-        return article
+        model.objects.filter(pk=article.pk).update(translation_status='failed',translation_error=str(exc)[:4000],updated_at=timezone.now())
+        return model.objects.get(pk=article.pk)
 
-    next_version = article.translation_version + 1
-    ArticleTranslationVersion.objects.create(
-        article=article, version=next_version, title_fa=title_fa, abstract_fa=abstract_fa,
-        content_fa=content_fa, provider=provider, quality_score=100, source_hash=source_hash, is_valid=True, created_by=created_by,
-    )
-    article.title_fa = title_fa
-    article.abstract_fa = abstract_fa
-    if source_text:
-        article.full_text = source_text
-    if full_text:
-        article.full_text_fa = content_fa
-    article.translation_status = 'translated'
-    article.translation_hash = source_hash
-    article.translation_version = next_version
-    article.translation_quality = 100
-    article.translation_error = ''
-    article.translated_at = timezone.now()
-    article.save()
-    return article
+    with transaction.atomic():
+        locked=model.objects.select_for_update().get(pk=article.pk)
+        current_text=locked.full_text or (source_text if full_text else locked.full_text)
+        current_hash=hashlib.sha256(f'{locked.title}\n{locked.abstract}\n{current_text}'.encode('utf-8')).hexdigest()
+        if locked.title != source_title or locked.abstract != source_abstract or current_hash != source_hash:
+            locked.translation_status='pending'
+            locked.translation_error='منبع مقاله هنگام ترجمه تغییر کرد؛ ترجمه باید دوباره اجرا شود.'
+            locked.save(update_fields=['translation_status','translation_error','updated_at'])
+            return locked
+        next_version=(locked.translation_versions.aggregate(max_version=__import__('django').db.models.Max('version'))['max_version'] or 0)+1
+        ArticleTranslationVersion.objects.create(
+            article=locked,version=next_version,title_fa=title_fa,abstract_fa=abstract_fa,
+            content_fa=content_fa,provider=provider,quality_score=100,source_hash=source_hash,
+            is_valid=True,created_by=created_by,
+        )
+        locked.title_fa=title_fa
+        locked.abstract_fa=abstract_fa
+        if full_text and source_text:
+            locked.full_text=source_text
+            locked.full_text_fa=content_fa
+        locked.translation_status='translated'
+        locked.translation_hash=source_hash
+        locked.translation_version=next_version
+        locked.translation_quality=100
+        locked.translation_error=''
+        locked.translated_at=timezone.now()
+        locked.save()
+        return locked
