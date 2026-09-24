@@ -531,3 +531,17 @@ class PasswordBookV1SafetyTests(TestCase):
 
 
 
+
+
+class CatalogSearchScopeRegressionTests(TestCase):
+    def test_catalog_does_not_scan_long_description_as_search_surface(self):
+        author=Author.objects.create(name='Search Scope Author')
+        Book.objects.create(name='Visible title',slug='search-scope',author=author,status='published',visibility='public',summary='Short useful summary',description='uniquebodyonlytoken')
+        response=self.client.get(reverse('books'),{'q':'uniquebodyonlytoken'})
+        self.assertNotContains(response,'Visible title')
+
+    def test_catalog_still_searches_summary(self):
+        author=Author.objects.create(name='Summary Search Author')
+        Book.objects.create(name='Summary title',slug='summary-scope',author=author,status='published',visibility='public',summary='specialsummarytoken')
+        response=self.client.get(reverse('books'),{'q':'specialsummarytoken'})
+        self.assertContains(response,'Summary title')
