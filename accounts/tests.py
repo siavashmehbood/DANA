@@ -570,3 +570,23 @@ class AdminDerivedCounterIntegrityTests(TestCase):
         user.refresh_from_db()
         self.assertEqual(user.wallet_balance,321)
         self.assertEqual((user.xp,user.points,user.purchase_points,user.study_points),(11,12,13,14))
+
+
+class LibraryAccessProvenanceRegressionTests(TestCase):
+    def test_library_distinguishes_purchase_subscription_free_and_granted(self):
+        user=User.objects.create_user(username='library-provenance',password='pass12345')
+        author=Author.objects.create(name='Library Provenance Author')
+        purchased=Book.objects.create(name='Purchased provenance',slug='purchased-provenance',author=author,status='published',price=100)
+        subscribed=Book.objects.create(name='Subscription provenance',slug='subscription-provenance',author=author,status='published',price=100)
+        free=Book.objects.create(name='Free provenance',slug='free-provenance',author=author,status='published',visibility='public',price=0)
+        granted=Book.objects.create(name='Granted provenance',slug='granted-provenance',author=author,status='published',price=100)
+        Entitlement.objects.create(user=user,book=purchased,source='purchase')
+        Entitlement.objects.create(user=user,book=subscribed,source='subscription',expires_at=timezone.now()+timedelta(days=1))
+        Entitlement.objects.create(user=user,book=free,source='promotion')
+        Entitlement.objects.create(user=user,book=granted,source='admin')
+        self.client.force_login(user)
+        rows={row['book'].pk:row['source'] for row in self.client.get(reverse('library')).context['library_rows']}
+        self.assertEqual(rows[purchased.pk],'purchased')
+        self.assertEqual(rows[subscribed.pk],'subscription')
+        self.assertEqual(rows[free.pk],'free')
+        self.assertEqual(rows[granted.pk],'granted')
