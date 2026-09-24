@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from django.db.models import Sum, Q, Value, DecimalField
+from django.db.models import Sum, Q
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from datetime import timedelta
@@ -47,7 +47,7 @@ def leaderboard(request):
         people=people.annotate(score_total=Coalesce(Sum('review__admin_score',filter=Q(review__created_at__gte=start,review__admin_score__isnull=False)),0))
         rows=[{'user':u,'level':level_for(u),'value':u.score_total} for u in people]
     else:
-        rows=[{'user':u,'level':level_for(u),'value':level_for(u)} for u in people]
+        rows=[{'user':u,'level':u.level,'value':u.level} for u in people]
     rows.sort(key=lambda x:(x['value'],x['user'].xp),reverse=True)
     visible=rows[:10]
     mine=next((x for x in rows if x['user'].pk==request.user.pk),None)
