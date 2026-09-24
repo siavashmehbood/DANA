@@ -41,6 +41,8 @@ ZARINPAL_MERCHANT_ID=os.getenv('ZARINPAL_MERCHANT_ID','')
 ZARINPAL_AMOUNT_MULTIPLIER=int(os.getenv('ZARINPAL_AMOUNT_MULTIPLIER','10'))
 if not DEBUG and SECRET_KEY=='django-insecure-change-this': raise RuntimeError('SECRET_KEY must be configured when DEBUG=0')
 if not DEBUG and not ALLOWED_HOSTS: raise RuntimeError('ALLOWED_HOSTS must be configured when DEBUG=0')
+if not DEBUG and any(host in {'*','0.0.0.0'} for host in ALLOWED_HOSTS): raise RuntimeError('ALLOWED_HOSTS must not contain wildcard/public bind hosts when DEBUG=0')
+if not DEBUG and not CSRF_TRUSTED_ORIGINS: raise RuntimeError('CSRF_TRUSTED_ORIGINS must be configured with the production HTTPS origin when DEBUG=0')
 
 
 from django.templatetags.static import static
