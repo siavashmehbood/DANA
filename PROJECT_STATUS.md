@@ -63,11 +63,11 @@
 ## Release Candidate gate — 2026-09-24
 - Critical repository-fixable remaining: **0 known**.
 - High repository-fixable remaining: **0 known**.
-- Default CI: **PASS** — DANA CI #1395 on `d2525810cc4dfa13f64abe64af059d043eb4df55`.
-- PostgreSQL 17 full regression: **PASS** — DANA CI #1395.
+- Default CI: **PASS** — DANA CI #1406 on `85420201aca63a330085bf7fab08c49bec806269`.
+- PostgreSQL 17 full regression: **PASS** — DANA CI #1406.
 - Migration check/apply: **PASS** — both CI jobs.
 - Deployment security check: **PASS**.
-- Payment: **staging-ready in repository**; real-provider smoke remains an EXTERNAL RELEASE REQUIREMENT above.
+- Payment: **staging-ready in repository**; success and cancellation callbacks are serialized against the payment row to prevent concurrent final-state races and duplicate provider verification; real-provider smoke remains an EXTERNAL RELEASE REQUIREMENT above.
 - Private media: **production-safe in repository**; production serving/storage isolation and legacy migration remain EXTERNAL RELEASE REQUIREMENTs above.
 - Critical user/audio/subscription E2E: **covered by the green regression suite**.
 - Mobile/RTL and critical accessibility: **V1 usable / critical fixes complete**.
