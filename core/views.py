@@ -150,10 +150,10 @@ def pwa_manifest(request):
 
 
 def service_worker(request):
-    js = """const CACHE='dana-v6'; const CORE=[];
+    js = """const CACHE='dana-v7'; const OFFLINE='/static/offline.html'; const CORE=[OFFLINE];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const url=new URL(event.request.url);const cacheable=url.origin===location.origin&&(url.pathname.startsWith('/static/')||CORE.includes(url.pathname));if(!cacheable)return;event.respondWith(fetch(event.request,{credentials:'same-origin'}).then(response=>{if(response.ok&&response.type==='basic'&&!response.headers.get('Cache-Control')?.includes('private')){const copy=response.clone();caches.open(CACHE).then(c=>c.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request)));});"""
+self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const url=new URL(event.request.url);if(event.request.mode==='navigate'){event.respondWith(fetch(event.request,{credentials:'same-origin'}).catch(()=>caches.match(OFFLINE)));return;}const cacheable=url.origin===location.origin&&url.pathname.startsWith('/static/');if(!cacheable)return;event.respondWith(fetch(event.request,{credentials:'same-origin'}).then(response=>{if(response.ok&&response.type==='basic'&&!response.headers.get('Cache-Control')?.includes('private')){const copy=response.clone();caches.open(CACHE).then(c=>c.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request)));});"""
     response=HttpResponse(js, content_type='application/javascript')
     response['Cache-Control']='no-cache'
     response['Service-Worker-Allowed']='/'
