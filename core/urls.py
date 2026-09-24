@@ -4,6 +4,7 @@ from .views import home, admin_logout, pwa_manifest, service_worker, protected_b
 from .admin_localization import apply_admin_localization
 
 apply_admin_localization()
+from . import admin as dana_admin  # noqa: F401,E402 — installs the custom Persian dashboard
 admin.site.site_header='مدیریت دانا'
 admin.site.site_title='دانا | مدیریت'
 admin.site.index_title='پنل مدیریت دانا'
