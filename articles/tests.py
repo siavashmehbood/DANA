@@ -354,3 +354,15 @@ class TranslationPipelineRegressionTests(TestCase):
         self.assertEqual(article.abstract_fa,'چکیده سالم')
         self.assertEqual(article.translation_version,1)
         self.assertEqual(article.translation_status,'failed')
+
+
+class ArticleImporterTranslationTriggerTests(TestCase):
+    def test_importer_triggers_translation_processing_for_existing_untranslated_article(self):
+        from .importer import import_discovered
+        row={'provider':'trigger-provider','external_id':'trigger-1','title':'Trigger paper','authors':'A','abstract':'Readable abstract','year':2026,'publication_date':None,'journal':'J','doi':'10.1/trigger','source_url':'https://example.test/paper','pdf_url':'','citation_count':1,'relevance_score':1}
+        with patch('articles.importer.discover_articles',return_value=[row]), patch('articles.signals.schedule_article_processing') as schedule:
+            with self.captureOnCommitCallbacks(execute=True):
+                import_discovered('trigger')
+            article=Article.objects.get(doi='10.1/trigger')
+            self.assertEqual(article.translation_status,'pending')
+            schedule.assert_called_with(article.pk)
