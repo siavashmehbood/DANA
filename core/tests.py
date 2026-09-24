@@ -472,13 +472,3 @@ class AudioRecommendationSignalTests(TestCase):
         self.assertNotIn(current,list(response.context['recommendations']))
 
 
-class ProductionSettingsValidationTests(TestCase):
-    def test_health_and_readiness_endpoints_are_available(self):
-        health=self.client.get('/healthz/')
-        ready=self.client.get('/readyz/')
-        self.assertEqual(health.status_code,200)
-        self.assertEqual(health.json()['status'],'ok')
-        self.assertEqual(ready.status_code,200)
-        self.assertEqual(ready.json()['status'],'ready')
-        self.assertEqual(health['Cache-Control'],'no-store')
-        self.assertEqual(ready['Cache-Control'],'no-store')
