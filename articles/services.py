@@ -20,7 +20,7 @@ def _process_article(article_id):
             return
         if article.source_id and not article.source.allow_full_republish:
             result=translate_article(article, full_text=False)
-            if result.translation_status == 'failed':
+            if result.translation_status in {'failed','provider_failed','validation_failed'}:
                 logger.warning('Automatic translation failed for article %s: %s', article_id, result.translation_error)
             return
         if not article.pdf and article.pdf_url:
