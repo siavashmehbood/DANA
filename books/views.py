@@ -69,7 +69,7 @@ def listing(request):
         variants=_search_variants(q)
         search_q=Q()
         for term in variants:
-            search_q |= Q(name__icontains=term)|Q(author__name__icontains=term)|Q(category__name__icontains=term)|Q(summary__icontains=term)|Q(description__icontains=term)
+            search_q |= Q(name__icontains=term)|Q(author__name__icontains=term)|Q(category__name__icontains=term)|Q(summary__icontains=term)
         books=books.filter(search_q)
     books=apply_filters(books)
     books=apply_sort(books)
