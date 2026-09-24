@@ -122,7 +122,9 @@ def bookmark(request, pk):
     item,created=Bookmark.objects.get_or_create(user=request.user,book=book,page=page,defaults={'title':title})
     if not created and title and item.title != title:
         item.title=title; item.save(update_fields=['title'])
-    return JsonResponse({'ok':True,'created':created,'id':item.id,'page':item.page,'title':item.title})
+    response=JsonResponse({'ok':True,'created':created,'id':item.id,'page':item.page,'title':item.title})
+    response['Cache-Control']='private, no-store'
+    return response
 
 
 @login_required
@@ -137,7 +139,9 @@ def highlight(request, pk):
     if color not in {'yellow','green','blue','pink'}: color='yellow'
     if not text: return JsonResponse({'error':'Highlight is empty'},status=400)
     item,created=Highlight.objects.get_or_create(user=request.user,book=book,page=page,text=text,defaults={'color':color})
-    return JsonResponse({'ok':True,'created':created,'id':item.id,'page':item.page,'text':item.text})
+    response=JsonResponse({'ok':True,'created':created,'id':item.id,'page':item.page,'text':item.text})
+    response['Cache-Control']='private, no-store'
+    return response
 
 
 @login_required
@@ -147,7 +151,9 @@ def delete_highlight(request, pk, highlight_id):
     if not book.is_published or not _has_access(request.user,book): return HttpResponseForbidden('Access denied')
     item=get_object_or_404(Highlight,pk=highlight_id,user=request.user,book=book)
     item.delete()
-    return JsonResponse({'ok':True})
+    response=JsonResponse({'ok':True})
+    response['Cache-Control']='private, no-store'
+    return response
 
 
 @login_required
