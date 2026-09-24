@@ -90,12 +90,14 @@ def detail(request, slug):
         mode = 'fa'
     search = request.GET.get('find', '').strip()[:200]
     can_show_full_text = not article.source_id or article.source.allow_full_republish
-    article.reader_full_text = linebreaks(article.full_text or '', autoescape=True) if can_show_full_text else ''
-    article.reader_full_text_fa = linebreaks(article.full_text_fa or '', autoescape=True) if can_show_full_text else ''
     if mode == 'fa' and not (article.full_text_fa or article.abstract_fa):
         mode = 'en'
     if mode == 'en' and not (article.full_text or article.abstract) and (article.full_text_fa or article.abstract_fa):
         mode = 'fa'
+    # Full academic bodies can be very large. Render only the language columns
+    # requested by the reader instead of formatting both bodies on every hit.
+    article.reader_full_text = linebreaks(article.full_text or '', autoescape=True) if can_show_full_text and mode in {'en','both'} else ''
+    article.reader_full_text_fa = linebreaks(article.full_text_fa or '', autoescape=True) if can_show_full_text and mode in {'fa','both'} else ''
     related = Article.objects.filter(published=True).exclude(pk=article.pk)
     if article.category_id:
         related = related.filter(category_id=article.category_id)
