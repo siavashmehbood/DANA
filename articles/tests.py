@@ -366,3 +366,18 @@ class ArticleImporterTranslationTriggerTests(TestCase):
             article=Article.objects.get(doi='10.1/trigger')
             self.assertEqual(article.translation_status,'pending')
             schedule.assert_called_with(article.pk)
+
+
+class ArticleCatalogSearchPerformanceTests(TestCase):
+    def test_catalog_search_uses_metadata_and_abstract_without_full_body_scan(self):
+        Article.objects.create(
+            title='Metadata Needle', slug='metadata-needle', abstract='Readable summary',
+            full_text='ordinary body', published=True,
+        )
+        Article.objects.create(
+            title='Other Article', slug='body-only-needle', abstract='Readable summary',
+            full_text='Metadata Needle appears only in this very large body', published=True,
+        )
+        response=self.client.get(reverse('article_list'), {'q':'Metadata Needle'})
+        self.assertContains(response,'Metadata Needle')
+        self.assertNotContains(response,'Other Article')
