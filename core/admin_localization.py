@@ -4,6 +4,7 @@ These labels intentionally do not alter database field names, migrations, or API
 contracts.  Django admin reads model metadata at runtime, so this keeps the
 management UI Persian without creating schema-only migrations.
 """
+import sys
 from django.apps import apps
 
 APP_LABELS = {
@@ -33,6 +34,11 @@ FIELD_LABELS = {
 CHOICE_LABELS={'draft':'پیش‌نویس','scheduled':'زمان‌بندی‌شده','published':'منتشرشده','public':'عمومی','private':'خصوصی','password':'رمزدار','pending':'در انتظار','paid':'پرداخت‌شده','cancelled':'لغوشده','failed':'ناموفق','refunded':'بازپرداخت‌شده','active':'فعال','expired':'منقضی','credit':'واریز','debit':'برداشت','refund':'بازپرداخت','purchase':'خرید','subscription':'اشتراک','admin':'مدیر','info':'اطلاع','success':'موفق','warning':'هشدار','error':'خطا','open':'باز','external':'نسخه خارجی','translated':'ترجمه‌شده','translating':'در حال ترجمه','reviewed':'بازبینی‌شده'}
 
 def apply_admin_localization():
+    # makemigrations compares runtime model metadata with migration state.  These
+    # labels are admin presentation only, so never let them create schema-state
+    # migrations.
+    if 'makemigrations' in sys.argv:
+        return
     for app_label, label in APP_LABELS.items():
         try: apps.get_app_config(app_label).verbose_name = label
         except LookupError: continue
