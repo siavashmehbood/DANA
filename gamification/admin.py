@@ -19,10 +19,10 @@ class BadgeAdmin(ModelAdmin):
 
 @admin.register(XPEvent)
 class XPEventAdmin(ModelAdmin):
-    list_display = ('user', 'amount', 'reason', 'source', 'created_at')
+    list_display = ('user', 'amount', 'reason', 'source', 'reference', 'created_at')
     list_filter = ('source', 'created_at')
-    search_fields = ('user__username', 'user__phone', 'reason')
-    readonly_fields = ('user', 'amount', 'reason', 'source', 'created_at')
+    search_fields = ('user__username', 'user__phone', 'reason', 'reference')
+    readonly_fields = ('user', 'amount', 'reason', 'source', 'reference', 'created_at')
     date_hierarchy = 'created_at'
     def has_add_permission(self, request): return False
     def has_delete_permission(self, request, obj=None): return False
