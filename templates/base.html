@@ -25,12 +25,8 @@
 <link rel="stylesheet" href="{% static 'css/app.css' %}?v=panel-final-3">
 <link rel="stylesheet" href="{% static 'css/theme-final.css' %}?v=2">
 <link rel="stylesheet" href="{% static 'css/ui-overhaul.css' %}?v=2">
-<link rel="stylesheet" href="{% static 'css/article-detail-overhaul.css' %}?v=1">
-<link rel="stylesheet" href="{% static 'css/article-library-pro.css' %}?v=1">
-<link rel="stylesheet" href="{% static 'css/reader-premium.css' %}?v=15">
-<link rel="stylesheet" href="{% static 'css/reader-pages.css' %}?v=33">
 <link rel="stylesheet" href="{% static 'css/site-unified.css' %}?v=2">
-<link rel="stylesheet" href="{% static 'css/reader-fix.css' %}?v=2">
+{% block extra_css %}{% endblock %}
 </head>
 <body class="page-enter">
 <a class="skip-link" href="#main-content">پرش به محتوای اصلی</a>
@@ -51,7 +47,7 @@
 <div class="toast-stack" aria-live="polite" aria-atomic="true"></div>
 <button class="top" id="top" aria-label="بازگشت به بالا">↑</button>
 <script src="{% static 'js/app.js' %}"></script>
-<script src="{% static 'js/reader-controller.js' %}?v=31"></script>
+{% block extra_js %}{% endblock %}
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('{% url 'service_worker' %}').catch(()=>{}));}</script>
 </body>
 </html>
