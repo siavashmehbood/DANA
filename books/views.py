@@ -96,7 +96,10 @@ def listing(request):
             Event.objects.create(user=request.user if request.user.is_authenticated else None,name='search_success',value=total_count,metadata=metadata)
     paginator=Paginator(books,24)
     page_obj=paginator.get_page(page_number)
-    return render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'access':access,'categories':category_qs,'used_relaxed_search':used_relaxed_search,'query_was_normalized':bool(raw_q and raw_q != q)})
+    response=render(request,'books/list.html',{'books':page_obj.object_list,'page_obj':page_obj,'total_count':total_count,'q':q,'cat':cat,'sort':sort,'kind':kind,'price':price,'access':access,'categories':category_qs,'used_relaxed_search':used_relaxed_search,'query_was_normalized':bool(raw_q and raw_q != q)})
+    response['Cache-Control']='private, no-store' if request.user.is_authenticated else 'public, max-age=60'
+    if request.user.is_authenticated: response['Vary']='Cookie'
+    return response
 
 def _has_book_access(user, book):
     if not user.is_authenticated:
@@ -147,6 +150,8 @@ def detail(request,slug):
         response['Vary']='Cookie'
     if book.visibility != 'public':
         response['X-Robots-Tag']='noindex, nofollow'
+    elif not request.user.is_authenticated:
+        response['Cache-Control']='public, max-age=120'
     return response
 
 
