@@ -81,7 +81,7 @@ class ArticleAnnotation(models.Model):
 
 class Article(models.Model):
     ACCESS_CHOICES = [('open', 'آزاد'), ('external', 'نسخه خارجی')]
-    TRANSLATION_STATUS = [('pending','در انتظار ترجمه'),('translating','در حال ترجمه'),('translated','ترجمه شده'),('reviewed','بازبینی شده'),('failed','خطای ترجمه')]
+    TRANSLATION_STATUS = [('not_requested','درخواست نشده'),('pending','در انتظار ترجمه'),('translating','در حال ترجمه'),('translated','ترجمه شده'),('reviewed','بازبینی شده'),('validation_failed','رد شده در کنترل کیفیت'),('provider_failed','خطای ارائه‌دهنده'),('retry_pending','در انتظار تلاش مجدد'),('original_only','فقط متن اصلی'),('failed','خطای ترجمه')]
     title = models.CharField(max_length=500)
     title_fa = models.CharField(max_length=500, blank=True)
     slug = models.SlugField(max_length=550, unique=True, allow_unicode=True)
