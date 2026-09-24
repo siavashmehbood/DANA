@@ -32,7 +32,7 @@ class UserAdmin(BaseUserAdmin):
     )
     list_filter = ('is_active', 'is_staff', 'leaderboard_public', 'is_deactivated')
     search_fields = ('username', 'phone', 'first_name', 'last_name', 'email', 'referral_code')
-    readonly_fields = ('referral_code', 'terms_accepted_at', 'wallet_balance', 'last_login', 'date_joined')
+    readonly_fields = ('referral_code', 'terms_accepted_at', 'wallet_balance', 'xp', 'points', 'purchase_points', 'study_points', 'last_login', 'date_joined')
     list_per_page = 30
     date_hierarchy = 'date_joined'
     ordering = ('-date_joined',)
