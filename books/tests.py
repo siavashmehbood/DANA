@@ -35,6 +35,7 @@ class ProtectedMediaTests(TestCase):
         response=self.client.get(reverse('book_secure_file',args=[self.book.pk,'audio']),HTTP_RANGE='bytes=2-5')
         self.assertEqual(response.status_code,206)
         self.assertEqual(response['Content-Range'],'bytes 2-5/10')
+        self.assertEqual(response['Content-Length'],'4')
         self.assertEqual(response.content,b'2345')
 
     def test_expired_entitlement_denies_protected_media(self):
