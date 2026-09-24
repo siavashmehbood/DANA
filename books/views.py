@@ -192,7 +192,13 @@ def secure_file(request, pk, kind, chapter_id=None):
     if range_match:
         size=field.size; start=int(range_match.group(1)); requested_end=int(range_match.group(2)) if range_match.group(2) else size-1
         if start>=size or requested_end<start:
-            response=HttpResponse(status=416); response['Content-Range']=f'bytes */{size}'; return response
+            response=HttpResponse(status=416)
+            response['Content-Range']=f'bytes */{size}'
+            response['Accept-Ranges']='bytes'
+            response['Cache-Control']='private, no-store'
+            response['Vary']='Cookie'
+            response['X-Robots-Tag']='noindex, nofollow'
+            return response
         end=min(requested_end,size-1,start+2*1024*1024-1)
         handle=field.open('rb'); handle.seek(start); data=handle.read(end-start+1); handle.close()
         response=HttpResponse(data,status=206,content_type=content_type)
