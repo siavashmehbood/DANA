@@ -503,6 +503,40 @@ class ShopFlowTests(TestCase):
         self.assertEqual(Subscription.objects.filter(user=self.user,plan=plan).count(),1)
 
 
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_bank_callback_rejects_payment_amount_mismatch_without_verify(self, gateway_factory):
+        CartItem.objects.create(user=self.user,book=self.book)
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='AMOUNT-AUTH',url='https://gateway.example/pay',message='')
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        payment=Payment.objects.get(authority='AMOUNT-AUTH')
+        payment.amount=payment.amount+Decimal('1')
+        payment.save(update_fields=['amount'])
+        response=self.client.get(reverse('payment_callback'),{'Authority':'AMOUNT-AUTH','Status':'OK'})
+        self.assertEqual(response.status_code,302)
+        payment.refresh_from_db(); payment.order.refresh_from_db()
+        self.assertEqual(payment.status,'failed')
+        self.assertEqual(payment.order.status,'cancelled')
+        self.assertFalse(Entitlement.objects.filter(user=self.user,book=self.book).exists())
+        gateway.verify.assert_not_called()
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_duplicate_success_callback_is_idempotent(self, gateway_factory):
+        CartItem.objects.create(user=self.user,book=self.book)
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='DUP-AUTH',url='https://gateway.example/pay',message='')
+        gateway.verify.return_value=Mock(ok=True,authority='REF-1',message='')
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        self.client.get(reverse('payment_callback'),{'Authority':'DUP-AUTH','Status':'OK'})
+        self.client.get(reverse('payment_callback'),{'Authority':'DUP-AUTH','Status':'OK'})
+        self.assertEqual(gateway.verify.call_count,1)
+        self.assertEqual(Entitlement.objects.filter(user=self.user,book=self.book).count(),1)
+
+
 class BankCheckoutIdempotencyProductTests(TestCase):
     def setUp(self):
         self.user=User.objects.create_user(username='bank-repeat',password='pass12345')
