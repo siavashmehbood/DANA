@@ -176,7 +176,8 @@ class RecommendationTests(TestCase):
     def test_service_worker_does_not_cache_private_reader_routes(self):
         response=self.client.get(reverse('service_worker'))
         body=response.content.decode()
-        self.assertIn("url.pathname.startsWith('/static/')||CORE.includes(url.pathname)",body)
+        self.assertIn("url.pathname.startsWith('/static/')",body)
+        self.assertIn("event.request.mode==='navigate'",body)
         self.assertNotIn("c.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request).then",body)
         self.assertNotIn("caches.match('/')",body)
 
@@ -278,8 +279,9 @@ class HomePrivacyTests(TestCase):
     def test_service_worker_does_not_precache_personalized_home(self):
         response=self.client.get('/sw.js')
         body=response.content.decode()
-        self.assertIn("CORE=[]",body)
-        self.assertNotIn("CORE=['/",body)
+        self.assertIn("CORE=[OFFLINE]",body)
+        self.assertIn("OFFLINE='/static/offline.html'",body)
+        self.assertNotIn("caches.match('/')",body)
 
 
 class BaseMetadataTests(TestCase):
