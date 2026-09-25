@@ -5,7 +5,8 @@ from playwright.sync_api import sync_playwright, expect
 BASE_URL=os.getenv("DANA_E2E_BASE_URL","https://dana-staging-web.onrender.com").rstrip("/")
 OUT=Path(os.getenv("DANA_E2E_ARTIFACT_DIR","artifacts/mobile"))
 OUT.mkdir(parents=True,exist_ok=True)
-VIEWPORTS=[("320x568",320,568),("360x800",360,800),("375x667",375,667),("390x844",390,844),("412x915",412,915),("430x932",430,932),("desktop-1366x768",1366,768)]\nANDROID_UA="Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36"
+VIEWPORTS=[("320x568",320,568),("360x800",360,800),("375x667",375,667),("390x844",390,844),("412x915",412,915),("430x932",430,932),("desktop-1366x768",1366,768)]
+ANDROID_UA="Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36"
 
 def assert_visible_geometry(page, selector):
     loc=page.locator(selector)
