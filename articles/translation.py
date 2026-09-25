@@ -202,13 +202,27 @@ def translate_text(text, delay=0.1, retries=3):
                         service_exhausted = True
                         break
                     response.raise_for_status()
-                    translated_chunk = _normalize_translation(response.json().get('responseData', {}).get('translatedText', ''))
-                    if translated_chunk:
+                    payload = response.json()
+                    # MyMemory may report quota/provider failures inside an HTTP 200 response.
+                    response_status = payload.get('responseStatus')
+                    if response_status and int(response_status) >= 400:
+                        if int(response_status) == 429:
+                            service_exhausted = True
                         break
+                    candidate = _normalize_translation(payload.get('responseData', {}).get('translatedText', ''))
+                    # Do not let the rough glossary fallback masquerade as a translation.
+                    # Retry weak provider output; if exhausted, leave the article safely retryable.
+                    if candidate and _translation_quality(chunk, candidate):
+                        translated_chunk = candidate
+                        break
+                    if attempt + 1 < retries:
+                        time.sleep(min(2 ** attempt, 4))
                 except (requests.RequestException, ValueError):
                     if attempt + 1 < retries:
-                        time.sleep(1)
-        result.append(translated_chunk or rough_translate(chunk))
+                        time.sleep(min(2 ** attempt, 4))
+        if not translated_chunk:
+            raise RuntimeError('Translation provider exhausted without a valid Persian translation')
+        result.append(translated_chunk)
         time.sleep(delay)
     return '\n\n'.join(result)
 
