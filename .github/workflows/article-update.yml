@@ -46,7 +46,7 @@ jobs:
       - name: Discover all article categories
         run: python manage.py auto_discover_all --limit "${{ inputs.per_topic || '4' }}"
       - name: Process translation queue
-        run: python manage.py process_article_queue --limit 40
+        run: python manage.py process_article_queue --limit 40 --retry-failed
       - name: Capture production result
         run: |
           python manage.py shell -c "from django.db.models import Q; from articles.models import Article; r=Q(full_text__gt='')|Q(full_text_fa__gt='')|Q(abstract__gt='')|Q(abstract_fa__gt='')|Q(pdf_url__gt='')|Q(pdf__gt=''); q=Article.objects.filter(published=True); print('AFTER published_readable='+str(q.filter(r).count())+' pending='+str(q.filter(translation_status__in=['pending','retry_pending']).count())+' translated='+str(q.filter(translation_status__in=['translated','reviewed','original_only']).count())+' failed='+str(q.filter(translation_status__in=['failed','provider_failed','validation_failed']).count())+' homepage='+str(q.filter(r).order_by('-created_at')[:8].count()))"
