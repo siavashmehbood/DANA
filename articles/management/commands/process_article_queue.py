@@ -12,9 +12,12 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--limit', type=int, default=25)
+        parser.add_argument('--retry-failed', action='store_true', help='Safely requeue failed translations before processing.')
 
     def handle(self, *args, **options):
         limit=max(1, options['limit'])
+        if options.get('retry_failed'):
+            Article.objects.filter(published=True, translation_status__in=['validation_failed','provider_failed','failed']).update(translation_status='retry_pending', translation_error='')
         processed=0
         stale_before=timezone.now()-timezone.timedelta(minutes=15)
         while processed < limit:
