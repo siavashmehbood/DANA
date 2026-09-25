@@ -44,7 +44,7 @@ class Command(BaseCommand):
             self.stdout.write(fallback)
 
     def add_arguments(self, parser):
-        parser.add_argument('--limit', type=int, default=12)
+        parser.add_argument('--limit', type=int, default=4)
         parser.add_argument('--topic', action='append', dest='topics')
         parser.add_argument('--only', nargs='+', help='Run selected category slugs/names only.')
 
@@ -66,7 +66,11 @@ class Command(BaseCommand):
             if category.name != name:
                 category.name = name
                 category.save(update_fields=['name'])
-            result = import_discovered(query, options['limit'], category)
+            try:
+                result = import_discovered(query, options['limit'], category)
+            except Exception as exc:
+                self.stderr.write(f'{name}: ERROR {type(exc).__name__}: {exc}')
+                continue
             total_found += result['discovered']
             total_new += result['created']
             total_updated += result['updated']
