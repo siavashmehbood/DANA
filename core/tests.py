@@ -202,6 +202,28 @@ class HomepageArticleDiscoveryTests(TestCase):
         for width in (320,360,375,390,430):
             self.assertLessEqual(width,600)
 
+    def test_global_animation_layer_never_gates_mobile_content_visibility(self):
+        from pathlib import Path
+        from django.conf import settings
+        js=(Path(settings.BASE_DIR)/'static/js/app.js').read_text(encoding='utf-8')
+        css=(Path(settings.BASE_DIR)/'static/css/app.css').read_text(encoding='utf-8')
+        self.assertIn("[data-animate]{opacity:1;transform:none}",css)
+        self.assertNotIn("[data-animate]{opacity:0;transform:translateY(10px)}",css)
+        self.assertIn("card.classList.add('is-visible')",js)
+        self.assertIn("prefers-reduced-motion: reduce",js)
+        self.assertIn("[data-animate]{opacity:1!important;transform:none!important}",css)
+
+    def test_real_mobile_acceptance_css_guards_narrow_viewports(self):
+        from pathlib import Path
+        from django.conf import settings
+        css=(Path(settings.BASE_DIR)/'static/css/app.css').read_text(encoding='utf-8')
+        self.assertIn("html,body{max-width:100%;overflow-x:clip}",css)
+        self.assertIn("@media(max-width:430px)",css)
+        self.assertIn(".site-header .header-more-toggle{min-height:44px",css)
+        self.assertIn(".site-header .header-more-menu{z-index:160}",css)
+        for width in (320,360,375,390,412,430):
+            self.assertLessEqual(width,430)
+
     def test_article_shelf_precedes_long_book_shelves_for_mobile_discovery(self):
         Article.objects.create(title='Early article',slug='early-article',published=True,abstract='Readable')
         body=self.client.get(reverse('home')).content.decode()
