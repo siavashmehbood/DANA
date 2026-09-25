@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}ثبت‌نام در دانا{% endblock %}
+{% block content %}
+<section class="auth-modern">
+  <div class="auth-visual"><span class="auth-logo">✦</span><span class="auth-brand">دانا</span><h1>کتابخانه‌ات را<br><strong>بساز.</strong></h1><p>بدون نیاز به پیامک، با ایمیل و رمز عبور عضو دانا شو.</p><div class="auth-points"><span>✓ کتابخانه شخصی</span><span>✓ ذخیره پیشرفت مطالعه</span><span>✓ ورود امن با ایمیل</span></div></div>
+  <div class="auth-box"><div class="auth-head"><span class="auth-eyebrow">CREATE ACCOUNT</span><h2>ساخت حساب</h2><p>ایمیل و رمز عبور خود را وارد کن</p></div>
+    <div class="login-panel"><form method="post">{% csrf_token %}<input type="hidden" name="next" value="{{ next_url }}"><label class="sr-only" for="register-email">ایمیل</label><input id="register-email" type="email" name="email" autocomplete="email" value="{{ email|default:'' }}" placeholder="ایمیل" required><label class="sr-only" for="register-password">رمز عبور</label><input id="register-password" type="password" name="password" autocomplete="new-password" placeholder="رمز عبور" required><label class="sr-only" for="register-password-confirmation">تکرار رمز عبور</label><input id="register-password-confirmation" type="password" name="password_confirmation" autocomplete="new-password" placeholder="تکرار رمز عبور" required><label class="check"><input type="checkbox" name="terms" required> قوانین دانا را می‌پذیرم</label><button class="btn auth-btn">ثبت‌نام و ورود ←</button></form>
+      <div class="login-links"><a href="{% url 'login' %}?next={{ next_url|urlencode }}">حساب دارید؟ وارد شوید</a></div><button type="button" class="switch-login" onclick="location.href='{% url 'login' %}?next={{ next_url|urlencode }}'">ورود با شماره موبایل / کد یکبارمصرف</button></div>
+    <p class="auth-footer">رمز عبور به‌صورت امن و استاندارد ذخیره می‌شود.</p>
+  </div>
+</section>
+{% endblock %}
