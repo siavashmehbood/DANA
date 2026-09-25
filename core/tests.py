@@ -176,8 +176,11 @@ class HomepageArticleDiscoveryTests(TestCase):
     def test_homepage_has_useful_article_empty_state_and_archive_link(self):
         response=self.client.get(reverse('home'))
         self.assertContains(response,'هنوز مقاله‌ای منتشر نشده است.')
-        self.assertContains(response,'مشاهده همه مقالات')
+        self.assertContains(response,'مشاهده همه ←')
         self.assertContains(response,reverse('article_list'))
+        self.assertContains(response,'<h2>مقالات</h2>',html=True)
+        self.assertNotContains(response,'DANA ACADEMIC')
+        self.assertNotContains(response,'مقالات علمی و هوش مصنوعی')
 
     def test_article_shelf_precedes_long_book_shelves_for_mobile_discovery(self):
         Article.objects.create(title='Early article',slug='early-article',published=True,abstract='Readable')
