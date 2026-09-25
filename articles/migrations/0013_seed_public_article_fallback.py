@@ -1,4 +1,4 @@
-from django.db import migrations
+from django.db import migrations\nfrom django.db.models import Q
 
 
 def seed_public_article(apps, schema_editor):
@@ -6,12 +6,12 @@ def seed_public_article(apps, schema_editor):
     if Article.objects.filter(
         published=True
     ).filter(
-        __import__("django").db.models.Q(full_text__gt="") |
-        __import__("django").db.models.Q(full_text_fa__gt="") |
-        __import__("django").db.models.Q(abstract__gt="") |
-        __import__("django").db.models.Q(abstract_fa__gt="") |
-        __import__("django").db.models.Q(pdf_url__gt="") |
-        __import__("django").db.models.Q(pdf__gt="")
+        Q(full_text__gt="") |
+        Q(full_text_fa__gt="") |
+        Q(abstract__gt="") |
+        Q(abstract_fa__gt="") |
+        Q(pdf_url__gt="") |
+        Q(pdf__gt="")
     ).exists():
         return
     Article.objects.get_or_create(
