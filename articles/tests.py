@@ -592,3 +592,63 @@ class ScientificTranslationQualityTests(TestCase):
         self.assertEqual(article.translation_status,'translating')
         self.assertEqual(article.translation_error,'')
         process.assert_called_once_with(article.pk)
+
+
+class TranslationProviderFailoverTests(TestCase):
+    def setUp(self):
+        from . import translation
+        translation._PROVIDER_COOLDOWN.clear()
+
+    @patch('articles.translation._argos_translate', return_value='ترجمه فارسی معتبر برای پژوهش علمی')
+    @patch('articles.translation.requests.get')
+    def test_429_cools_mymemory_and_fails_over_to_argos(self, get, argos):
+        from .translation import translate_text, _cooldown_active
+        get.return_value.status_code=429
+        value, provider=translate_text('Scientific research methods', delay=0, retries=1, return_provider=True)
+        self.assertEqual(provider, 'argos-offline')
+        self.assertIn('فارسی', value)
+        self.assertTrue(_cooldown_active('mymemory'))
+        argos.assert_called_once()
+
+    @patch('articles.translation._argos_translate', return_value='ترجمه فارسی معتبر برای پژوهش علمی')
+    @patch('articles.translation.requests.get', side_effect=requests.Timeout())
+    def test_timeout_retries_then_fails_over(self, get, _argos):
+        from .translation import translate_text
+        _, provider=translate_text('Scientific research methods', delay=0, retries=2, return_provider=True)
+        self.assertEqual(get.call_count, 2)
+        self.assertEqual(provider, 'argos-offline')
+
+    @patch('articles.translation._argos_translate', return_value='ترجمه فارسی معتبر برای پژوهش علمی')
+    @patch('articles.translation.requests.get')
+    def test_5xx_retries_then_fails_over(self, get, _argos):
+        from .translation import translate_text
+        get.return_value.status_code=503
+        _, provider=translate_text('Scientific research methods', delay=0, retries=2, return_provider=True)
+        self.assertEqual(get.call_count, 2)
+        self.assertEqual(provider, 'argos-offline')
+
+    @patch('articles.translation._argos_translate', return_value='ترجمه فارسی معتبر برای پژوهش علمی')
+    @patch('articles.translation.requests.get')
+    def test_active_cooldown_skips_mymemory_for_next_article(self, get, _argos):
+        from .translation import translate_text, _cooldown
+        _cooldown('mymemory', 60)
+        _, provider=translate_text('Scientific research methods', delay=0, return_provider=True)
+        self.assertEqual(provider, 'argos-offline')
+        get.assert_not_called()
+
+    @patch('articles.translation.translate_text')
+    def test_translation_version_records_actual_provider(self, translate):
+        from .translation import translate_article
+        translate.side_effect=[('عنوان فارسی پژوهش علمی','argos-offline'),('چکیده فارسی معتبر برای پژوهش علمی','argos-offline')]
+        article=Article.objects.create(title='Scientific research title',slug='provider-provenance',abstract='Scientific research abstract',published=True)
+        result=translate_article(article)
+        version=result.translation_versions.get()
+        self.assertEqual(version.provider,'argos-offline')
+        self.assertEqual(result.translation_status,'translated')
+
+    @patch('articles.translation._argos_translate', side_effect=RuntimeError('offline model unavailable'))
+    @patch('articles.translation.requests.get', side_effect=requests.Timeout())
+    def test_all_provider_failure_does_not_bypass_validator(self, _get, _argos):
+        from .translation import translate_text
+        with self.assertRaises(RuntimeError):
+            translate_text('Unmapped scientific sentence about qubits', delay=0, retries=1)
