@@ -1,4 +1,5 @@
-from django.db import migrations\nfrom django.db.models import Q
+from django.db import migrations
+from django.db.models import Q
 
 
 def seed_public_article(apps, schema_editor):
