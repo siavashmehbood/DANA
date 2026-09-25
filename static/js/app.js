@@ -56,3 +56,29 @@ document.addEventListener('click',(event)=>{
  document.addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(!b)return;const text=b.dataset.copy;if(!text)return;navigator.clipboard?.writeText(text).then(()=>{const old=b.textContent;b.textContent='کپی شد ✓';toast('کد دعوت با موفقیت کپی شد.','success');setTimeout(()=>b.textContent=old,1600)}).catch(()=>toast('کپی خودکار در دسترس نیست.','error'))});
  qsa('.book-card,.pro-book,.article-home-card,.category-pro-grid a').forEach(c=>c.setAttribute('data-animate',''));
 })();
+
+
+// Header "More" menu: explicit state keeps touch, keyboard and ARIA in sync.
+(function setupHeaderMore(){
+ const root=document.querySelector('.header-more');
+ if(!root)return;
+ const toggle=root.querySelector('.header-more-toggle');
+ const menu=root.querySelector('.header-more-menu');
+ if(!toggle||!menu)return;
+ const setOpen=(open)=>{
+  root.classList.toggle('is-open',open);
+  menu.hidden=!open;
+  toggle.setAttribute('aria-expanded',String(open));
+  toggle.setAttribute('aria-label',open?'بستن منوی حساب':'باز کردن منوی حساب');
+ };
+ toggle.addEventListener('click',(event)=>{event.stopPropagation();setOpen(toggle.getAttribute('aria-expanded')!=='true')});
+ menu.addEventListener('click',(event)=>event.stopPropagation());
+ document.addEventListener('click',(event)=>{if(!root.contains(event.target))setOpen(false)});
+ document.addEventListener('keydown',(event)=>{
+  if(event.key==='Escape'&&toggle.getAttribute('aria-expanded')==='true'){
+   setOpen(false);
+   toggle.focus();
+  }
+ });
+ setOpen(false);
+})();
