@@ -161,7 +161,29 @@ def rough_translate(text):
     return value
 
 
-def translate_text(text, delay=0.1, retries=2):
+def _normalize_translation(text):
+    value = re.sub(r'\\s+', ' ', (text or '').replace('ي','ی').replace('ك','ک')).strip()
+    return value
+
+
+def _translation_quality(source, translated):
+    translated = _normalize_translation(translated)
+    if not source or not translated:
+        return False
+    # Scientific titles legitimately retain acronyms, model names, formulae and proper nouns.
+    # Require meaningful Persian rather than an unrealistically high Persian-letter ratio.
+    persian = len(re.findall(r'[\\u0600-\\u06FF]', translated))
+    words = re.findall(r"[A-Za-z\\u0600-\\u06FF]+", translated)
+    source_words = re.findall(r"[A-Za-z]+", source)
+    min_persian = 2 if len(source_words) <= 4 else max(3, min(12, len(source_words) // 3))
+    if persian < min_persian:
+        return False
+    if len(words) < max(1, min(4, len(source_words) // 4)):
+        return False
+    return True
+
+
+def translate_text(text, delay=0.1, retries=3):
     result, service_exhausted = [], False
     for chunk in _chunks(text):
         translated_chunk = ''
@@ -175,7 +197,7 @@ def translate_text(text, delay=0.1, retries=2):
                         service_exhausted = True
                         break
                     response.raise_for_status()
-                    translated_chunk = response.json().get('responseData', {}).get('translatedText', '').strip()
+                    translated_chunk = _normalize_translation(response.json().get('responseData', {}).get('translatedText', ''))
                     if translated_chunk:
                         break
                 except (requests.RequestException, ValueError):
@@ -214,18 +236,11 @@ def translate_article(article, full_text=False, force=False, provider='mymemory+
         abstract_fa=translate_text(source_abstract) if source_abstract and (force or not article.abstract_fa) else article.abstract_fa
         content_fa=translate_text(source_text) if full_text and source_text and (force or not article.full_text_fa) else article.full_text_fa
 
-        def quality_ok(source, translated):
-            if not source or not translated:
-                return False
-            persian=len(re.findall(r'[\u0600-\u06FF]',translated))
-            letters=len(re.findall(r'[A-Za-z\u0600-\u06FF]',translated))
-            return letters > 0 and persian / letters >= 0.50 and len(translated.strip()) >= min(8,max(3,len(source.strip())//8))
-
-        if not quality_ok(source_title,title_fa):
+        if not _translation_quality(source_title,title_fa):
             raise ValueError('Translation quality validation failed for title')
-        if source_abstract and not quality_ok(source_abstract,abstract_fa):
+        if source_abstract and not _translation_quality(source_abstract,abstract_fa):
             raise ValueError('Translation quality validation failed for abstract')
-        if full_text and source_text and not quality_ok(source_text,content_fa):
+        if full_text and source_text and not _translation_quality(source_text,content_fa):
             raise ValueError('Translation quality validation failed for content')
     except Exception as exc:
         message=str(exc)
