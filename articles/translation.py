@@ -221,7 +221,13 @@ def translate_text(text, delay=0.1, retries=3):
                     if attempt + 1 < retries:
                         time.sleep(min(2 ** attempt, 4))
         if not translated_chunk:
-            raise RuntimeError('Translation provider exhausted without a valid Persian translation')
+            fallback = _normalize_translation(rough_translate(chunk))
+            # Keep the deliberately small free glossary fallback for phrases it can
+            # translate completely; never accept its mixed-English partial output.
+            if fallback != _normalize_translation(chunk) and _translation_quality(chunk, fallback):
+                translated_chunk = fallback
+            else:
+                raise RuntimeError('Translation provider exhausted without a valid Persian translation')
         result.append(translated_chunk)
         time.sleep(delay)
     return '\n\n'.join(result)
