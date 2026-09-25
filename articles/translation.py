@@ -173,10 +173,15 @@ def _translation_quality(source, translated):
     # Scientific titles legitimately retain acronyms, model names, formulae and proper nouns.
     # Require meaningful Persian rather than an unrealistically high Persian-letter ratio.
     persian = len(re.findall(r'[\u0600-\u06FF]', translated))
+    latin = len(re.findall(r'[A-Za-z]', translated))
     words = re.findall(r"[A-Za-z\u0600-\u06FF]+", translated)
     source_words = re.findall(r"[A-Za-z]+", source)
     min_persian = 2 if len(source_words) <= 4 else max(3, min(12, len(source_words) // 3))
     if persian < min_persian:
+        return False
+    # Mixed scientific Persian may retain acronyms/proper nouns, but prose that
+    # remains predominantly English is not a usable translation.
+    if latin > persian and latin > 8:
         return False
     if len(words) < max(1, min(4, len(source_words) // 4)):
         return False
