@@ -551,3 +551,44 @@ class DurableArticleQueueRegressionTests(TestCase):
         with patch('articles.management.commands.process_article_queue._process_article') as process:
             call_command('process_article_queue',limit=1,stdout=StringIO())
         process.assert_not_called()
+
+
+class ScientificTranslationQualityTests(TestCase):
+    def test_scientific_title_with_acronym_and_proper_name_is_valid(self):
+        from .translation import _translation_quality
+        self.assertTrue(_translation_quality(
+            'BERT and CRISPR methods in Alzheimer research',
+            'روش‌های BERT و CRISPR در پژوهش آلزایمر',
+        ))
+
+    def test_short_scientific_title_is_valid(self):
+        from .translation import _translation_quality
+        self.assertTrue(_translation_quality('AI Safety', 'ایمنی هوش مصنوعی'))
+
+    def test_scientific_abstract_with_terms_is_valid(self):
+        from .translation import _translation_quality
+        self.assertTrue(_translation_quality(
+            'We evaluate GPT-5 on protein folding and report improved accuracy.',
+            'ما GPT-5 را در تاخوردگی پروتئین ارزیابی می‌کنیم و بهبود دقت را گزارش می‌کنیم.',
+        ))
+
+    def test_untranslated_english_is_rejected(self):
+        from .translation import _translation_quality
+        self.assertFalse(_translation_quality(
+            'Neural networks for scientific discovery',
+            'Neural networks for scientific discovery',
+        ))
+
+    def test_normalizes_arabic_persian_variants_and_whitespace(self):
+        from .translation import _normalize_translation
+        self.assertEqual(_normalize_translation('  يادگيري   ماشين  '), 'یادگیری ماشین')
+
+    def test_failed_rows_can_be_safely_requeued(self):
+        from django.core.management import call_command
+        article=Article.objects.create(title='Retry title',slug='retry-title',abstract='Scientific abstract',published=True,translation_status='validation_failed',translation_error='old')
+        with patch('articles.management.commands.process_article_queue._process_article') as process:
+            call_command('process_article_queue',limit=1,retry_failed=True)
+        article.refresh_from_db()
+        self.assertEqual(article.translation_status,'translating')
+        self.assertEqual(article.translation_error,'')
+        process.assert_called_once_with(article.pk)
