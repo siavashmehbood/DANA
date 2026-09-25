@@ -16,8 +16,15 @@ MIDDLEWARE=['django.middleware.security.SecurityMiddleware','whitenoise.middlewa
 ROOT_URLCONF='core.urls'
 TEMPLATES=[{'BACKEND':'django.template.backends.django.DjangoTemplates','DIRS':[BASE_DIR/'templates'],'APP_DIRS':True,'OPTIONS':{'context_processors':['django.template.context_processors.request','django.contrib.auth.context_processors.auth','django.contrib.messages.context_processors.messages']}}]
 WSGI_APPLICATION='core.wsgi.application'; ASGI_APPLICATION='core.asgi.application'
+DATABASE_URL=os.getenv('DANA_ARTICLE_DATABASE_URL','').strip()
 DB_ENGINE=os.getenv('DB_ENGINE','sqlite3')
-if DB_ENGINE=='postgresql':
+if DATABASE_URL:
+    from urllib.parse import urlparse
+    _db=urlparse(DATABASE_URL)
+    if _db.scheme not in {'postgres','postgresql'} or not _db.hostname or not _db.path.strip('/'):
+        raise RuntimeError('DANA_ARTICLE_DATABASE_URL must be a PostgreSQL URL')
+    DATABASES={'default':{'ENGINE':'django.db.backends.postgresql','NAME':_db.path.lstrip('/'),'USER':_db.username or '','PASSWORD':_db.password or '','HOST':_db.hostname,'PORT':str(_db.port or 5432),'CONN_MAX_AGE':0,'OPTIONS':{'sslmode':os.getenv('DB_SSLMODE','require')}}}
+elif DB_ENGINE=='postgresql':
     DATABASES={'default':{'ENGINE':'django.db.backends.postgresql','NAME':os.getenv('DB_NAME',''),'USER':os.getenv('DB_USER',''),'PASSWORD':os.getenv('DB_PASSWORD',''),'HOST':os.getenv('DB_HOST','localhost'),'PORT':os.getenv('DB_PORT','5432'),'CONN_MAX_AGE':int(os.getenv('DB_CONN_MAX_AGE','60')),'OPTIONS':{'sslmode':os.getenv('DB_SSLMODE','require')}}}
 else: DATABASES={'default':{'ENGINE':'django.db.backends.sqlite3','NAME':BASE_DIR/'db.sqlite3'}}
 AUTH_USER_MODEL='accounts.User'; LOGIN_URL='/login/'; LOGIN_REDIRECT_URL='/'
