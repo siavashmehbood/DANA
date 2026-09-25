@@ -10,6 +10,7 @@ from accounts.models import User
 from books.models import Author, Book, Category
 from shop.models import Entitlement, Subscription, SubscriptionPlan
 from reader.models import Review, ReadingProgress, AudioProgress
+from articles.models import Article
 
 class HealthEndpointTests(TestCase):
     def test_liveness_and_readiness_are_available(self):
@@ -124,6 +125,35 @@ class HomeDiscoveryTests(TestCase):
         response=self.client.get(reverse('home'))
         popular=list(response.context['popular'])
         self.assertLess(popular.index(approved),popular.index(hidden))
+
+
+class HomepageArticleDiscoveryTests(TestCase):
+    def test_readable_published_article_is_visible_on_homepage(self):
+        article=Article.objects.create(title='Mobile visible article',slug='mobile-visible-article',published=True,abstract='Readable abstract')
+        response=self.client.get(reverse('home'))
+        self.assertEqual(response.status_code,200)
+        self.assertIn(article,list(response.context['latest_articles']))
+        self.assertContains(response,'Mobile visible article')
+        self.assertContains(response,reverse('article_detail',args=[article.slug]))
+        self.assertContains(response,reverse('article_list'))
+
+    def test_unreadable_or_unpublished_articles_are_not_featured(self):
+        Article.objects.create(title='No readable content',slug='no-readable-content',published=True)
+        Article.objects.create(title='Draft article',slug='draft-home-article',published=False,abstract='Readable draft')
+        response=self.client.get(reverse('home'))
+        self.assertNotContains(response,'No readable content')
+        self.assertNotContains(response,'Draft article')
+
+    def test_homepage_has_useful_article_empty_state_and_archive_link(self):
+        response=self.client.get(reverse('home'))
+        self.assertContains(response,'هنوز مقاله‌ای منتشر نشده است.')
+        self.assertContains(response,'مشاهده همه مقالات')
+        self.assertContains(response,reverse('article_list'))
+
+    def test_article_shelf_precedes_long_book_shelves_for_mobile_discovery(self):
+        Article.objects.create(title='Early article',slug='early-article',published=True,abstract='Readable')
+        body=self.client.get(reverse('home')).content.decode()
+        self.assertLess(body.index('id="latest-articles"'),body.index('id="new-books"'))
 
 
 class RecommendationTests(TestCase):
