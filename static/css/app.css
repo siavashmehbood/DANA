@@ -512,3 +512,17 @@ progress{width:100%;min-height:12px;accent-color:var(--dana-accent)}
  .site-header .header-more-menu{position:absolute;top:calc(100% + 7px);left:0;right:auto;min-width:180px;max-width:calc(100vw - 20px)}
  .site-header .header-more-menu a{min-height:44px;display:flex;align-items:center}
 }
+
+
+/* Homepage Articles visibility invariant.
+   Article cards are server-rendered content and must never depend on JS/IntersectionObserver to become visible. */
+#latest-articles.articles-home-top{display:block;visibility:visible;opacity:1;height:auto;max-height:none}
+#latest-articles .article-home-grid{display:grid;visibility:visible;opacity:1;height:auto;max-height:none;overflow:visible}
+#latest-articles .article-home-card{visibility:visible;opacity:1;transform:none}
+#latest-articles .article-home-card[data-animate]{opacity:1;transform:none}
+#latest-articles:before{content:none}
+@media(max-width:600px){
+  #latest-articles.articles-home-top{display:block;visibility:visible;opacity:1;height:auto;max-height:none;overflow:visible}
+  #latest-articles .article-home-grid{display:grid;grid-template-columns:minmax(0,1fr)}
+  #latest-articles .article-home-card,#latest-articles .article-home-card:first-child{display:flex;grid-column:auto}
+}
