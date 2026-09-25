@@ -11,15 +11,15 @@
   <div class="auth-box">
     <div class="auth-head"><span class="auth-eyebrow">WELCOME BACK</span><h2>ورود به حساب</h2><p>روش ورودت را انتخاب کن</p></div>
     <div id="passwordLogin" class="login-panel">
-      <div class="login-panel-title"><div class="method-icon">♙</div><div><h3>ورود با نام کاربری</h3><small>نام کاربری و رمز عبور خود را وارد کنید</small></div></div>
-      <form method="post">{% csrf_token %}<input type="hidden" name="next" value="{{next_url}}"><label class="sr-only" for="login-username">نام کاربری</label><input id="login-username" name="username" autocomplete="username" placeholder="نام کاربری" required><label class="sr-only" for="login-password">رمز عبور</label><input id="login-password" type="password" name="password" autocomplete="current-password" placeholder="رمز عبور" required><button class="btn auth-btn" name="login_method" value="password">ورود به حساب ←</button></form>
-      <div class="login-links"><a href="#" onclick="showRecovery();return false">فراموشی رمز عبور</a></div>
+      <div class="login-panel-title"><div class="method-icon">♙</div><div><h3>ورود با ایمیل</h3><small>ایمیل و رمز عبور خود را وارد کنید</small></div></div>
+      <form method="post">{% csrf_token %}<input type="hidden" name="next" value="{{next_url}}"><label class="sr-only" for="login-email">ایمیل</label><input id="login-email" type="email" name="email" autocomplete="email" placeholder="ایمیل" required><label class="sr-only" for="login-password">رمز عبور</label><input id="login-password" type="password" name="password" autocomplete="current-password" placeholder="رمز عبور" required><button class="btn auth-btn" name="login_method" value="password">ورود به حساب ←</button></form>
+      <div class="login-links"><a href="{% url 'register' %}?next={{ next_url|urlencode }}">حساب ندارید؟ ثبت‌نام با ایمیل</a> · <a href="#" onclick="showRecovery();return false">فراموشی رمز عبور</a></div>
       <button type="button" class="switch-login" onclick="showPhoneLogin()">ورود با شماره موبایل و ثبت‌نام</button>
     </div>
     <div id="phoneLogin" class="login-panel" hidden>
       <div class="login-panel-title"><div class="method-icon">⌕</div><div><h3>ورود با شماره موبایل</h3><small>کد یکبارمصرف دریافت کن</small></div></div>
       <form method="post">{% csrf_token %}<input type="hidden" name="next" value="{{next_url}}"><label class="sr-only" for="login-phone">شماره موبایل</label><input id="login-phone" name="phone" inputmode="tel" autocomplete="tel" placeholder="09xxxxxxxxx" required><label class="check"><input type="checkbox" name="terms" required> قوانین دانا را می‌پذیرم</label><button class="btn auth-btn" name="login_method" value="otp">ارسال کد ورود ←</button></form>
-      <button type="button" class="switch-login" onclick="showPasswordLogin()">ورود با نام کاربری</button>
+      <button type="button" class="switch-login" onclick="showPasswordLogin()">ورود با ایمیل</button>
     </div>
     <div id="recoveryPanel" class="login-panel" hidden><h3>بازیابی دسترسی</h3><p>اگر شماره موبایل به حسابت متصل است، با کد یکبارمصرف وارد شو و سپس از پروفایل رمز جدید تنظیم کن.</p><button type="button" class="btn auth-btn" onclick="showPhoneLogin()">ورود با کد یکبارمصرف ←</button><button type="button" class="switch-login" onclick="showPasswordLogin()">بازگشت به ورود</button></div>
     <p class="auth-footer">ورود به دانا سریع، امن و ساده است.</p>
