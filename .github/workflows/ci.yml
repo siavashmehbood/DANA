@@ -68,3 +68,48 @@ jobs:
         run: python manage.py migrate --noinput
       - name: PostgreSQL regression suite
         run: python manage.py test
+
+
+  browser-production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install browser test dependencies
+        run: |
+          pip install playwright==1.55.0
+          playwright install --with-deps chromium
+      - name: Wait for staging deploy with manifest-versioned assets
+        env:
+          DANA_E2E_BASE_URL: https://dana-staging-web.onrender.com
+        run: |
+          python - <<'PY'
+          import re,time,urllib.request
+          url='https://dana-staging-web.onrender.com/'
+          for attempt in range(20):
+              try:
+                  html=urllib.request.urlopen(url,timeout=30).read().decode('utf-8','replace')
+                  if re.search(r'/static/css/app\.[0-9a-f]{8,}\.css',html):
+                      print('staging is on manifest-versioned static assets')
+                      break
+                  print('waiting for staging deploy',attempt+1)
+              except Exception as exc:
+                  print('staging probe failed',repr(exc))
+              time.sleep(30)
+          else:
+              raise SystemExit('staging did not deploy manifest-versioned assets in time')
+          PY
+      - name: Real browser mobile acceptance
+        env:
+          DANA_E2E_BASE_URL: https://dana-staging-web.onrender.com
+        run: python e2e/test_mobile_production.py
+      - name: Upload mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-production-screenshots
+          path: artifacts/mobile/
+          if-no-files-found: warn
