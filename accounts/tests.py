@@ -8,7 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth.hashers import make_password, check_password
 
 from .models import OTPCode, User
-from shop.models import Referral, Entitlement, SubscriptionPlan, Subscription
+from shop.models import Referral, Entitlement, SubscriptionPlan, Subscription, CartItem
 from books.models import Author, Book, Category
 from reader.models import ReadingProgress
 
@@ -590,3 +590,65 @@ class LibraryAccessProvenanceRegressionTests(TestCase):
         self.assertEqual(rows[subscribed.pk],'subscription')
         self.assertEqual(rows[free.pk],'free')
         self.assertEqual(rows[granted.pk],'granted')
+
+
+class EmailPasswordAuthTests(TestCase):
+    def test_successful_email_registration_logs_user_in(self):
+        response=self.client.post(reverse('register'),{'email':'new@example.com','password':'Strong-pass-938!','password_confirmation':'Strong-pass-938!','terms':'1'})
+        self.assertEqual(response.status_code,302)
+        user=User.objects.get(email='new@example.com')
+        self.assertTrue(user.check_password('Strong-pass-938!'))
+        self.assertEqual(int(self.client.session['_auth_user_id']),user.pk)
+
+    def test_duplicate_email_is_rejected_case_insensitively(self):
+        User.objects.create_user(username='existing',email='User@Example.com',password='Strong-pass-938!')
+        response=self.client.post(reverse('register'),{'email':'user@example.com','password':'Strong-pass-938!','password_confirmation':'Strong-pass-938!','terms':'1'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(User.objects.filter(email__iexact='user@example.com').count(),1)
+
+    def test_invalid_registration_is_rejected(self):
+        response=self.client.post(reverse('register'),{'email':'bad-email','password':'short','password_confirmation':'different','terms':'1'})
+        self.assertEqual(response.status_code,200)
+        self.assertFalse(User.objects.filter(email='bad-email').exists())
+
+    def test_email_password_login(self):
+        user=User.objects.create_user(username='email-login',email='login@example.com',password='Strong-pass-938!')
+        response=self.client.post(reverse('login'),{'login_method':'password','email':'login@example.com','password':'Strong-pass-938!'})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(int(self.client.session['_auth_user_id']),user.pk)
+
+    def test_wrong_email_password_does_not_login(self):
+        User.objects.create_user(username='wrong-pass',email='wrong@example.com',password='Strong-pass-938!')
+        response=self.client.post(reverse('login'),{'login_method':'password','email':'wrong@example.com','password':'wrong-password'})
+        self.assertEqual(response.status_code,200)
+        self.assertNotIn('_auth_user_id',self.client.session)
+
+    def test_registration_safe_next_redirect(self):
+        response=self.client.post(reverse('register'),{'email':'safe@example.com','password':'Strong-pass-938!','password_confirmation':'Strong-pass-938!','terms':'1','next':'https://evil.example/'})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,'/')
+
+    def test_guest_cart_survives_email_registration(self):
+        author=Author.objects.create(name='Guest Cart Author')
+        book=Book.objects.create(name='Guest Cart Book',slug='guest-cart-book',author=author,status='published',price=100)
+        response=self.client.post(reverse('cart'),{'book_id':book.pk})
+        self.assertIn(reverse('login'),response.url)
+        response=self.client.post(reverse('register'),{'email':'cart@example.com','password':'Strong-pass-938!','password_confirmation':'Strong-pass-938!','terms':'1','next':reverse('cart')})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,reverse('cart'))
+        response=self.client.get(reverse('cart'))
+        self.assertContains(response,'Guest Cart Book')
+        self.assertTrue(CartItem.objects.filter(user__email='cart@example.com',book=book).exists())
+
+    def test_existing_otp_flow_still_works(self):
+        response=self.client.post(reverse('login'),{'login_method':'otp','phone':'09121234567','terms':'1'})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,reverse('otp'))
+        self.assertTrue(OTPCode.objects.filter(phone='+989121234567',purpose='login').exists())
+
+    def test_logout_ends_email_login_session(self):
+        User.objects.create_user(username='logout-email',email='logout@example.com',password='Strong-pass-938!')
+        self.client.post(reverse('login'),{'login_method':'password','email':'logout@example.com','password':'Strong-pass-938!'})
+        response=self.client.get(reverse('logout'))
+        self.assertEqual(response.status_code,302)
+        self.assertNotIn('_auth_user_id',self.client.session)
