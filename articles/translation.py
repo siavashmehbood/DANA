@@ -1,6 +1,7 @@
 import hashlib
 import re
 import time
+import threading
 import ipaddress
 import socket
 from urllib.parse import urlparse
@@ -15,6 +16,37 @@ from django.utils import timezone
 from .models import ArticleTranslationVersion
 
 MYMEMORY_URL = 'https://api.mymemory.translated.net/get'
+_PROVIDER_COOLDOWN = {}
+_PROVIDER_LOCK = threading.Lock()
+_ARGOS_READY = False
+
+
+def _cooldown_active(provider):
+    with _PROVIDER_LOCK:
+        return _PROVIDER_COOLDOWN.get(provider, 0) > time.monotonic()
+
+
+def _cooldown(provider, seconds):
+    with _PROVIDER_LOCK:
+        _PROVIDER_COOLDOWN[provider] = max(_PROVIDER_COOLDOWN.get(provider, 0), time.monotonic() + seconds)
+
+
+def _argos_translate(text):
+    global _ARGOS_READY
+    import argostranslate.package
+    import argostranslate.translate
+    if not _ARGOS_READY:
+        installed = argostranslate.translate.get_installed_languages()
+        en = next((lang for lang in installed if lang.code == 'en'), None)
+        fa = next((lang for lang in installed if lang.code == 'fa'), None)
+        if not en or not fa:
+            argostranslate.package.update_package_index()
+            package = next((p for p in argostranslate.package.get_available_packages() if p.from_code == 'en' and p.to_code == 'fa'), None)
+            if not package:
+                raise RuntimeError('Argos en->fa model is unavailable')
+            argostranslate.package.install_from_path(package.download())
+        _ARGOS_READY = True
+    return _normalize_translation(argostranslate.translate.translate(text, 'en', 'fa'))
 
 ROUGH_TERMS = {
     'natural language processing': 'پردازش زبان طبیعی', 'neural network': 'شبکه عصبی',
@@ -188,52 +220,51 @@ def _translation_quality(source, translated):
     return True
 
 
-def translate_text(text, delay=0.1, retries=3):
-    result, service_exhausted = [], False
+def translate_text(text, delay=0.1, retries=3, return_provider=False):
+    result, providers = [], []
     for chunk in _chunks(text):
-        translated_chunk = ''
-        if not service_exhausted:
+        translated_chunk, used_provider = '', ''
+        if not _cooldown_active('mymemory'):
             for attempt in range(retries):
                 try:
                     response = requests.get(MYMEMORY_URL, params={'q': chunk, 'langpair': 'en|fa'}, timeout=8, headers={'User-Agent': 'DANA/2.0'})
                     if response.status_code == 429:
+                        _cooldown('mymemory', 300); break
+                    if response.status_code >= 500:
                         if attempt + 1 < retries:
                             time.sleep(min(2 ** attempt, 4)); continue
-                        service_exhausted = True
-                        break
+                        _cooldown('mymemory', 120); break
                     response.raise_for_status()
                     payload = response.json()
-                    # MyMemory may report quota/provider failures inside an HTTP 200 response.
                     response_status = payload.get('responseStatus')
                     if response_status and int(response_status) >= 400:
-                        if int(response_status) == 429:
-                            service_exhausted = True
-                        break
+                        _cooldown('mymemory', 300 if int(response_status) == 429 else 120); break
                     candidate = _normalize_translation(payload.get('responseData', {}).get('translatedText', ''))
-                    # Do not let the rough glossary fallback masquerade as a translation.
-                    # Retry weak provider output; if exhausted, leave the article safely retryable.
                     if candidate and _translation_quality(chunk, candidate):
-                        translated_chunk = candidate
-                        break
-                    if attempt + 1 < retries:
-                        time.sleep(min(2 ** attempt, 4))
+                        translated_chunk, used_provider = candidate, 'mymemory'; break
+                    if attempt + 1 < retries: time.sleep(min(2 ** attempt, 4))
+                except (requests.Timeout, requests.ConnectionError):
+                    if attempt + 1 < retries: time.sleep(min(2 ** attempt, 4))
+                    else: _cooldown('mymemory', 60)
                 except (requests.RequestException, ValueError):
-                    if attempt + 1 < retries:
-                        time.sleep(min(2 ** attempt, 4))
+                    break
+        if not translated_chunk:
+            try:
+                candidate = _argos_translate(chunk)
+                if candidate and _translation_quality(chunk, candidate): translated_chunk, used_provider = candidate, 'argos-offline'
+            except Exception:
+                pass
         if not translated_chunk:
             fallback = _normalize_translation(rough_translate(chunk))
-            # Keep the deliberately small free glossary fallback for phrases it can
-            # translate completely; never accept its mixed-English partial output.
-            if fallback != _normalize_translation(chunk) and _translation_quality(chunk, fallback):
-                translated_chunk = fallback
-            else:
-                raise RuntimeError('Translation provider exhausted without a valid Persian translation')
-        result.append(translated_chunk)
-        time.sleep(delay)
-    return '\n\n'.join(result)
+            if fallback != _normalize_translation(chunk) and _translation_quality(chunk, fallback): translated_chunk, used_provider = fallback, 'rough-glossary'
+            else: raise RuntimeError('Translation providers exhausted without a valid Persian translation')
+        result.append(translated_chunk); providers.append(used_provider); time.sleep(delay)
+    value = '\n\n'.join(result)
+    provenance = '+'.join(dict.fromkeys(providers))
+    return (value, provenance) if return_provider else value
 
 
-def translate_article(article, full_text=False, force=False, provider='mymemory+fallback', created_by=None):
+def translate_article(article, full_text=False, force=False, provider=None, created_by=None):
     """Translate outside a DB transaction, then publish a validated version atomically.
 
     Network translation used to run while holding select_for_update(), which could
@@ -257,9 +288,15 @@ def translate_article(article, full_text=False, force=False, provider='mymemory+
 
     model.objects.filter(pk=article.pk).update(translation_status='translating',translation_error='')
     try:
-        title_fa=translate_text(source_title) if (force or not article.title_fa) else article.title_fa
-        abstract_fa=translate_text(source_abstract) if source_abstract and (force or not article.abstract_fa) else article.abstract_fa
-        content_fa=translate_text(source_text) if full_text and source_text and (force or not article.full_text_fa) else article.full_text_fa
+        used_providers=[]
+        def translated_value(source, existing, needed=True):
+            if not needed or (existing and not force): return existing
+            value, used = translate_text(source, return_provider=True)
+            if used: used_providers.extend(used.split('+'))
+            return value
+        title_fa=translated_value(source_title, article.title_fa)
+        abstract_fa=translated_value(source_abstract, article.abstract_fa, bool(source_abstract))
+        content_fa=translated_value(source_text, article.full_text_fa, bool(full_text and source_text))
 
         if not _translation_quality(source_title,title_fa):
             raise ValueError('Translation quality validation failed for title')
@@ -285,7 +322,7 @@ def translate_article(article, full_text=False, force=False, provider='mymemory+
         next_version=(locked.translation_versions.aggregate(max_version=Max('version'))['max_version'] or 0)+1
         ArticleTranslationVersion.objects.create(
             article=locked,version=next_version,title_fa=title_fa,abstract_fa=abstract_fa,
-            content_fa=content_fa,provider=provider,quality_score=100,source_hash=source_hash,
+            content_fa=content_fa,provider=provider or '+'.join(dict.fromkeys(used_providers)) or 'existing-translation',quality_score=100,source_hash=source_hash,
             is_valid=True,created_by=created_by,
         )
         locked.title_fa=title_fa
