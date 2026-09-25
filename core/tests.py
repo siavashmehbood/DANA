@@ -127,6 +127,35 @@ class HomeDiscoveryTests(TestCase):
         self.assertLess(popular.index(approved),popular.index(hidden))
 
 
+class HeaderMoreNavigationTests(TestCase):
+    def setUp(self):
+        self.user=User.objects.create_user(username='header-more-user',password='pass12345')
+        self.client.force_login(self.user)
+
+    def test_authenticated_header_more_has_accessible_toggle_and_menu(self):
+        response=self.client.get(reverse('home'))
+        self.assertContains(response,'class="header-more-toggle"')
+        self.assertContains(response,'aria-expanded="false"')
+        self.assertContains(response,'aria-controls="header-more-menu"')
+        self.assertContains(response,'id="header-more-menu" hidden')
+        self.assertContains(response,reverse('notifications'))
+        self.assertContains(response,reverse('tickets'))
+        self.assertContains(response,reverse('orders'))
+        self.assertContains(response,reverse('wallet'))
+        self.assertContains(response,reverse('cart'))
+        self.assertContains(response,reverse('profile'))
+        self.assertContains(response,reverse('logout'))
+
+    def test_header_more_interaction_script_supports_toggle_outside_click_and_escape(self):
+        response=self.client.get('/static/js/app.js')
+        body=response.content.decode()
+        self.assertIn("root.classList.toggle('is-open',open)",body)
+        self.assertIn("menu.hidden=!open",body)
+        self.assertIn("toggle.setAttribute('aria-expanded',String(open))",body)
+        self.assertIn("if(!root.contains(event.target))setOpen(false)",body)
+        self.assertIn("event.key==='Escape'",body)
+
+
 class HomepageArticleDiscoveryTests(TestCase):
     def test_readable_published_article_is_visible_on_homepage(self):
         article=Article.objects.create(title='Mobile visible article',slug='mobile-visible-article',published=True,abstract='Readable abstract')
