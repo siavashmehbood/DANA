@@ -162,7 +162,7 @@ def rough_translate(text):
 
 
 def _normalize_translation(text):
-    value = re.sub(r'\\s+', ' ', (text or '').replace('ي','ی').replace('ك','ک')).strip()
+    value = re.sub(r'\s+', ' ', (text or '').replace('ي','ی').replace('ك','ک')).strip()
     return value
 
 
@@ -172,8 +172,8 @@ def _translation_quality(source, translated):
         return False
     # Scientific titles legitimately retain acronyms, model names, formulae and proper nouns.
     # Require meaningful Persian rather than an unrealistically high Persian-letter ratio.
-    persian = len(re.findall(r'[\\u0600-\\u06FF]', translated))
-    words = re.findall(r"[A-Za-z\\u0600-\\u06FF]+", translated)
+    persian = len(re.findall(r'[\u0600-\u06FF]', translated))
+    words = re.findall(r"[A-Za-z\u0600-\u06FF]+", translated)
     source_words = re.findall(r"[A-Za-z]+", source)
     min_persian = 2 if len(source_words) <= 4 else max(3, min(12, len(source_words) // 3))
     if persian < min_persian:
