@@ -18,7 +18,7 @@ TEMPLATES=[{'BACKEND':'django.template.backends.django.DjangoTemplates','DIRS':[
 WSGI_APPLICATION='core.wsgi.application'; ASGI_APPLICATION='core.asgi.application'
 DB_ENGINE=os.getenv('DB_ENGINE','sqlite3')
 if DB_ENGINE=='postgresql':
-    DATABASES={'default':{'ENGINE':'django.db.backends.postgresql','NAME':os.getenv('DB_NAME',''),'USER':os.getenv('DB_USER',''),'PASSWORD':os.getenv('DB_PASSWORD',''),'HOST':os.getenv('DB_HOST','localhost'),'PORT':os.getenv('DB_PORT','5432'),'CONN_MAX_AGE':int(os.getenv('DB_CONN_MAX_AGE','60'))}}
+    DATABASES={'default':{'ENGINE':'django.db.backends.postgresql','NAME':os.getenv('DB_NAME',''),'USER':os.getenv('DB_USER',''),'PASSWORD':os.getenv('DB_PASSWORD',''),'HOST':os.getenv('DB_HOST','localhost'),'PORT':os.getenv('DB_PORT','5432'),'CONN_MAX_AGE':int(os.getenv('DB_CONN_MAX_AGE','60')),'OPTIONS':{'sslmode':os.getenv('DB_SSLMODE','require')}}}
 else: DATABASES={'default':{'ENGINE':'django.db.backends.sqlite3','NAME':BASE_DIR/'db.sqlite3'}}
 AUTH_USER_MODEL='accounts.User'; LOGIN_URL='/login/'; LOGIN_REDIRECT_URL='/'
 LANGUAGE_CODE='fa-ir'; TIME_ZONE=os.getenv('TIME_ZONE','Asia/Tehran'); USE_I18N=True; USE_TZ=True
