@@ -182,6 +182,26 @@ class HomepageArticleDiscoveryTests(TestCase):
         self.assertNotContains(response,'DANA ACADEMIC')
         self.assertNotContains(response,'مقالات علمی و هوش مصنوعی')
 
+    def test_article_cards_do_not_depend_on_intersection_observer_for_visibility(self):
+        from pathlib import Path
+        from django.conf import settings
+        js=(Path(settings.BASE_DIR)/'static/js/app.js').read_text(encoding='utf-8')
+        css=(Path(settings.BASE_DIR)/'static/css/app.css').read_text(encoding='utf-8')
+        self.assertNotIn(".pro-book,.article-home-card,.category-pro-grid",js)
+        self.assertIn("#latest-articles .article-home-card{visibility:visible;opacity:1;transform:none}",css)
+        self.assertIn("#latest-articles .article-home-card[data-animate]{opacity:1;transform:none}",css)
+        self.assertIn("#latest-articles:before{content:none}",css)
+
+    def test_mobile_article_visibility_invariant_covers_supported_widths(self):
+        from pathlib import Path
+        from django.conf import settings
+        css=(Path(settings.BASE_DIR)/'static/css/app.css').read_text(encoding='utf-8')
+        self.assertIn("@media(max-width:600px)",css)
+        self.assertIn("#latest-articles.articles-home-top{display:block;visibility:visible;opacity:1;height:auto;max-height:none;overflow:visible}",css)
+        self.assertIn("#latest-articles .article-home-grid{display:grid;grid-template-columns:minmax(0,1fr)}",css)
+        for width in (320,360,375,390,430):
+            self.assertLessEqual(width,600)
+
     def test_article_shelf_precedes_long_book_shelves_for_mobile_discovery(self):
         Article.objects.create(title='Early article',slug='early-article',published=True,abstract='Readable')
         body=self.client.get(reverse('home')).content.decode()
