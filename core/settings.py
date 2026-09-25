@@ -22,7 +22,7 @@ if DB_ENGINE=='postgresql':
 else: DATABASES={'default':{'ENGINE':'django.db.backends.sqlite3','NAME':BASE_DIR/'db.sqlite3'}}
 AUTH_USER_MODEL='accounts.User'; LOGIN_URL='/login/'; LOGIN_REDIRECT_URL='/'
 LANGUAGE_CODE='fa-ir'; TIME_ZONE=os.getenv('TIME_ZONE','Asia/Tehran'); USE_I18N=True; USE_TZ=True
-STATIC_URL='/static/'; STATIC_ROOT=BASE_DIR/'staticfiles'; STATICFILES_DIRS=[BASE_DIR/'static']; STORAGES={'default':{'BACKEND':'django.core.files.storage.FileSystemStorage'},'staticfiles':{'BACKEND':'whitenoise.storage.CompressedManifestStaticFilesStorage'}}; MEDIA_URL='/media/'; MEDIA_ROOT=BASE_DIR/'media'
+STATIC_URL='/static/'; STATIC_ROOT=BASE_DIR/'staticfiles'; STATICFILES_DIRS=[BASE_DIR/'static']; STORAGES={'default':{'BACKEND':'django.core.files.storage.FileSystemStorage'},'staticfiles':{'BACKEND':('django.contrib.staticfiles.storage.StaticFilesStorage' if 'test' in __import__('sys').argv else 'whitenoise.storage.CompressedManifestStaticFilesStorage')}}; MEDIA_URL='/media/'; MEDIA_ROOT=BASE_DIR/'media'
 def validate_private_media_root(media_root, private_root):
     public_root=Path(media_root).resolve()
     protected_root=Path(private_root).resolve()
