@@ -9,6 +9,6 @@
 <div class="dana-admin-brand"><span class="dana-logo">✦</span><div><strong>دانا</strong><small>مرکز مدیریت</small></div></div>
 {% endblock %}
 {% block nav-global %}
-<div class="dana-admin-toplinks"><a href="/">مشاهده سایت</a><a href="/admin/articles/article/add/">＋ افزودن مقاله</a><a href="/admin/articles/article/">مقالات</a><a href="/admin/">داشبورد</a><span>مدیریت هوشمند کتابخانه</span></div>
+<nav class="dana-admin-toplinks" aria-label="میانبرهای مدیریت"><a href="{% url 'home' %}">مشاهده سایت</a><a href="{% url 'admin:articles_article_add' %}">＋ افزودن مقاله</a><a href="{% url 'admin:articles_article_changelist' %}">مقالات</a><a href="{% url 'admin:index' %}">داشبورد</a><span>مدیریت هوشمند کتابخانه</span></nav>
 {% endblock %}
 {% block footer %}<div class="dana-admin-footer">دانا · کتابخانه هوشمند شما</div>{% endblock %}

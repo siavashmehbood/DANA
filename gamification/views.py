@@ -1,10 +1,12 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from django.db.models import Sum
+from django.db.models import Sum, Q
+
 from django.utils import timezone
 from datetime import timedelta
 from accounts.models import User
 from .models import GamificationLevel
+from reader.models import ReadingActivity, ListeningActivity
 
 PERIODS=[('week','این هفته'),('month','این ماه'),('year','امسال')]
 METRICS=[('level','لول'),('study_hours','ساعت مطالعه'),('admin_score','امتیاز مدیر')]
@@ -22,11 +24,10 @@ def period_start(period):
 def metric_value(user,metric,start):
     if metric=='level': return level_for(user)
     if metric=='study_hours':
-        try:
-            from reader.models import ReadingProgress
-            seconds=ReadingProgress.objects.filter(user=user,updated_at__gte=start).aggregate(v=Sum('seconds'))['v'] or 0
-            return round(seconds/3600,1)
-        except Exception: return 0
+        from reader.models import ReadingActivity, ListeningActivity
+        reading=ReadingActivity.objects.filter(user=user,created_at__gte=start).aggregate(v=Sum('seconds'))['v'] or 0
+        listening=ListeningActivity.objects.filter(user=user,created_at__gte=start).aggregate(v=Sum('seconds'))['v'] or 0
+        return round((reading+listening)/3600,1)
     try:
         from reader.models import Review
         return Review.objects.filter(user=user,created_at__gte=start,admin_score__isnull=False).aggregate(v=Sum('admin_score'))['v'] or 0
@@ -40,7 +41,15 @@ def leaderboard(request):
     if metric not in dict(METRICS): metric='level'
     start=period_start(period)
     people=User.objects.filter(is_active=True,leaderboard_public=True)
-    rows=[{'user':u,'level':level_for(u),'value':metric_value(u,metric,start)} for u in people]
+    if metric=='study_hours':
+        reading=dict(ReadingActivity.objects.filter(user__in=people,created_at__gte=start).values('user_id').annotate(v=Sum('seconds')).values_list('user_id','v'))
+        listening=dict(ListeningActivity.objects.filter(user__in=people,created_at__gte=start).values('user_id').annotate(v=Sum('seconds')).values_list('user_id','v'))
+        rows=[{'user':u,'level':level_for(u),'value':round(((reading.get(u.pk) or 0)+(listening.get(u.pk) or 0))/3600,1)} for u in people]
+    elif metric=='admin_score':
+        people=people.annotate(score_total=Sum('review__admin_score',filter=Q(review__created_at__gte=start,review__admin_score__isnull=False)))
+        rows=[{'user':u,'level':level_for(u),'value':u.score_total or 0} for u in people]
+    else:
+        rows=[{'user':u,'level':u.level,'value':u.level} for u in people]
     rows.sort(key=lambda x:(x['value'],x['user'].xp),reverse=True)
     visible=rows[:10]
     mine=next((x for x in rows if x['user'].pk==request.user.pk),None)

@@ -3,9 +3,11 @@ from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
 from accounts.models import User
 from books.models import Author, Book
-from .models import CartItem, CheckoutRequest, Coupon, Entitlement, Order, Payment, Referral, WalletTransaction
+from .models import CartItem, CheckoutRequest, Coupon, Entitlement, Order, OrderItem, Payment, Referral, WalletTransaction, SubscriptionPlan, Subscription
 
 
 class ShopFlowTests(TestCase):
@@ -18,6 +20,11 @@ class ShopFlowTests(TestCase):
     def _checkout(self,key='checkout-test-key'):
         CartItem.objects.get_or_create(user=self.user,book=self.book)
         return self.client.post(reverse('checkout'),{'action':'pay','idempotency_key':key})
+
+    def _subscribe(self, plan):
+        self.client.get(reverse('subscriptions'))
+        key=self.client.session['subscription_activation_key']
+        return self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key})
 
     def test_wallet_page_requires_login(self):
         self.client.logout(); self.assertEqual(self.client.get('/shop/wallet/').status_code,302)
@@ -69,7 +76,7 @@ class ShopFlowTests(TestCase):
         callback=self.client.get(reverse('payment_callback'),{'Authority':'A456','Status':'OK'})
         self.assertEqual(callback.status_code,200)
         order=Order.objects.get(user=self.user); payment=Payment.objects.get(order=order)
-        self.assertEqual(order.status,'paid'); self.assertEqual(payment.status,'successful'); self.assertTrue(Entitlement.objects.filter(user=self.user,book=self.book).exists())
+        self.assertEqual(order.status,'paid'); self.assertEqual(payment.status,'successful'); self.assertEqual(payment.reference_id,'999'); self.assertTrue(Entitlement.objects.filter(user=self.user,book=self.book).exists())
         self.assertFalse(CartItem.objects.filter(user=self.user,book=self.book).exists())
 
     @override_settings(ZARINPAL_MERCHANT_ID='')
@@ -79,3 +86,680 @@ class ShopFlowTests(TestCase):
         self.assertEqual(response.status_code,302)
         self.assertEqual(response.url,reverse('checkout'))
         self.assertFalse(Payment.objects.filter(provider='zarinpal').exists())
+
+
+    def test_expired_entitlement_does_not_block_repurchase(self):
+        self.user.wallet_balance=Decimal('200000'); self.user.save(update_fields=['wallet_balance'])
+        Entitlement.objects.create(user=self.user,book=self.book,expires_at=timezone.now()-timedelta(minutes=1),source='subscription')
+        CartItem.objects.create(user=self.user,book=self.book)
+        response=self.client.post(reverse('checkout'),{'action':'pay','idempotency_key':'repurchase-key'})
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(Order.objects.filter(user=self.user,status='paid').exists())
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.payment.requests.post')
+    def test_cancelled_callback_cannot_later_verify_same_payment(self, post):
+        request_response=Mock(); request_response.raise_for_status.return_value=None; request_response.json.return_value={'data':{'code':100,'authority':'A789'}}
+        post.return_value=request_response
+        CartItem.objects.create(user=self.user,book=self.book)
+        self.client.post(reverse('bank_checkout'))
+        first=self.client.get(reverse('payment_callback'),{'Authority':'A789','Status':'NOK'})
+        self.assertEqual(first.status_code,302)
+        second=self.client.get(reverse('payment_callback'),{'Authority':'A789','Status':'OK'})
+        self.assertEqual(second.status_code,302)
+        payment=Payment.objects.get(authority='A789')
+        self.assertEqual(payment.status,'cancelled')
+        self.assertFalse(Entitlement.objects.filter(user=self.user,book=self.book).exists())
+        self.assertEqual(post.call_count,1)
+
+
+    def test_unpublished_book_cannot_be_purchased(self):
+        draft=Book.objects.create(name='Draft sale',slug='draft-sale',author=self.author,price=1000,status='draft')
+        response=self.client.post(reverse('cart'),{'book_id':draft.pk})
+        self.assertEqual(response.status_code,302)
+        self.assertFalse(CartItem.objects.filter(user=self.user,book=draft).exists())
+
+
+    def test_cart_removes_book_that_becomes_unpublished(self):
+        item=CartItem.objects.create(user=self.user,book=self.book)
+        self.book.status='draft'; self.book.save(update_fields=['status'])
+        response=self.client.get(reverse('cart'))
+        self.assertEqual(response.status_code,200)
+        self.assertFalse(CartItem.objects.filter(pk=item.pk).exists())
+
+
+    def test_order_history_is_user_scoped(self):
+        other=User.objects.create_user(username='other-orders',password='pass12345')
+        mine=Order.objects.create(user=self.user,subtotal=100,discount=0,tax=0,total=100,status='paid',tracking_code='MINE-1')
+        Order.objects.create(user=other,subtotal=100,discount=0,tax=0,total=100,status='paid',tracking_code='OTHER-1')
+        response=self.client.get(reverse('orders'))
+        self.assertContains(response,'MINE-1')
+        self.assertNotContains(response,'OTHER-1')
+
+
+    def test_subscription_catalog_shows_active_plans(self):
+        SubscriptionPlan.objects.create(name='ماهانه',slug='monthly',price=100000,duration_days=30,active=True)
+        SubscriptionPlan.objects.create(name='خاموش',slug='inactive',price=1,duration_days=1,active=False)
+        response=self.client.get(reverse('subscriptions'))
+        self.assertContains(response,'ماهانه')
+        self.assertNotContains(response,'خاموش')
+
+
+    def test_subscription_active_state_obeys_period(self):
+        plan=SubscriptionPlan.objects.create(name='Active plan',slug='active-plan',price=10,duration_days=30)
+        sub=Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=1))
+        self.assertTrue(sub.is_active)
+        sub.status='cancelled'
+        self.assertFalse(sub.is_active)
+
+
+    def test_future_subscription_is_not_shown_as_active(self):
+        plan=SubscriptionPlan.objects.create(name='Future',slug='future-plan',price=10,duration_days=30)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()+timedelta(days=1),expires_at=timezone.now()+timedelta(days=31))
+        response=self.client.get(reverse('subscriptions'))
+        self.assertNotContains(response,'اشتراک فعال: Future')
+
+
+    def test_featured_subscription_is_listed_first(self):
+        SubscriptionPlan.objects.create(name='Regular',slug='regular-plan',price=1,duration_days=30)
+        SubscriptionPlan.objects.create(name='Featured',slug='featured-plan',price=999,duration_days=30,featured=True)
+        response=self.client.get(reverse('subscriptions'))
+        self.assertLess(response.content.decode().find('Featured'),response.content.decode().find('Regular'))
+
+
+    def test_subscription_period_constraint_rejects_invalid_range(self):
+        from django.db import IntegrityError
+        plan=SubscriptionPlan.objects.create(name='Range',slug='range-plan',price=10,duration_days=30)
+        with self.assertRaises(IntegrityError):
+            Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now(),expires_at=timezone.now()-timedelta(days=1))
+
+
+    def test_free_subscription_can_be_activated(self):
+        plan=SubscriptionPlan.objects.create(name='Free Catalog',slug='free-catalog',price=0,duration_days=7,grants_catalog_access=True)
+        self.client.login(username='buyer',password='pass12345')
+        response=self._subscribe(plan)
+        self.assertRedirects(response,reverse('subscriptions'))
+        self.assertTrue(Subscription.objects.filter(user=self.user,plan=plan,status='active').exists())
+
+    def test_paid_subscription_requires_sufficient_wallet_balance(self):
+        plan=SubscriptionPlan.objects.create(name='Paid Catalog',slug='paid-catalog',price=100,duration_days=30)
+        self._subscribe(plan)
+        self.assertFalse(Subscription.objects.filter(user=self.user,plan=plan).exists())
+
+    def test_paid_subscription_debits_wallet_and_activates(self):
+        plan=SubscriptionPlan.objects.create(name='Wallet Plus',slug='wallet-plus',price=100,duration_days=30)
+        self.user.wallet_balance=Decimal('250')
+        self.user.save(update_fields=['wallet_balance'])
+        response=self._subscribe(plan)
+        self.assertRedirects(response,reverse('subscriptions'))
+        self.user.refresh_from_db()
+        sub=Subscription.objects.get(user=self.user,plan=plan,status='active')
+        self.assertEqual(self.user.wallet_balance,Decimal('150'))
+        tx=WalletTransaction.objects.get(reference=f'subscription:{sub.pk}:debit')
+        self.assertEqual(tx.balance_before,Decimal('250'))
+        self.assertEqual(tx.balance_after,Decimal('150'))
+
+
+    def test_reactivating_same_free_plan_extends_from_current_expiry(self):
+        plan=SubscriptionPlan.objects.create(name='Free Extend',slug='free-extend',price=0,duration_days=7)
+        current=Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        self._subscribe(plan)
+        original_expiry=current.expires_at
+        renewed=Subscription.objects.get(pk=current.pk)
+        self.assertEqual(renewed.starts_at,current.starts_at)
+        self.assertGreater(renewed.expires_at,original_expiry)
+
+
+    def test_reactivating_same_free_plan_leaves_one_active_row(self):
+        plan=SubscriptionPlan.objects.create(name='Single Active',slug='single-active',price=0,duration_days=7)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        self._subscribe(plan)
+        self.assertEqual(Subscription.objects.filter(user=self.user,plan=plan,status='active').count(),1)
+
+
+    def test_subscription_page_marks_elapsed_active_rows_expired(self):
+        plan=SubscriptionPlan.objects.create(name='Elapsed',slug='elapsed',price=0,duration_days=1)
+        sub=Subscription.objects.create(user=self.user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=2),expires_at=timezone.now()-timedelta(days=1))
+        self.client.login(username='buyer',password='pass12345')
+        self.client.get(reverse('subscriptions'))
+        sub.refresh_from_db()
+        self.assertEqual(sub.status,'expired')
+
+
+    def test_retired_plan_remains_visible_for_existing_subscription(self):
+        plan=SubscriptionPlan.objects.create(name='Disabled Current',slug='disabled-current',price=0,duration_days=7,active=False)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        response=self.client.get(reverse('subscriptions'))
+        self.assertIsNotNone(response.context['current_subscription'])
+        self.assertEqual(response.context['current_subscription'].plan_id,plan.id)
+
+
+    def test_free_plan_cannot_queue_duplicate_future_renewals(self):
+        plan=SubscriptionPlan.objects.create(name='Queue Safe',slug='queue-safe',price=0,duration_days=7)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()+timedelta(days=2),expires_at=timezone.now()+timedelta(days=9))
+        self.client.login(username='buyer',password='pass12345')
+        self._subscribe(plan)
+        self.assertEqual(Subscription.objects.filter(user=self.user,plan=plan).count(),1)
+
+
+    def test_switching_free_plan_preserves_previous_active_membership(self):
+        old=SubscriptionPlan.objects.create(name='Old Free',slug='old-free',price=0,duration_days=7)
+        new=SubscriptionPlan.objects.create(name='New Free',slug='new-free',price=0,duration_days=7)
+        previous=Subscription.objects.create(user=self.user,plan=old,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        self._subscribe(new)
+        previous.refresh_from_db()
+        self.assertEqual(previous.status,'active')
+        self.assertFalse(Subscription.objects.filter(user=self.user,plan=new).exists())
+        self.assertEqual(Subscription.objects.filter(user=self.user,status='active').count(),1)
+
+
+    def test_database_rejects_two_active_subscriptions_for_same_user(self):
+        from django.db import IntegrityError
+        first=SubscriptionPlan.objects.create(name='Constraint A',slug='constraint-a',price=0,duration_days=7)
+        second=SubscriptionPlan.objects.create(name='Constraint B',slug='constraint-b',price=0,duration_days=7)
+        Subscription.objects.create(user=self.user,plan=first,starts_at=timezone.now(),expires_at=timezone.now()+timedelta(days=7))
+        with self.assertRaises(IntegrityError):
+            Subscription.objects.create(user=self.user,plan=second,starts_at=timezone.now(),expires_at=timezone.now()+timedelta(days=7))
+
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.payment.requests.post')
+    def test_bank_checkout_does_not_repurchase_owned_book(self, post):
+        Entitlement.objects.create(user=self.user,book=self.book,source='purchase')
+        CartItem.objects.create(user=self.user,book=self.book)
+        response=self.client.post(reverse('bank_checkout'))
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,reverse('cart'))
+        self.assertFalse(Order.objects.filter(user=self.user).exists())
+        post.assert_not_called()
+
+
+    def test_subscription_activation_token_blocks_duplicate_post(self):
+        plan=SubscriptionPlan.objects.create(name='Idempotent Plus',slug='idempotent-plus',price=100,duration_days=30)
+        self.user.wallet_balance=Decimal('500')
+        self.user.save(update_fields=['wallet_balance'])
+        self.client.get(reverse('subscriptions'))
+        key=self.client.session['subscription_activation_key']
+        url=reverse('subscribe',args=[plan.slug])
+        first=self.client.post(url,{'activation_key':key})
+        second=self.client.post(url,{'activation_key':key})
+        self.user.refresh_from_db()
+        self.assertEqual(first.status_code,302)
+        self.assertEqual(second.status_code,302)
+        self.assertEqual(self.user.wallet_balance,Decimal('400'))
+        self.assertEqual(WalletTransaction.objects.filter(user=self.user,reason='Subscription purchase').count(),1)
+
+
+    def test_queued_same_plan_is_not_extended_early(self):
+        plan=SubscriptionPlan.objects.create(name='Queued same',slug='queued-same',price=0,duration_days=30)
+        now=timezone.now()
+        queued=Subscription.objects.create(user=self.user,plan=plan,status='active',starts_at=now+timedelta(days=1),expires_at=now+timedelta(days=31))
+        original_expiry=queued.expires_at
+        self._subscribe(plan)
+        queued.refresh_from_db()
+        self.assertEqual(queued.expires_at,original_expiry)
+
+    def test_queued_subscription_blocks_overlapping_second_plan(self):
+        first=SubscriptionPlan.objects.create(name='First queued',slug='first-queued',price=0,duration_days=30)
+        second=SubscriptionPlan.objects.create(name='Second queued',slug='second-queued',price=0,duration_days=30)
+        now=timezone.now()
+        Subscription.objects.create(user=self.user,plan=first,status='active',starts_at=now+timedelta(days=1),expires_at=now+timedelta(days=31))
+        response=self._subscribe(second)
+        self.assertEqual(response.status_code,302)
+        self.assertFalse(Subscription.objects.filter(user=self.user,plan=second).exists())
+
+
+    def test_retired_plan_does_not_revoke_existing_subscription(self):
+        plan=SubscriptionPlan.objects.create(name='Disabled active state',slug='disabled-active-state',price=0,duration_days=30,active=False)
+        sub=Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=1))
+        self.assertTrue(sub.is_active)
+
+
+    def test_bank_callback_cannot_use_another_users_authority(self):
+        other=User.objects.create_user(username='other-bank-user',password='pass12345')
+        order=Order.objects.create(user=other,subtotal=100,discount=0,tax=0,total=100,status='pending',tracking_code='998877')
+        Payment.objects.create(user=other,order=order,provider='zarinpal',amount=100,status='pending',authority='private-authority',idempotency_key='private-payment')
+        self.client.force_login(self.user)
+        response=self.client.get(reverse('payment_callback'),{'Authority':'private-authority','Status':'OK'})
+        self.assertEqual(response.status_code,302)
+        order.refresh_from_db()
+        self.assertEqual(order.status,'pending')
+
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.payment.requests.post')
+    def test_cancelled_bank_payment_releases_coupon_reservation(self, post):
+        response_data=Mock(); response_data.raise_for_status.return_value=None; response_data.json.return_value={'data':{'code':100,'authority':'COUPON-AUTH'}}
+        post.return_value=response_data
+        coupon=Coupon.objects.create(code='BANK10',percent=10,capacity=1)
+        CartItem.objects.create(user=self.user,book=self.book)
+        session=self.client.session; session['checkout_coupon']='BANK10'; session.save()
+        self.client.post(reverse('bank_checkout'))
+        coupon.refresh_from_db(); self.assertEqual(coupon.used,1)
+        self.client.get(reverse('payment_callback'),{'Authority':'COUPON-AUTH','Status':'NOK'})
+        coupon.refresh_from_db(); self.assertEqual(coupon.used,0)
+
+
+    def test_subscription_renewal_ignores_future_row_when_no_current_membership(self):
+        plan=SubscriptionPlan.objects.create(name='Future Guard',slug='future-guard',price=0,duration_days=7)
+        future=Subscription.objects.create(user=self.user,plan=plan,status='cancelled',starts_at=timezone.now()+timedelta(days=3),expires_at=timezone.now()+timedelta(days=10))
+        response=self._subscribe(plan)
+        self.assertEqual(response.status_code,302)
+        active=Subscription.objects.get(user=self.user,status='active')
+        self.assertLessEqual(active.starts_at,timezone.now())
+        future.refresh_from_db()
+        self.assertEqual(future.status,'cancelled')
+
+
+    def test_activation_expires_stale_active_membership_before_new_plan(self):
+        old=SubscriptionPlan.objects.create(name='Stale',slug='stale-plan',price=0,duration_days=7)
+        new=SubscriptionPlan.objects.create(name='Fresh',slug='fresh-plan',price=0,duration_days=7)
+        stale=Subscription.objects.create(user=self.user,plan=old,status='active',starts_at=timezone.now()-timedelta(days=9),expires_at=timezone.now()-timedelta(days=2))
+        response=self._subscribe(new)
+        self.assertEqual(response.status_code,302)
+        stale.refresh_from_db()
+        self.assertEqual(stale.status,'expired')
+        self.assertTrue(Subscription.objects.filter(user=self.user,plan=new,status='active').exists())
+
+
+    def test_switching_plan_does_not_destroy_remaining_paid_membership(self):
+        old=SubscriptionPlan.objects.create(name='Paid Current',slug='paid-current',price=100,duration_days=30)
+        new=SubscriptionPlan.objects.create(name='Other Plan',slug='other-plan',price=50,duration_days=30)
+        current=Subscription.objects.create(user=self.user,plan=old,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=20))
+        self.user.wallet_balance=Decimal('500')
+        self.user.save(update_fields=['wallet_balance'])
+        response=self._subscribe(new)
+        self.assertEqual(response.status_code,302)
+        current.refresh_from_db(); self.user.refresh_from_db()
+        self.assertEqual(current.status,'active')
+        self.assertFalse(Subscription.objects.filter(user=self.user,plan=new).exists())
+        self.assertEqual(self.user.wallet_balance,Decimal('500'))
+
+
+    def test_subscription_catalog_refresh_changes_activation_nonce(self):
+        self.client.get(reverse('subscriptions'))
+        first=self.client.session['subscription_activation_key']
+        self.client.get(reverse('subscriptions'))
+        second=self.client.session['subscription_activation_key']
+        self.assertNotEqual(first,second)
+
+
+    def test_subscription_catalog_disables_switch_while_membership_active(self):
+        current_plan=SubscriptionPlan.objects.create(name='Current UI',slug='current-ui',price=0,duration_days=7)
+        other_plan=SubscriptionPlan.objects.create(name='Other UI',slug='other-ui',price=0,duration_days=7)
+        Subscription.objects.create(user=self.user,plan=current_plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        response=self.client.get(reverse('subscriptions'))
+        self.assertContains(response,'پس از پایان اشتراک فعلی')
+        self.assertContains(response,reverse('subscribe',args=[current_plan.slug]))
+        self.assertNotContains(response,reverse('subscribe',args=[other_plan.slug]))
+
+
+    def test_current_subscription_plan_is_marked_in_catalog(self):
+        plan=SubscriptionPlan.objects.create(name='Marked Plan',slug='marked-plan',price=0,duration_days=7)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        response=self.client.get(reverse('subscriptions'))
+        self.assertContains(response,'پلن فعلی')
+
+
+    def test_anonymous_subscription_activation_redirects_to_login(self):
+        plan=SubscriptionPlan.objects.create(name='Login required',slug='login-required',price=0,duration_days=30)
+        self.client.logout()
+        response=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':'invalid'})
+        self.assertEqual(response.status_code,302)
+        self.assertIn('/login/',response.url)
+        self.assertFalse(Subscription.objects.filter(plan=plan).exists())
+
+
+    def test_subscription_catalog_is_private_cache(self):
+        response=self.client.get(reverse('subscriptions'))
+        self.assertIn('no-store',response.headers.get('Cache-Control',''))
+        self.assertEqual(response.headers.get('X-Robots-Tag'),'noindex, nofollow')
+
+
+    def test_retired_plan_notice_explains_existing_access(self):
+        plan=SubscriptionPlan.objects.create(name='Legacy',slug='legacy-plan',price=0,duration_days=7,active=False)
+        Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=2))
+        self.client.login(username='buyer',password='pass12345')
+        response=self.client.get(reverse('subscriptions'))
+        self.assertContains(response,'اشتراک فعلی شما تا پایان اعتبار فعال است')
+
+
+    def test_anonymous_catalog_does_not_issue_activation_token(self):
+        self.client.logout()
+        response=self.client.get(reverse('subscriptions'))
+        self.assertEqual(response.context['activation_key'],'')
+        self.assertNotIn('subscription_activation_key',self.client.session)
+
+
+    def test_same_plan_renewal_extends_existing_active_subscription(self):
+        plan=SubscriptionPlan.objects.create(name='Renewable',slug='renewable',price=0,duration_days=30)
+        current=Subscription.objects.create(user=self.user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        old_expiry=current.expires_at
+        self.client.login(username='buyer',password='pass12345')
+        self.client.get(reverse('subscriptions'))
+        key=self.client.session['subscription_activation_key']
+        response=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key})
+        self.assertEqual(response.status_code,302)
+        current.refresh_from_db()
+        self.assertEqual(Subscription.objects.filter(user=self.user,status='active').count(),1)
+        self.assertGreater(current.expires_at,old_expiry+timedelta(days=29))
+
+
+    def test_paid_same_plan_can_be_renewed_more_than_once_with_auditable_ledger(self):
+        plan=SubscriptionPlan.objects.create(name='Paid renewal',slug='paid-renewal',price=100,duration_days=30)
+        self.user.wallet_balance=Decimal('500')
+        self.user.save(update_fields=['wallet_balance'])
+        self.client.login(username='buyer',password='pass12345')
+        for _ in range(2):
+            self.client.get(reverse('subscriptions'))
+            key=self.client.session['subscription_activation_key']
+            self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key})
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.wallet_balance,Decimal('300'))
+        rows=WalletTransaction.objects.filter(user=self.user,reason='Subscription purchase')
+        self.assertEqual(rows.count(),2)
+        self.assertEqual(rows.values('reference').distinct().count(),2)
+
+
+    def test_subscription_activation_nonce_is_single_use_even_on_failed_purchase(self):
+        plan=SubscriptionPlan.objects.create(name='Too expensive',slug='too-expensive',price=999999,duration_days=30)
+        self.client.login(username='buyer',password='pass12345')
+        self.client.get(reverse('subscriptions'))
+        key=self.client.session['subscription_activation_key']
+        first=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key})
+        self.assertEqual(first.status_code,302)
+        second=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key},follow=True)
+        self.assertContains(second,'درخواست فعال‌سازی نامعتبر یا تکراری است')
+        self.assertFalse(Subscription.objects.filter(user=self.user,plan=plan).exists())
+
+
+    def test_paid_subscription_renewal_uses_unique_wallet_reference(self):
+        plan=SubscriptionPlan.objects.create(name='Renew Paid',slug='renew-paid',price=100,duration_days=30)
+        self.user.wallet_balance=Decimal('300')
+        self.user.save(update_fields=['wallet_balance'])
+        self._subscribe(plan)
+        self._subscribe(plan)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.wallet_balance,Decimal('100'))
+        refs=list(WalletTransaction.objects.filter(user=self.user,reason='Subscription purchase').values_list('reference',flat=True))
+        self.assertEqual(len(refs),2)
+        self.assertEqual(len(set(refs)),2)
+
+
+    def test_subscription_activation_token_is_single_use(self):
+        plan=SubscriptionPlan.objects.create(name='Single Use',slug='single-use',price=0,duration_days=7)
+        self.client.get(reverse('subscriptions'))
+        key=self.client.session['subscription_activation_key']
+        first=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key})
+        second=self.client.post(reverse('subscribe',args=[plan.slug]),{'activation_key':key})
+        self.assertEqual(first.status_code,302)
+        self.assertEqual(second.status_code,302)
+        self.assertEqual(Subscription.objects.filter(user=self.user,plan=plan).count(),1)
+
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_bank_callback_rejects_payment_amount_mismatch_without_verify(self, gateway_factory):
+        CartItem.objects.create(user=self.user,book=self.book)
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='AMOUNT-AUTH',url='https://gateway.example/pay',message='')
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        payment=Payment.objects.get(authority='AMOUNT-AUTH')
+        payment.amount=payment.amount+Decimal('1')
+        payment.save(update_fields=['amount'])
+        response=self.client.get(reverse('payment_callback'),{'Authority':'AMOUNT-AUTH','Status':'OK'})
+        self.assertEqual(response.status_code,302)
+        payment.refresh_from_db(); payment.order.refresh_from_db()
+        self.assertEqual(payment.status,'failed')
+        self.assertEqual(payment.order.status,'cancelled')
+        self.assertFalse(Entitlement.objects.filter(user=self.user,book=self.book).exists())
+        gateway.verify.assert_not_called()
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_duplicate_success_callback_is_idempotent(self, gateway_factory):
+        CartItem.objects.create(user=self.user,book=self.book)
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='DUP-AUTH',url='https://gateway.example/pay',message='')
+        gateway.verify.return_value=Mock(ok=True,authority='REF-1',message='')
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        self.client.get(reverse('payment_callback'),{'Authority':'DUP-AUTH','Status':'OK'})
+        self.client.get(reverse('payment_callback'),{'Authority':'DUP-AUTH','Status':'OK'})
+        self.assertEqual(gateway.verify.call_count,1)
+        self.assertEqual(Entitlement.objects.filter(user=self.user,book=self.book).count(),1)
+
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_cancelled_callback_does_not_override_successful_payment(self, gateway_factory):
+        CartItem.objects.create(user=self.user,book=self.book)
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='CANCEL-RACE',url='https://gateway.example/pay',message='')
+        gateway.verify.return_value=Mock(ok=True,authority='CANCEL-REF',message='',retryable=False)
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        success=self.client.get(reverse('payment_callback'),{'Authority':'CANCEL-RACE','Status':'OK'})
+        cancelled=self.client.get(reverse('payment_callback'),{'Authority':'CANCEL-RACE','Status':'NOK'})
+        payment=Payment.objects.get(authority='CANCEL-RACE'); payment.order.refresh_from_db()
+        self.assertEqual(success.status_code,200)
+        self.assertEqual(cancelled.status_code,200)
+        self.assertEqual(payment.status,'successful')
+        self.assertEqual(payment.order.status,'paid')
+        self.assertTrue(Entitlement.objects.filter(user=self.user,book=self.book).exists())
+
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_successful_callback_still_verifies_once_after_serialization(self, gateway_factory):
+        CartItem.objects.create(user=self.user,book=self.book)
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='SERIAL-AUTH',url='https://gateway.example/pay',message='')
+        gateway.verify.return_value=Mock(ok=True,authority='SERIAL-REF',message='',retryable=False)
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        first=self.client.get(reverse('payment_callback'),{'Authority':'SERIAL-AUTH','Status':'OK'})
+        second=self.client.get(reverse('payment_callback'),{'Authority':'SERIAL-AUTH','Status':'OK'})
+        payment=Payment.objects.get(authority='SERIAL-AUTH')
+        self.assertEqual(first.status_code,200)
+        self.assertEqual(second.status_code,200)
+        self.assertEqual(payment.status,'successful')
+        self.assertEqual(payment.reference_id,'SERIAL-REF')
+        self.assertEqual(gateway.verify.call_count,1)
+        self.assertEqual(Entitlement.objects.filter(user=self.user,book=self.book).count(),1)
+
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_transient_verify_failure_keeps_payment_retryable(self, gateway_factory):
+        CartItem.objects.create(user=self.user,book=self.book)
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='RETRY-AUTH',url='https://gateway.example/pay',message='',retryable=False)
+        gateway.verify.side_effect=[
+            Mock(ok=False,authority='',message='temporary timeout',retryable=True),
+            Mock(ok=True,authority='REF-RETRY',message='',retryable=False),
+        ]
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        first=self.client.get(reverse('payment_callback'),{'Authority':'RETRY-AUTH','Status':'OK'})
+        payment=Payment.objects.get(authority='RETRY-AUTH'); payment.order.refresh_from_db()
+        self.assertEqual(first.status_code,302)
+        self.assertEqual(payment.status,'pending')
+        self.assertEqual(payment.order.status,'pending')
+        self.assertTrue(CartItem.objects.filter(user=self.user,book=self.book).exists())
+        second=self.client.get(reverse('payment_callback'),{'Authority':'RETRY-AUTH','Status':'OK'})
+        payment.refresh_from_db(); payment.order.refresh_from_db()
+        self.assertEqual(second.status_code,200)
+        self.assertEqual(payment.status,'successful')
+        self.assertEqual(payment.order.status,'paid')
+        self.assertTrue(Entitlement.objects.filter(user=self.user,book=self.book).exists())
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_transient_request_failure_keeps_coupon_reserved_and_order_pending(self, gateway_factory):
+        coupon=Coupon.objects.create(code='RETRY10',percent=10,capacity=2)
+        CartItem.objects.create(user=self.user,book=self.book)
+        session=self.client.session; session['checkout_coupon']=coupon.code; session.save()
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=False,authority='',url='',message='connection timeout',retryable=True)
+        gateway_factory.return_value=gateway
+        response=self.client.post(reverse('bank_checkout'))
+        payment=Payment.objects.get(user=self.user,provider='zarinpal')
+        payment.order.refresh_from_db(); coupon.refresh_from_db()
+        self.assertRedirects(response,reverse('orders'))
+        self.assertEqual(payment.status,'pending')
+        self.assertEqual(payment.order.status,'pending')
+        self.assertEqual(coupon.used,1)
+
+
+class BankCheckoutIdempotencyProductTests(TestCase):
+    def setUp(self):
+        self.user=User.objects.create_user(username='bank-repeat',password='pass12345')
+        author=Author.objects.create(name='Bank Repeat Author')
+        self.book=Book.objects.create(name='Bank Repeat Book',slug='bank-repeat-book',author=author,price=Decimal('100000'),status='published',visibility='public')
+        CartItem.objects.create(user=self.user,book=self.book)
+        self.client.force_login(self.user)
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_repeated_bank_checkout_reuses_pending_order(self, gateway_factory):
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='AUTH-REPEAT',url='https://gateway.example/pay',message='')
+        gateway_factory.return_value=gateway
+        first=self.client.post(reverse('bank_checkout'))
+        self.assertEqual(first.status_code,302)
+        second=self.client.post(reverse('bank_checkout'))
+        self.assertEqual(second.status_code,302)
+        self.assertEqual(Order.objects.filter(user=self.user,status='pending').count(),1)
+        self.assertEqual(Payment.objects.filter(user=self.user,provider='zarinpal',status='pending').count(),1)
+        self.assertEqual(gateway.request.call_count,1)
+
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_bank_checkout_does_not_reuse_pending_order_for_different_coupon_context(self, gateway_factory):
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.side_effect=[Mock(ok=True,authority='AUTH-ONE',url='https://gateway.example/pay/one',message=''),Mock(ok=True,authority='AUTH-TWO',url='https://gateway.example/pay/two',message='')]
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        coupon=Coupon.objects.create(code='BANK10',percent=10,capacity=5,active=True)
+        session=self.client.session
+        session['checkout_coupon']=coupon.code
+        session.save()
+        self.client.post(reverse('bank_checkout'))
+        self.assertEqual(Order.objects.filter(user=self.user,status='pending').count(),2)
+        self.assertEqual(Payment.objects.filter(user=self.user,provider='zarinpal',status='pending').count(),2)
+        self.assertEqual(gateway.request.call_count,2)
+
+
+class GuestCartHandoffTests(TestCase):
+    def setUp(self):
+        self.author=Author.objects.create(name='Guest Cart Author')
+        self.book=Book.objects.create(name='Guest Cart Book',slug='guest-cart-book',author=self.author,status='published',price=1000)
+
+    def test_guest_add_to_cart_survives_login_handoff(self):
+        response=self.client.post(reverse('cart'),{'book_id':self.book.pk})
+        self.assertRedirects(response,reverse('login')+'?next='+reverse('cart'),fetch_redirect_response=False)
+        user=User.objects.create_user(username='guest-cart-user',password='pass12345')
+        self.client.force_login(user)
+        response=self.client.get(reverse('cart'))
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(CartItem.objects.filter(user=user,book=self.book).exists())
+        self.assertNotIn('pending_cart_book_id',self.client.session)
+
+    def test_guest_add_to_cart_survives_real_password_login_redirect(self):
+        response=self.client.post(reverse('cart'),{'book_id':self.book.pk})
+        self.assertRedirects(response,reverse('login')+'?next='+reverse('cart'),fetch_redirect_response=False)
+        user=User.objects.create_user(username='guest-real-login',password='pass12345')
+        response=self.client.post(reverse('login'),{'username':'guest-real-login','password':'pass12345','login_method':'password','next':reverse('cart')})
+        self.assertRedirects(response,reverse('cart'),fetch_redirect_response=False)
+        response=self.client.get(reverse('cart'))
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(CartItem.objects.filter(user=user,book=self.book).exists())
+        self.assertNotIn('pending_cart_book_id',self.client.session)
+
+
+class BankCheckoutEntryPointTests(TestCase):
+    def test_checkout_uses_post_for_bank_payment_action(self):
+        user=User.objects.create_user(username='bank-entry',password='pass12345')
+        author=Author.objects.create(name='Bank Entry Author')
+        book=Book.objects.create(name='Bank Entry Book',slug='bank-entry-book',author=author,status='published',price=Decimal('1000'))
+        CartItem.objects.create(user=user,book=book)
+        self.client.force_login(user)
+        response=self.client.get(reverse('checkout'))
+        self.assertContains(response,'formaction="'+reverse('bank_checkout')+'"')
+        self.assertContains(response,'formmethod="post"')
+
+
+class BankCheckoutMethodSafetyTests(TestCase):
+    def test_get_bank_checkout_never_creates_order(self):
+        user=User.objects.create_user(username='bank-get-safe',password='pass12345')
+        author=Author.objects.create(name='Bank Safe Author')
+        book=Book.objects.create(name='Bank Safe Book',slug='bank-safe-book',author=author,status='published',price=Decimal('1000'))
+        CartItem.objects.create(user=user,book=book)
+        self.client.force_login(user)
+        before=Order.objects.filter(user=user).count()
+        response=self.client.get(reverse('bank_checkout'))
+        self.assertRedirects(response,reverse('checkout'))
+        self.assertEqual(Order.objects.filter(user=user).count(),before)
+
+
+class BankPaymentRecoveryUxTests(TestCase):
+    @override_settings(ZARINPAL_MERCHANT_ID='test-merchant')
+    @patch('shop.bank.gateway')
+    def test_cancelled_bank_payment_preserves_cart_and_explains_retry(self, gateway_factory):
+        user=User.objects.create_user(username='bank-recovery',password='pass12345')
+        author=Author.objects.create(name='Bank Recovery Author')
+        book=Book.objects.create(name='Bank Recovery Book',slug='bank-recovery-book',author=author,status='published',price=Decimal('1000'))
+        CartItem.objects.create(user=user,book=book)
+        self.client.force_login(user)
+        gateway=Mock(); gateway.enabled=True
+        gateway.request.return_value=Mock(ok=True,authority='RECOVERY-AUTH',url='https://gateway.example/pay',message='')
+        gateway_factory.return_value=gateway
+        self.client.post(reverse('bank_checkout'))
+        response=self.client.get(reverse('payment_callback'),{'Authority':'RECOVERY-AUTH','Status':'NOK'},follow=True)
+        self.assertTrue(CartItem.objects.filter(user=user,book=book).exists())
+        self.assertContains(response,'سبد خرید شما حفظ شده')
+
+
+class EntitlementAdminIntegrityTests(TestCase):
+    def test_entitlement_source_is_admin_managed_provenance(self):
+        from django.contrib.admin.sites import AdminSite
+        from .admin import EntitlementAdmin
+        admin=EntitlementAdmin(Entitlement,AdminSite())
+        self.assertIn('source',admin.readonly_fields)
+        self.assertIn('order',admin.readonly_fields)
+
+
+class SubscriptionAdminIntegrityTests(TestCase):
+    def test_subscription_admin_is_auditable_and_not_directly_mutable(self):
+        from django.contrib.admin.sites import AdminSite
+        from .admin import SubscriptionAdmin
+        admin=SubscriptionAdmin(Subscription,AdminSite())
+        self.assertFalse(admin.has_add_permission(None))
+        self.assertFalse(admin.has_delete_permission(None))
+        for field in ('user','plan','status','starts_at','expires_at','created_at'):
+            self.assertIn(field,admin.readonly_fields)
+
+
+class EntitlementProvenanceRegressionTests(TestCase):
+    def test_bank_purchase_upgrades_expired_subscription_entitlement(self):
+        from .bank import finalize_bank_order
+        user=User.objects.create_user(username='provenance-user',password='pass12345')
+        author=Author.objects.create(name='Provenance Author')
+        book=Book.objects.create(name='Provenance Book',slug='provenance-book',author=author,status='published',price=1000)
+        Entitlement.objects.create(user=user,book=book,source='subscription',expires_at=timezone.now()-timedelta(days=1))
+        order=Order.objects.create(user=user,subtotal=1000,discount=0,tax=0,total=1000,status='pending',tracking_code='PROV01')
+        OrderItem.objects.create(order=order,book=book,price=1000)
+        payment=Payment.objects.create(user=user,order=order,provider='zarinpal',amount=1000,status='successful',idempotency_key='provenance-payment')
+        self.assertTrue(finalize_bank_order(order,payment))
+        entitlement=Entitlement.objects.get(user=user,book=book)
+        self.assertEqual(entitlement.source,'purchase')
+        self.assertIsNone(entitlement.expires_at)
+        self.assertEqual(entitlement.order_id,order.pk)

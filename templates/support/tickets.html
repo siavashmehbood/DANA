@@ -1,1 +1,14 @@
-{% extends 'base.html' %}{% block content %}<div class="panel"><h1>پشتیبانی</h1><form method="post">{% csrf_token %}<input name="subject" placeholder="موضوع" required><textarea name="body" placeholder="شرح مشکل" required></textarea><button class="btn">ثبت تیکت</button></form><hr>{% for t in tickets %}<div class="notification"><b>{{t.subject}}</b><span class="badge">{{t.get_status_display}}</span><p>{{t.body}}</p></div>{% endfor %}</div>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}پشتیبانی | دانا{% endblock %}
+{% block description %}درخواست‌های پشتیبانی دانا را ثبت و پیگیری کن.{% endblock %}
+{% block robots %}<meta name="robots" content="noindex,nofollow">{% endblock %}
+{% block content %}
+<div class="panel"><h1>پشتیبانی</h1>
+<form method="post"><h2>درخواست جدید</h2>{% csrf_token %}<label for="ticket-subject">موضوع</label><input id="ticket-subject" name="subject" maxlength="250" placeholder="موضوع" required><label for="ticket-body">شرح مشکل</label><textarea id="ticket-body" name="body" maxlength="10000" placeholder="شرح مشکل" required></textarea><button class="btn">ثبت تیکت</button></form>
+<hr>
+{% for t in tickets %}<section class="notification"><b>{{t.subject}}</b> <span class="badge">{{t.get_status_display}}</span><p>{{t.body}}</p>
+{% for m in t.messages.all %}<div class="tool-item"><b>{% if m.user_id == user.id %}شما{% else %}پشتیبانی{% endif %}</b><p>{{m.body}}</p><small>{{m.created_at}}</small></div>{% endfor %}
+{% if t.status != 'closed' and t.status != 'resolved' %}<form method="post" action="{% url 'ticket_reply' t.pk %}">{% csrf_token %}<label class="sr-only" for="ticket-reply-{{t.pk}}">پاسخ به {{t.subject}}</label><textarea id="ticket-reply-{{t.pk}}" name="body" maxlength="10000" placeholder="پاسخ شما..." required></textarea><button class="btn small">ارسال پاسخ</button></form>{% endif %}
+</section>{% empty %}<div class="empty">هنوز درخواستی ثبت نکرده‌اید.</div>{% endfor %}
+{% if page_obj.paginator.num_pages > 1 %}<nav class="pagination" aria-label="صفحه‌بندی تیکت‌ها">{% if page_obj.has_previous %}<a class="btn secondary" href="?page={{page_obj.previous_page_number}}">قبلی</a>{% endif %}<span class="muted">صفحه {{page_obj.number}} از {{page_obj.paginator.num_pages}}</span>{% if page_obj.has_next %}<a class="btn secondary" href="?page={{page_obj.next_page_number}}">بعدی</a>{% endif %}</nav>{% endif %}
+</div>{% endblock %}

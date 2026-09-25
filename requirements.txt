@@ -9,3 +9,4 @@ qrcode==8.2
 openpyxl==3.1.5
 psycopg[binary]==3.3.5
 django-unfold==0.106.1
+gunicorn==23.0.0

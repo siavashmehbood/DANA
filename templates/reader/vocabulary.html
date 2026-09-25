@@ -1,18 +1,26 @@
 {% extends 'base.html' %}
-{% block title %}لغات من | DANA{% endblock %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reader-pages.css' %}">
+{% endblock %}
+{% block title %}لغات من | دانا{% endblock %}
+{% block description %}واژه‌ها و عبارت‌های ذخیره‌شده هنگام مطالعه در دانا.{% endblock %}
 {% block content %}
 <section class="section vocabulary-page">
   <div class="section-title"><div><h1>لغات من</h1><p class="muted">کلمه‌ها و عبارت‌هایی که هنگام مطالعه ذخیره کرده‌ای.</p></div></div>
-  <form class="reader-search" method="get"><input name="q" value="{{ query }}" placeholder="جست‌وجو در لغات من..."><button class="btn" type="submit">جست‌وجو</button></form>
+  <form class="reader-search" method="get" role="search"><label class="sr-only" for="vocab-search">جست‌وجو در لغات</label><input id="vocab-search" name="q" value="{{ query }}" placeholder="جست‌وجو در لغات من..."><button class="btn" type="submit">جست‌وجو</button></form><p class="muted">{{word_count}} واژه{% if query %} برای «{{query}}»{% endif %}</p>
   {% if words %}
   <div class="vocabulary-list">
     {% for item in words %}
     <article class="vocabulary-item">
       <div><h3>{{ item.word }}</h3><p class="muted">{% if item.meaning_fa %}{{ item.meaning_fa }}{% else %}معنی فارسی هنوز ثبت نشده است{% endif %}</p>{% if item.article %}<a href="{% url 'article_detail' item.article.slug %}">مطالعه منبع</a>{% endif %}</div>
-      <form method="post" action="{% url 'reader_delete_word' item.pk %}">{% csrf_token %}<button class="btn danger" type="submit">حذف</button></form>
+      <form method="post" action="{% url 'reader_delete_word' item.pk %}" onsubmit="return confirm('این واژه از فهرست حذف شود؟')">{% csrf_token %}<button class="btn danger" type="submit">حذف</button></form>
     </article>
     {% endfor %}
   </div>
+  {% if page_obj.paginator.num_pages > 1 %}<nav class="pagination" aria-label="صفحه‌بندی لغات">{% if page_obj.has_previous %}<a class="btn secondary" href="?page={{page_obj.previous_page_number}}&q={{query|urlencode}}">صفحه قبل</a>{% endif %}<span class="muted">صفحه {{page_obj.number}} از {{page_obj.paginator.num_pages}}</span>{% if page_obj.has_next %}<a class="btn secondary" href="?page={{page_obj.next_page_number}}&q={{query|urlencode}}">صفحه بعد</a>{% endif %}</nav>{% endif %}
   {% else %}<div class="empty-state">هنوز کلمه‌ای ذخیره نکرده‌ای.</div>{% endif %}
 </section>
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/reader-controller.js' %}?v=31"></script>{% endblock %}

@@ -1,5 +1,9 @@
 ﻿{% extends 'base.html' %}
 {% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reader-pages.css' %}">
+<link rel="stylesheet" href="{% static 'css/reader-fix.css' %}">
+{% endblock %}
 {% block title %}مطالعه PDF | {{ article.title_fa|default:article.title }} | دانا{% endblock %}
 {% block content %}
 <div hidden>{% csrf_token %}</div>\n<div class="pdf-reader-shell" data-pdf-url="{{ pdf_url }}" data-progress-url="{% url 'article_reading_progress' article.slug %}" data-bookmark-url="{% url 'article_bookmark_toggle' article.slug %}" data-annotation-url="{% url 'article_annotation_create' article.slug %}" data-annotations='{{ annotations_json|escapejs }}' data-bookmarks='{{ bookmarks_json|escapejs }}' data-last-position="{{ last_position }}" data-reading-seconds="{{ reading_seconds }}">
@@ -34,3 +38,5 @@
 </div>
 {% endblock %}
 {% block extra_js %}<script type="module" src="{% static 'js/pdf-reader.js' %}?v=6"></script>{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/reader-controller.js' %}?v=31"></script>{% endblock %}

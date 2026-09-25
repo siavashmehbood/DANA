@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MaxValueValidator, MinValueValidator
 from accounts.models import User
 from books.models import Book, Chapter
 from articles.models import Article
@@ -6,11 +7,76 @@ from articles.models import Article
 
 class ReadingProgress(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); progress=models.DecimalField(max_digits=5,decimal_places=2,default=0); current_page=models.PositiveIntegerField(default=0); current_chapter=models.ForeignKey(Chapter,null=True,blank=True,on_delete=models.SET_NULL); seconds=models.PositiveIntegerField(default=0); audio_seconds=models.PositiveIntegerField(default=0); updated_at=models.DateTimeField(auto_now=True)
-    class Meta: unique_together=('user','book')
-class Bookmark(models.Model): user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); page=models.PositiveIntegerField(); title=models.CharField(max_length=150,blank=True); created_at=models.DateTimeField(auto_now_add=True)
-class Note(models.Model): user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); page=models.PositiveIntegerField(); text=models.TextField(); created_at=models.DateTimeField(auto_now_add=True)
+    class Meta:
+        constraints=[models.UniqueConstraint(fields=['user','book'],name='unique_reading_progress')]
+        indexes=[models.Index(fields=['user','-updated_at'],name='reader_progress_recent_idx')]
+class ReadingActivity(models.Model):
+    user=models.ForeignKey(User,on_delete=models.CASCADE)
+    book=models.ForeignKey(Book,on_delete=models.CASCADE)
+    seconds=models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    created_at=models.DateTimeField(auto_now_add=True)
+    class Meta:
+        indexes=[models.Index(fields=['user','-created_at'],name='reader_activity_recent_idx')]
+
+class ListeningActivity(models.Model):
+    user=models.ForeignKey(User,on_delete=models.CASCADE)
+    book=models.ForeignKey(Book,on_delete=models.CASCADE)
+    seconds=models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    created_at=models.DateTimeField(auto_now_add=True)
+    class Meta:
+        indexes=[models.Index(fields=['user','-created_at'],name='reader_listen_recent_idx')]
+
+class AudioProgress(models.Model):
+    user=models.ForeignKey(User,on_delete=models.CASCADE)
+    book=models.ForeignKey(Book,on_delete=models.CASCADE)
+    chapter=models.ForeignKey(Chapter,null=True,blank=True,on_delete=models.CASCADE)
+    position_seconds=models.PositiveIntegerField(default=0)
+    duration_seconds=models.PositiveIntegerField(default=0)
+    completed=models.BooleanField(default=False)
+    updated_at=models.DateTimeField(auto_now=True)
+    class Meta:
+        constraints=[models.UniqueConstraint(fields=['user','book','chapter'],name='unique_audio_progress_chapter'),models.UniqueConstraint(fields=['user','book'],condition=models.Q(chapter__isnull=True),name='unique_audio_progress_book')]
+        indexes=[models.Index(fields=['user','book','-updated_at'],name='reader_audio_recent_idx')]
+
+class Bookmark(models.Model):
+    user=models.ForeignKey(User,on_delete=models.CASCADE)
+    book=models.ForeignKey(Book,on_delete=models.CASCADE)
+    page=models.PositiveIntegerField()
+    title=models.CharField(max_length=150,blank=True)
+    created_at=models.DateTimeField(auto_now_add=True)
+    class Meta:
+        constraints=[models.UniqueConstraint(fields=['user','book','page'],name='unique_bookmark_page')]
+        indexes=[models.Index(fields=['user','book','page'],name='reader_bookmark_lookup_idx')]
+class Highlight(models.Model):
+    COLOR_CHOICES=[('yellow','زرد'),('green','سبز'),('blue','آبی'),('pink','صورتی')]
+    user=models.ForeignKey(User,on_delete=models.CASCADE)
+    book=models.ForeignKey(Book,on_delete=models.CASCADE)
+    page=models.PositiveIntegerField()
+    text=models.TextField()
+    color=models.CharField(max_length=10,choices=COLOR_CHOICES,default='yellow')
+    created_at=models.DateTimeField(auto_now_add=True)
+    class Meta:
+        constraints=[models.UniqueConstraint(fields=['user','book','page','text'],name='unique_reader_highlight')]
+        indexes=[models.Index(fields=['user','book','page'],name='reader_highlight_lookup_idx')]
+
+class Note(models.Model):
+    user=models.ForeignKey(User,on_delete=models.CASCADE)
+    book=models.ForeignKey(Book,on_delete=models.CASCADE)
+    page=models.PositiveIntegerField()
+    text=models.TextField()
+    created_at=models.DateTimeField(auto_now_add=True)
+    class Meta:
+        constraints=[models.UniqueConstraint(fields=['user','book','page','text'],name='unique_reader_note')]
+        indexes=[models.Index(fields=['user','book','-created_at'],name='reader_note_recent_idx')]
 class ProblemReport(models.Model): user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); text=models.TextField(); status=models.CharField(max_length=20,default='open'); created_at=models.DateTimeField(auto_now_add=True)
-class Review(models.Model): user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); rating=models.PositiveSmallIntegerField(default=5); text=models.TextField(); admin_score=models.PositiveSmallIntegerField(null=True,blank=True); admin_reply=models.TextField(blank=True); approved=models.BooleanField(default=False); created_at=models.DateTimeField(auto_now_add=True)
+class ReadingGoal(models.Model):
+    user=models.OneToOneField(User,on_delete=models.CASCADE,related_name='reading_goal')
+    weekly_minutes=models.PositiveIntegerField(default=120,validators=[MinValueValidator(1),MaxValueValidator(10080)])
+    weekly_books=models.PositiveSmallIntegerField(default=1,validators=[MinValueValidator(1),MaxValueValidator(100)])
+    updated_at=models.DateTimeField(auto_now=True)
+class Review(models.Model):
+    user=models.ForeignKey(User,on_delete=models.CASCADE); book=models.ForeignKey(Book,on_delete=models.CASCADE); rating=models.PositiveSmallIntegerField(default=5,validators=[MinValueValidator(1),MaxValueValidator(5)]); text=models.TextField(); admin_score=models.PositiveSmallIntegerField(null=True,blank=True,validators=[MinValueValidator(1),MaxValueValidator(10)]); admin_reply=models.TextField(blank=True); approved=models.BooleanField(default=False); created_at=models.DateTimeField(auto_now_add=True)
+    class Meta: constraints=[models.UniqueConstraint(fields=['user','book'],name='unique_review_per_user_book')]
 
 
 class SavedWord(models.Model):

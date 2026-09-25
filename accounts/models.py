@@ -1,12 +1,13 @@
 import secrets
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.core.validators import MinValueValidator
 from django.utils import timezone
 class User(AbstractUser):
     username=models.CharField(max_length=150,unique=True,blank=True,null=True)
     phone=models.CharField(max_length=20,unique=True,null=True,blank=True)
     avatar=models.ImageField(upload_to='avatars/',null=True,blank=True)
-    wallet_balance=models.DecimalField(max_digits=14,decimal_places=0,default=0)
+    wallet_balance=models.DecimalField(max_digits=14,decimal_places=0,default=0,validators=[MinValueValidator(0)])
     xp=models.PositiveIntegerField(default=0); points=models.PositiveIntegerField(default=0)
     purchase_points=models.DecimalField(max_digits=14,decimal_places=2,default=0)
     study_points=models.DecimalField(max_digits=14,decimal_places=2,default=0)
@@ -26,7 +27,7 @@ class User(AbstractUser):
 class Device(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE,related_name='devices'); name=models.CharField(max_length=120); token=models.CharField(max_length=255,blank=True); last_seen=models.DateTimeField(default=timezone.now); created_at=models.DateTimeField(auto_now_add=True)
 class OTPCode(models.Model):
-    phone=models.CharField(max_length=20); code=models.CharField(max_length=5); purpose=models.CharField(max_length=30,default='login'); expires_at=models.DateTimeField(); attempts=models.PositiveSmallIntegerField(default=0); used=models.BooleanField(default=False); created_at=models.DateTimeField(auto_now_add=True)
+    phone=models.CharField(max_length=20); code=models.CharField(max_length=128); purpose=models.CharField(max_length=30,default='login'); expires_at=models.DateTimeField(); attempts=models.PositiveSmallIntegerField(default=0); used=models.BooleanField(default=False); created_at=models.DateTimeField(auto_now_add=True)
     class Meta: indexes=[models.Index(fields=['phone','purpose','created_at'])]
 class UserSession(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE,related_name='login_sessions'); session_key=models.CharField(max_length=40,unique=True); device=models.ForeignKey(Device,null=True,blank=True,on_delete=models.SET_NULL); ip=models.GenericIPAddressField(null=True,blank=True); user_agent=models.TextField(blank=True); last_seen=models.DateTimeField(auto_now=True); created_at=models.DateTimeField(auto_now_add=True)

@@ -7,6 +7,7 @@ from django.http import FileResponse, JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.template.defaultfilters import linebreaks
@@ -24,49 +25,58 @@ from .translation import (
 
 
 def listing(request):
-    query = request.GET.get('q', '').strip()
-    category = request.GET.get('category', '').strip()
+    query = request.GET.get('q', '').strip()[:200]
+    query = ' '.join(query.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split())
+    category = request.GET.get('category', '').strip()[:120]
     sort = request.GET.get('sort', 'top').strip()
+    if sort not in {'top','popular','oldest','newest'}:
+        sort='top'
     saved_only = request.GET.get('saved') == '1' and request.user.is_authenticated
     # Only show articles that have something the reader can actually open:
     # full text, translated text, an abstract, or a PDF source.
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
-    articles = Article.objects.filter(published=True).filter(readable).select_related('category')
+    articles = Article.objects.filter(published=True).filter(readable).select_related('category','source')
     if saved_only:
-        articles = articles.filter(library_items__user=request.user)
+        articles = articles.filter(library_items__user=request.user).distinct()
     if query:
-        articles = articles.filter(
-            Q(title__icontains=query) | Q(title_fa__icontains=query) |
-            Q(authors__icontains=query) | Q(abstract__icontains=query) |
-            Q(abstract_fa__icontains=query) | Q(full_text__icontains=query) |
-            Q(full_text_fa__icontains=query) | Q(journal__icontains=query) |
-            Q(doi__icontains=query)
-        )
+        variants={query,query.replace('ی','ي').replace('ک','ك')}
+        search_q=Q()
+        for term in variants:
+            # Listing search intentionally targets metadata/abstracts. Scanning both
+            # potentially multi-megabyte full-text columns with ILIKE on every
+            # request was a major unindexed catalog bottleneck.
+            search_q |= Q(title__icontains=term)|Q(title_fa__icontains=term)|Q(authors__icontains=term)|Q(abstract__icontains=term)|Q(abstract_fa__icontains=term)|Q(journal__icontains=term)|Q(doi__icontains=term)
+        articles=articles.filter(search_q)
     if category:
         articles = articles.filter(category__slug=category)
     if sort == 'popular':
-        articles = articles.order_by('-downloads', '-citation_count', '-relevance_score', '-year', '-created_at')
+        articles = articles.order_by('-downloads', '-citation_count', '-relevance_score', '-year', '-created_at', '-id')
     elif sort == 'top':
-        articles = articles.order_by('-relevance_score', '-citation_count', '-downloads', '-year', '-created_at')
+        articles = articles.order_by('-relevance_score', '-citation_count', '-downloads', '-year', '-created_at', '-id')
     elif sort == 'oldest':
-        articles = articles.order_by('year', 'created_at')
-    else:
-        articles = articles.order_by('-created_at')
-    paginator = Paginator(articles, 100)
+        articles = articles.order_by('year', 'created_at', 'id')
+    elif sort == 'newest':
+        articles = articles.order_by('-created_at', '-id')
+    paginator = Paginator(articles, 24)
     page_obj = paginator.get_page(request.GET.get('page', 1))
     for article in page_obj.object_list:
         article.display_title = article.title_fa or rough_translate(article.title)
         article.display_abstract = article.abstract_fa or rough_translate(article.abstract)
-    return render(request, 'articles/list.html', {
+    response=render(request, 'articles/list.html', {
         'articles': page_obj.object_list, 'page_obj': page_obj,
         'categories': ArticleCategory.objects.filter(is_active=True),
         'query': query, 'selected_category': category,
         'selected_sort': sort, 'article_count': paginator.count, 'saved_only': saved_only,
     })
+    response['Cache-Control']='private, no-store' if request.user.is_authenticated else 'public, max-age=60'
+    if request.user.is_authenticated: response['Vary']='Cookie'
+    return response
 
 
 def article_download(request, slug):
-    article = get_object_or_404(Article, slug=slug, published=True)
+    article = get_object_or_404(Article.objects.select_related('source'), slug=slug, published=True)
+    if article.source_id and not article.source.allow_full_republish:
+        return JsonResponse({'error': 'دریافت فایل کامل طبق سیاست منبع مجاز نیست.'}, status=403)
     if not article.pdf:
         return JsonResponse({'error': 'فایل PDF برای این مقاله موجود نیست.'}, status=404)
     return FileResponse(article.pdf.open('rb'), as_attachment=True, filename=f'{article.slug}.pdf')
@@ -75,34 +85,50 @@ def article_download(request, slug):
 def detail(request, slug):
     readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
     article = get_object_or_404(
-        Article.objects.select_related('category').filter(readable), slug=slug, published=True
+        Article.objects.select_related('category','source').filter(readable), slug=slug, published=True
     )
     # Keep detail pages fast: no network I/O during page rendering.
     mode = request.GET.get('lang', 'fa')
     if mode not in {'en', 'fa', 'both'}:
         mode = 'fa'
-    search = request.GET.get('find', '').strip()
-    article.reader_full_text = linebreaks(article.full_text or '')
-    article.reader_full_text_fa = linebreaks(article.full_text_fa or '')
+    search = request.GET.get('find', '').strip()[:200]
+    can_show_full_text = not article.source_id or article.source.allow_full_republish
+    if mode == 'fa' and not (article.full_text_fa or article.abstract_fa):
+        mode = 'en'
+    if mode == 'en' and not (article.full_text or article.abstract) and (article.full_text_fa or article.abstract_fa):
+        mode = 'fa'
+    # Full academic bodies can be very large. Render only the language columns
+    # requested by the reader instead of formatting both bodies on every hit.
+    article.reader_full_text = linebreaks(article.full_text or '', autoescape=True) if can_show_full_text and mode in {'en','both'} else ''
+    article.reader_full_text_fa = linebreaks(article.full_text_fa or '', autoescape=True) if can_show_full_text and mode in {'fa','both'} else ''
     related = Article.objects.filter(published=True).exclude(pk=article.pk)
     if article.category_id:
         related = related.filter(category_id=article.category_id)
-    related = related.order_by('-featured', '-year', '-created_at')[:4]
+    related = related.select_related('category','source').order_by('-featured', '-year', '-created_at')[:4]
     library_item = None
     annotations = []
     if request.user.is_authenticated:
         library_item = ArticleLibraryItem.objects.filter(user=request.user, article=article).first()
         annotations = ArticleAnnotation.objects.filter(user=request.user, article=article)
-    return render(request, 'articles/detail.html', {
+    response=render(request, 'articles/detail.html', {
         'article': article, 'related_articles': related,
         'language_mode': mode, 'reader_search': search,
-        'library_item': library_item, 'annotations': annotations,
+        'library_item': library_item, 'annotations': annotations, 'can_show_full_text': can_show_full_text,
     })
+    if request.user.is_authenticated:
+        response['Cache-Control']='private, no-store'
+        response['Vary']='Cookie'
+    else:
+        response['Cache-Control']='public, max-age=120'
+    return response
 
 
 @login_required
+@never_cache
 def pdf_reader(request, slug):
-    article = get_object_or_404(Article, slug=slug, published=True)
+    article = get_object_or_404(Article.objects.select_related('source'), slug=slug, published=True)
+    if article.source_id and not article.source.allow_full_republish:
+        return redirect('article_detail', slug=article.slug)
     if not article.pdf and article.pdf_url:
         try:
             download_article_pdf(article)
@@ -114,7 +140,7 @@ def pdf_reader(request, slug):
     annotations = list(ArticleAnnotation.objects.filter(user=request.user, article=article).values('id', 'kind', 'selected_text', 'note', 'color', 'page', 'rects', 'text_prefix', 'text_suffix', 'created_at'))
     for annotation in annotations:
         annotation['created_at'] = annotation['created_at'].isoformat()
-    return render(request, 'articles/pdf_reader.html', {
+    response=render(request, 'articles/pdf_reader.html', {
         'article': article,
         'pdf_url': reverse('article_download', args=[article.slug]),
         'annotations_json': json.dumps(annotations, ensure_ascii=False),
@@ -122,28 +148,37 @@ def pdf_reader(request, slug):
         'reading_seconds': item.reading_seconds if item else 0,
         'bookmarks_json': json.dumps((item.bookmarks if item else []), ensure_ascii=False),
     })
+    response['Cache-Control']='private, no-store'
+    response['Vary']='Cookie'
+    response['X-Robots-Tag']='noindex, nofollow'
+    return response
 
 
 @login_required
+@never_cache
 def research_library(request):
-    items = ArticleLibraryItem.objects.filter(user=request.user).select_related('article', 'article__category')
-    status = request.GET.get('status', '').strip()
+    items = ArticleLibraryItem.objects.filter(user=request.user, article__published=True).select_related('article', 'article__category')
+    status = request.GET.get('status', '').strip()[:20]
     favorite = request.GET.get('favorite') == '1'
-    q = request.GET.get('q', '').strip()
+    q = request.GET.get('q', '').strip()[:200]
+    q = ' '.join(q.replace('ي','ی').replace('ك','ک').replace('\u200c',' ').split())
     if status in dict(ArticleLibraryItem.STATUS_CHOICES):
         items = items.filter(status=status)
     if favorite:
         items = items.filter(favorite=True)
     if q:
         items = items.filter(Q(article__title__icontains=q) | Q(article__title_fa__icontains=q) | Q(article__authors__icontains=q) | Q(article__journal__icontains=q))
-    annotations = ArticleAnnotation.objects.filter(user=request.user).select_related('article')
-    stats = {
-        'total': ArticleLibraryItem.objects.filter(user=request.user).count(),
-        'reading': ArticleLibraryItem.objects.filter(user=request.user, status='reading').count(),
-        'read': ArticleLibraryItem.objects.filter(user=request.user, status='read').count(),
-        'favorites': ArticleLibraryItem.objects.filter(user=request.user, favorite=True).count(),
-    }
-    return render(request, 'articles/library.html', {'items': items[:100], 'annotations': annotations[:40], 'stats': stats, 'status': status, 'favorite': favorite, 'query': q})
+    annotations = ArticleAnnotation.objects.filter(user=request.user, article__published=True).select_related('article')
+    # One aggregate replaces four near-identical COUNT queries on every library hit.
+    from django.db.models import Count
+    stats = ArticleLibraryItem.objects.filter(user=request.user, article__published=True).aggregate(
+        total=Count('id'),
+        reading=Count('id', filter=Q(status='reading')),
+        read=Count('id', filter=Q(status='read')),
+        favorites=Count('id', filter=Q(favorite=True)),
+    )
+    page_obj = Paginator(items, 30).get_page(request.GET.get('page', 1))
+    return render(request, 'articles/library.html', {'items': page_obj.object_list, 'page_obj': page_obj, 'annotations': annotations[:40], 'stats': stats, 'status': status, 'favorite': favorite, 'query': q})
 
 
 @login_required

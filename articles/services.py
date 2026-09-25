@@ -1,31 +1,26 @@
 import logging
-import threading
 
-from django.db import close_old_connections
+from django.utils import timezone
 
 from .models import Article
 from .translation import download_article_pdf, extract_pdf_text, translate_article
 
 logger = logging.getLogger(__name__)
-_processing = set()
-_processing_lock = threading.Lock()
 
 
 def _process_article(article_id):
     try:
-        close_old_connections()
         article = Article.objects.get(pk=article_id)
         if not article.published:
             return
-        if not article.pdf_url:
-            try:
-                resolved = resolve_pdf_url(article)
-                if resolved:
-                    article.pdf_url = resolved
-                    article.access = 'open'
-                    article.save(update_fields=['pdf_url', 'access', 'updated_at'])
-            except Exception as exc:
-                logger.info('PDF source discovery failed for article %s: %s', article_id, exc)
+        if article.source_id and not article.source.is_active:
+            Article.objects.filter(pk=article_id).update(translation_status='not_requested', translation_error='منبع مقاله غیرفعال است.', updated_at=timezone.now())
+            return
+        if article.source_id and not article.source.allow_full_republish:
+            result=translate_article(article, full_text=False)
+            if result.translation_status in {'failed','provider_failed','validation_failed'}:
+                logger.warning('Automatic translation failed for article %s: %s', article_id, result.translation_error)
+            return
         if not article.pdf and article.pdf_url:
             try:
                 download_article_pdf(article)
@@ -39,27 +34,28 @@ def _process_article(article_id):
                     article.save(update_fields=['full_text', 'updated_at'])
             except Exception as exc:
                 logger.info('PDF extraction failed for article %s: %s', article_id, exc)
-        translate_article(article, full_text=True)
+        article.refresh_from_db(fields=['full_text'])
+        result=translate_article(article, full_text=bool(article.full_text))
+        if result.translation_status in {'failed','provider_failed','validation_failed'}:
+            logger.warning('Automatic translation failed for article %s: %s', article_id, result.translation_error)
     except Article.DoesNotExist:
         return
-    except Exception:
+    except Exception as exc:
+        Article.objects.filter(pk=article_id).update(translation_status='retry_pending', translation_error=str(exc)[:1000], updated_at=timezone.now())
         logger.exception('Automatic article processing failed for %s', article_id)
-    finally:
-        close_old_connections()
-        with _processing_lock:
-            _processing.discard(article_id)
 
 
 def schedule_article_processing(article_id):
-    with _processing_lock:
-        if article_id in _processing:
-            return False
-        _processing.add(article_id)
-    worker = threading.Thread(
-        target=_process_article,
-        args=(article_id,),
-        name=f'article-processing-{article_id}',
-        daemon=True,
-    )
-    worker.start()
+    """Durably mark an article for the database-backed worker.
+
+    Web requests never own background threads; process_article_queue consumes
+    these rows safely and can be supervised by the deployment environment.
+    """
+    article=Article.objects.filter(pk=article_id,published=True).first()
+    if not article:
+        return False
+    if article.translation_status in {'translated','reviewed'} and article.translation_hash:
+        return False
+    if article.translation_status != 'pending':
+        Article.objects.filter(pk=article_id).update(translation_status='pending',translation_error='')
     return True

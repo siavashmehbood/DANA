@@ -9,7 +9,7 @@
       {% if not gateway_enabled %}<p class="muted">درگاه هنوز در محیط فعلی پیکربندی نشده است.</p>{% endif %}
       <button class="btn checkout-pay" type="submit" {% if not gateway_enabled %}disabled{% endif %}>ادامه به درگاه ←</button>
     </form>
-    <aside class="panel cart-summary"><h2>خلاصه پرداخت</h2><div class="row"><span>مبلغ کالاها</span><b>{{ subtotal }} تومان</b></div><div class="row"><span>تخفیف</span><b>{{ discount }} تومان</b></div><div class="row"><span>مالیات ۱۰٪</span><b>{{ tax }} تومان</b></div><div class="cart-total"><span>مبلغ نهایی</span><strong>{{ total }} تومان</strong></div></aside>
+    <aside class="panel cart-summary" aria-labelledby="bank-summary-title"><h2 id="bank-summary-title">خلاصه پرداخت</h2><div class="row"><span>مبلغ کالاها</span><b>{{ subtotal }} تومان</b></div><div class="row"><span>تخفیف</span><b>{{ discount }} تومان</b></div><div class="row"><span>مالیات ۱۰٪</span><b>{{ tax }} تومان</b></div><div class="cart-total"><span>مبلغ نهایی</span><strong>{{ total }} تومان</strong></div></aside>
   </div>
 </section>
 {% endblock %}

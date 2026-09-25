@@ -1,12 +1,16 @@
 from datetime import timedelta
 
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.urls import reverse
 from django.utils import timezone
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.auth.hashers import make_password, check_password
 
 from .models import OTPCode, User
-from shop.models import Referral
+from shop.models import Referral, Entitlement, SubscriptionPlan, Subscription, CartItem
+from books.models import Author, Book, Category
+from reader.models import ReadingProgress
 
 
 class AccountFlowTests(TestCase):
@@ -23,13 +27,628 @@ class AccountFlowTests(TestCase):
         self.client.cookies[settings.SESSION_COOKIE_NAME] = session.session_key
         OTPCode.objects.create(
             phone='+989121234567',
-            code='12345',
+            code=make_password('12345'),
             purpose='login',
             expires_at=timezone.now() + timedelta(minutes=2),
         )
 
         response = self.client.post(reverse('otp'), {'code': '12345'})
 
-        self.assertRedirects(response, reverse('home'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/')
         invitee = User.objects.get(phone='+989121234567')
         self.assertTrue(Referral.objects.filter(inviter=inviter, invitee=invitee).exists())
+
+
+    def test_library_excludes_expired_entitlements(self):
+        user = User.objects.create_user(username='library-user', password='pass12345')
+        author = Author.objects.create(name='Library Author')
+        active = Book.objects.create(name='Active Access', slug='active-access', author=author, status='published')
+        expired = Book.objects.create(name='Expired Access', slug='expired-access', author=author, status='published')
+        Entitlement.objects.create(user=user, book=active)
+        Entitlement.objects.create(user=user, book=expired, expires_at=timezone.now()-timedelta(minutes=1))
+        self.client.force_login(user)
+        response = self.client.get(reverse('library'))
+        self.assertContains(response, 'Active Access')
+        self.assertNotContains(response, 'Expired Access')
+        self.assertFalse(any(row['book'].pk == expired.pk for row in response.context['library_rows']))
+        self.assertFalse(any(book.pk == expired.pk for book in response.context['recommended_books']))
+
+
+    def test_profile_rejects_disguised_avatar_extension(self):
+        user=User.objects.create_user(username='avatar-user',password='pass12345')
+        self.client.force_login(user)
+        bad=SimpleUploadedFile('avatar.exe',b'not-an-image',content_type='image/png')
+        response=self.client.post(reverse('profile'),{'avatar':bad})
+        self.assertRedirects(response,reverse('profile'))
+        user.refresh_from_db()
+        self.assertFalse(bool(user.avatar))
+
+
+class LibraryFilterTests(TestCase):
+    def test_invalid_library_filters_fall_back_to_all(self):
+        user=User.objects.create_user(username='library-filter',password='pass12345')
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'),{'state':'bad','kind':'bad'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.context['state'],'all')
+        self.assertEqual(response.context['kind'],'all')
+
+
+    def test_library_hides_draft_entitlement(self):
+        from books.models import Author, Book
+        from shop.models import Entitlement
+        user=User.objects.create_user(username='library-draft',password='pass12345')
+        author=Author.objects.create(name='Draft Author')
+        draft=Book.objects.create(name='Draft owned',slug='draft-owned',author=author,status='draft')
+        Entitlement.objects.create(user=user,book=draft)
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertNotContains(response,'Draft owned')
+
+
+    def test_library_includes_catalog_for_active_subscription(self):
+        user=User.objects.create_user(username='subscriber-library',password='pass12345')
+        author=Author.objects.create(name='Subscription Author')
+        Book.objects.create(name='Subscription Book',slug='subscription-book',author=author,status='published',subscription_included=True)
+        plan=SubscriptionPlan.objects.create(name='Catalog',slug='catalog-library',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=29))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertContains(response,'Subscription Book')
+        self.assertContains(response,'اشتراک')
+
+    def test_library_excludes_catalog_for_expired_subscription(self):
+        user=User.objects.create_user(username='expired-subscriber-library',password='pass12345')
+        author=Author.objects.create(name='Expired Subscription Author')
+        Book.objects.create(name='Expired Subscription Book',slug='expired-subscription-book',author=author,status='published',subscription_included=True)
+        plan=SubscriptionPlan.objects.create(name='Expired Catalog',slug='expired-catalog-library',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,status='expired',starts_at=timezone.now()-timedelta(days=31),expires_at=timezone.now()-timedelta(days=1))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertFalse(any(row['book'].pk == Book.objects.get(slug='expired-subscription-book').pk for row in response.context['library_rows']))
+
+
+    def test_library_can_filter_subscription_access(self):
+        user=User.objects.create_user(username='library-source',password='pass12345')
+        author=Author.objects.create(name='Source Author')
+        purchased=Book.objects.create(name='Purchased Only',slug='purchased-only',author=author,status='published')
+        subscribed=Book.objects.create(name='Subscription Only',slug='subscription-only',author=author,status='published',subscription_included=True)
+        Entitlement.objects.create(user=user,book=purchased)
+        plan=SubscriptionPlan.objects.create(name='Source Plan',slug='source-plan',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=1))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'),{'source':'subscription'})
+        self.assertContains(response,'Subscription Only')
+        self.assertNotContains(response,'Purchased Only')
+
+
+class SessionSecurityTests(TestCase):
+    def test_logout_others_invalidates_django_sessions(self):
+        user=User.objects.create_user(username='multi-session',password='pass12345')
+        first=Client()
+        second=Client()
+        first.post(reverse('login'),{'login_method':'password','username':'multi-session','password':'pass12345'})
+        second.post(reverse('login'),{'login_method':'password','username':'multi-session','password':'pass12345'})
+        self.assertEqual(first.get(reverse('profile')).status_code,200)
+        self.assertEqual(second.get(reverse('profile')).status_code,200)
+        first.post(reverse('logout_others'))
+        self.assertEqual(first.get(reverse('profile')).status_code,200)
+        self.assertEqual(second.get(reverse('profile')).status_code,302)
+
+
+class WalletIntegrityTests(TestCase):
+    def test_model_validation_rejects_negative_wallet_balance(self):
+        from django.core.exceptions import ValidationError
+        user=User(username='negative-wallet',wallet_balance=-1)
+        with self.assertRaises(ValidationError):
+            user.full_clean()
+
+
+class PasswordChangeSecurityTests(TestCase):
+    def setUp(self):
+        self.user=User.objects.create_user(username='password-user',password='old-pass-123')
+        self.client.login(username='password-user',password='old-pass-123')
+
+    def test_password_change_requires_current_password(self):
+        response=self.client.post(reverse('profile'),{'new_password':'new-pass-456'})
+        self.assertEqual(response.status_code,302)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('old-pass-123'))
+
+    def test_password_change_accepts_correct_current_password(self):
+        response=self.client.post(reverse('profile'),{'current_password':'old-pass-123','new_password':'new-pass-456'})
+        self.assertEqual(response.status_code,200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('new-pass-456'))
+
+
+class OtpStorageSecurityTests(TestCase):
+    def test_generated_otp_is_not_stored_in_plaintext(self):
+        response=self.client.post(reverse('login'),{'login_method':'otp','phone':'09121234567','terms':'1'})
+        self.assertEqual(response.status_code,302)
+        row=OTPCode.objects.latest('id')
+        self.assertNotEqual(len(row.code),5)
+        self.assertTrue(row.code.startswith(('pbkdf2_','argon2','bcrypt','scrypt')))
+
+
+class DashboardSubscriptionTests(TestCase):
+    def test_dashboard_counts_subscription_catalog_without_duplicates(self):
+        user=User.objects.create_user(username='dashboard-sub',password='pass12345')
+        author=Author.objects.create(name='Dashboard Author')
+        book=Book.objects.create(name='Dashboard Book',slug='dashboard-book',author=author,status='published')
+        Entitlement.objects.create(user=user,book=book)
+        plan=SubscriptionPlan.objects.create(name='Dashboard Plan',slug='dashboard-plan',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        self.client.force_login(user)
+        response=self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['books_count'],1)
+
+    def test_dashboard_routes_audio_only_progress_to_audio_player(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from reader.models import ReadingProgress
+        user=User.objects.create_user(username='dashboard-audio',password='pass12345')
+        author=Author.objects.create(name='Dashboard Audio Author')
+        book=Book.objects.create(name='Dashboard Audio',slug='dashboard-audio',author=author,status='published',audio=SimpleUploadedFile('audio.mp3',b'audio',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=book)
+        ReadingProgress.objects.create(user=user,book=book,progress=25)
+        self.client.force_login(user)
+        response=self.client.get(reverse('dashboard'))
+        self.assertContains(response,reverse('audio_player',args=[book.id]))
+        self.assertNotContains(response,reverse('reader',args=[book.id])+'\"')
+
+
+    def test_subscription_library_excludes_non_catalog_books(self):
+        user=User.objects.create_user(username='catalog-scope',password='pass12345')
+        author=Author.objects.create(name='Catalog Scope Author')
+        Book.objects.create(name='Excluded Private',slug='excluded-private',author=author,status='published',visibility='private',subscription_included=False)
+        plan=SubscriptionPlan.objects.create(name='Scoped Catalog',slug='scoped-catalog',price=0,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=10))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertNotContains(response,'Excluded Private')
+
+
+class LoginRedirectTests(TestCase):
+    def setUp(self):
+        self.user=User.objects.create_user(username='next-user',password='pass12345')
+
+    def test_password_login_returns_to_safe_local_destination(self):
+        response=self.client.post(reverse('login'),{'login_method':'password','username':'next-user','password':'pass12345','next':'/shop/subscriptions/'})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,'/shop/subscriptions/')
+
+    def test_password_login_rejects_external_destination(self):
+        response=self.client.post(reverse('login'),{'login_method':'password','username':'next-user','password':'pass12345','next':'https://evil.example/'})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,'/')
+
+
+class LibraryRecommendationTests(TestCase):
+    def test_library_recommends_same_category_without_owned_book(self):
+        from books.models import Author, Book, Category
+        from shop.models import Entitlement
+        user=User.objects.create_user(username='library-rec',password='pass12345')
+        author=Author.objects.create(name='Library Rec Author')
+        category=Category.objects.create(name='Library Rec',slug='library-rec')
+        owned=Book.objects.create(name='Owned Rec',slug='owned-rec',author=author,category=category,status='published')
+        candidate=Book.objects.create(name='Candidate Rec',slug='candidate-rec',author=author,category=category,status='published')
+        Entitlement.objects.create(user=user,book=owned)
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertIn(candidate,list(response.context['recommended_books']))
+        self.assertNotIn(owned,list(response.context['recommended_books']))
+
+
+class ReadingProfileTests(TestCase):
+    def test_profile_routes_audio_only_reading_progress_to_audio_player(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from reader.models import ReadingProgress
+        user=User.objects.create_user(username='profile-audio-route',password='pass12345')
+        author=Author.objects.create(name='Profile Audio Route Author')
+        book=Book.objects.create(name='Profile Audio Route',slug='profile-audio-route',author=author,status='published',audio=SimpleUploadedFile('profile.mp3',b'audio',content_type='audio/mpeg'))
+        ReadingProgress.objects.create(user=user,book=book,progress=20)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertContains(response,reverse('audio_player',args=[book.id]))
+        self.assertNotContains(response,reverse('reader',args=[book.id])+'\"')
+
+    def test_profile_uses_real_streak_badges_and_recent_progress(self):
+        from gamification.models import UserStreak, Badge, UserBadge
+        from reader.models import ReadingProgress
+        from books.models import Author, Book
+        user=User.objects.create_user(username='reading-profile',password='pass12345')
+        author=Author.objects.create(name='Profile Author')
+        book=Book.objects.create(name='Profile Reading',slug='profile-reading',author=author,status='published')
+        ReadingProgress.objects.create(user=user,book=book,progress=35)
+        UserStreak.objects.create(user=user,current_days=4,longest_days=7)
+        badge=Badge.objects.create(name='Reader Badge',active=True)
+        UserBadge.objects.create(user=user,badge=badge)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertContains(response,'Profile Reading')
+        self.assertContains(response,'Reader Badge')
+        self.assertContains(response,'روزهای پیوسته')
+
+
+
+
+    def test_profile_exposes_goal_percent_and_in_progress_count(self):
+        from reader.models import ReadingProgress
+        from books.models import Author, Book
+        user=User.objects.create_user(username='profile-metrics',password='pass12345')
+        author=Author.objects.create(name='Metrics Author')
+        book=Book.objects.create(name='Metrics Reading',slug='metrics-reading',author=author,status='published')
+        ReadingProgress.objects.create(user=user,book=book,progress=35,seconds=60)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.context['in_progress_count'],1)
+        self.assertGreaterEqual(response.context['weekly_goal_percent'],0)
+        self.assertLessEqual(response.context['weekly_goal_percent'],100)
+        self.assertContains(response,'در حال مطالعه')
+
+
+class AudioLibraryStateTests(TestCase):
+    def setUp(self):
+        from books.models import Author, Book
+        from shop.models import Entitlement
+        self.user=User.objects.create_user(username='audio-library',password='pass12345')
+        author=Author.objects.create(name='Audio Library Author')
+        self.book=Book.objects.create(name='Audio Library Book',slug='audio-library-book',author=author,status='published')
+        Entitlement.objects.create(user=self.user,book=self.book)
+        self.client.force_login(self.user)
+
+    def test_listening_only_book_appears_in_reading_filter(self):
+        from reader.models import AudioProgress
+        AudioProgress.objects.create(user=self.user,book=self.book,position_seconds=45,duration_seconds=300)
+        response=self.client.get(reverse('library'),{'state':'reading'})
+        self.assertContains(response,'Audio Library Book')
+
+    def test_completed_audio_book_appears_in_completed_filter(self):
+        from reader.models import AudioProgress
+        AudioProgress.objects.create(user=self.user,book=self.book,position_seconds=300,duration_seconds=300,completed=True)
+        response=self.client.get(reverse('library'),{'state':'completed'})
+        self.assertContains(response,'Audio Library Book')
+
+
+class RecommendationColdStartTests(TestCase):
+    def test_empty_library_gets_popular_fallback_recommendations(self):
+        from books.models import Author, Book
+        user=User.objects.create_user(username='cold-rec',password='pass12345')
+        author=Author.objects.create(name='Cold Author')
+        candidate=Book.objects.create(name='Cold Candidate',slug='cold-candidate',author=author,status='published',visibility='public')
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertIn(candidate,list(response.context['recommended_books']))
+
+
+    def test_library_keeps_access_for_retired_subscription_plan_until_expiry(self):
+        user=User.objects.create_user(username='retired-plan-user',password='pass12345')
+        author=Author.objects.create(name='Retired Plan Author')
+        Book.objects.create(name='Retired Plan Book',slug='retired-plan-book',author=author,status='published',subscription_included=True)
+        plan=SubscriptionPlan.objects.create(name='Retired Catalog',slug='retired-catalog',price=0,duration_days=30,grants_catalog_access=True,active=False)
+        Subscription.objects.create(user=user,plan=plan,status='active',starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=5))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertContains(response,'Retired Plan Book')
+
+
+    def test_expired_subscriber_is_not_recommended_subscription_only_book(self):
+        user=User.objects.create_user(username='expired-rec',password='pass12345')
+        author=Author.objects.create(name='Expired Rec Author')
+        book=Book.objects.create(name='Subscription Locked Recommendation',slug='locked-rec',author=author,status='published',price=100,subscription_included=True)
+        plan=SubscriptionPlan.objects.create(name='Expired Rec Plan',slug='expired-rec-plan',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,status='expired',starts_at=timezone.now()-timedelta(days=31),expires_at=timezone.now()-timedelta(days=1))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertFalse(any(item.pk == book.pk for item in response.context['recommended_books']))
+
+
+    def test_expired_subscriber_can_still_be_recommended_free_public_title(self):
+        user=User.objects.create_user(username='expired-free-rec',password='pass12345')
+        author=Author.objects.create(name='Free Rec Author')
+        free=Book.objects.create(name='Free Subscription Title',slug='free-sub-title',author=author,status='published',visibility='public',price=0,subscription_included=True)
+        plan=SubscriptionPlan.objects.create(name='Old Plan',slug='old-free-plan',price=100,duration_days=30,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,status='expired',starts_at=timezone.now()-timedelta(days=31),expires_at=timezone.now()-timedelta(days=1))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertTrue(any(item.pk == free.pk for item in response.context['recommended_books']))
+
+
+class ProfileTruthfulStatsTests(TestCase):
+    def test_profile_does_not_report_audio_cursor_as_listening_time(self):
+        from reader.models import AudioProgress
+        user=User.objects.create_user(username='truthful-stats',password='pass12345')
+        author=Author.objects.create(name='Stats Author')
+        book=Book.objects.create(name='Stats Audio',slug='stats-audio',author=author,status='published')
+        AudioProgress.objects.create(user=user,book=book,position_seconds=3600,duration_seconds=7200)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.status_code,200)
+        self.assertNotIn('total_audio_minutes',response.context)
+        self.assertNotContains(response,'شنیدن<br>')
+        self.assertContains(response,'مطالعه و شنیدن ثبت شده است')
+
+
+class ActiveSubscriberRecommendationTests(TestCase):
+    def test_active_subscriber_can_be_recommended_unengaged_catalog_book(self):
+        user=User.objects.create_user(username='subscriber-recs',password='pass12345')
+        author=Author.objects.create(name='Subscriber Author')
+        category=Category.objects.create(name='Subscriber Category',slug='subscriber-category')
+        owned=Book.objects.create(name='Owned Seed',slug='owned-seed',author=author,category=category,status='published',visibility='public')
+        candidate=Book.objects.create(name='Catalog Candidate',slug='catalog-candidate',author=author,category=category,status='published',visibility='public',subscription_included=True)
+        Entitlement.objects.create(user=user,book=owned)
+        plan=SubscriptionPlan.objects.create(name='Catalog',slug='catalog-recs',price=0,duration_days=30,active=True,grants_catalog_access=True)
+        Subscription.objects.create(user=user,plan=plan,starts_at=timezone.now()-timedelta(days=1),expires_at=timezone.now()+timedelta(days=29))
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertIn(candidate,list(response.context['recommended_books']))
+
+
+class WeeklyReadingStatsTests(TestCase):
+    def test_profile_weekly_minutes_use_activity_deltas_not_lifetime_snapshot(self):
+        from reader.models import ReadingProgress, ReadingActivity
+        user=User.objects.create_user(username='weekly-stats',password='pass12345')
+        author=Author.objects.create(name='Weekly Author')
+        book=Book.objects.create(name='Weekly Book',slug='weekly-book',author=author,status='published',visibility='public',price=0)
+        ReadingProgress.objects.create(user=user,book=book,seconds=7200,progress=20)
+        ReadingActivity.objects.create(user=user,book=book,seconds=600)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.context['weekly_minutes_done'],10)
+        self.assertEqual(response.context['total_reading_minutes'],120)
+
+
+
+class DashboardLatestActivityTests(TestCase):
+    def test_newer_audio_activity_drives_dashboard_continue_action(self):
+        from reader.models import AudioProgress, ReadingProgress
+        user=User.objects.create_user(username='dash-audio',password='pass12345')
+        author=Author.objects.create(name='Dash Author')
+        text_book=Book.objects.create(name='Text Book',slug='dash-text',author=author,status='published',pdf=SimpleUploadedFile('text.pdf',b'%PDF-1.4',content_type='application/pdf'))
+        audio_book=Book.objects.create(name='Audio Book',slug='dash-audio',author=author,status='published',audio=SimpleUploadedFile('audio.mp3',b'ID3',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=text_book)
+        Entitlement.objects.create(user=user,book=audio_book)
+        ReadingProgress.objects.create(user=user,book=text_book,progress=40,current_page=4)
+        AudioProgress.objects.create(user=user,book=audio_book,position_seconds=90,duration_seconds=300)
+        self.client.force_login(user)
+        response=self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['continue_item']['book'],audio_book)
+        self.assertEqual(response.context['continue_item']['kind'],'audio')
+
+
+class WeeklyBookGoalTests(TestCase):
+    def test_profile_counts_books_completed_during_week_for_book_goal(self):
+        from reader.models import ReadingProgress, ReadingGoal
+        user=User.objects.create_user(username='weekly-book-goal',password='pass12345')
+        author=Author.objects.create(name='Weekly Goal Author')
+        book=Book.objects.create(name='Weekly Complete',slug='weekly-complete',author=author,status='published')
+        ReadingGoal.objects.create(user=user,weekly_minutes=120,weekly_books=2)
+        ReadingProgress.objects.create(user=user,book=book,progress=100)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.context['weekly_books_done'],1)
+        self.assertEqual(response.context['weekly_books_goal_percent'],50)
+
+
+class LibraryLatestActivityTests(TestCase):
+    def test_library_marks_newer_audio_as_primary_resume_action(self):
+        from reader.models import AudioProgress, ReadingProgress
+        user=User.objects.create_user(username='library-latest',password='pass12345')
+        author=Author.objects.create(name='Library Latest Author')
+        book=Book.objects.create(name='Hybrid Book',slug='hybrid-latest',author=author,status='published',pdf=SimpleUploadedFile('hybrid.pdf',b'%PDF-1.4',content_type='application/pdf'),audio=SimpleUploadedFile('hybrid.mp3',b'ID3',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=book)
+        ReadingProgress.objects.create(user=user,book=book,progress=30,current_page=3)
+        AudioProgress.objects.create(user=user,book=book,position_seconds=120,duration_seconds=600)
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        row=response.context['library_rows'][0]
+        self.assertEqual(row['latest_kind'],'audio')
+        self.assertContains(response,'ادامه آخرین فعالیت: شنیدن')
+
+
+class DashboardUnifiedActivityShelfTests(TestCase):
+    def test_audio_only_activity_appears_in_dashboard_library_shelf(self):
+        from reader.models import AudioProgress
+        user=User.objects.create_user(username='dashboard-audio-shelf',password='pass12345')
+        author=Author.objects.create(name='Dashboard Audio Shelf Author')
+        book=Book.objects.create(name='Shelf Audio Book',slug='shelf-audio-book',author=author,status='published',audio=SimpleUploadedFile('shelf.mp3',b'ID3shelf',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=book)
+        AudioProgress.objects.create(user=user,book=book,position_seconds=75,duration_seconds=400)
+        self.client.force_login(user)
+        response=self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['reading_progress'][0]['kind'],'audio')
+        self.assertContains(response,'ادامه شنیدن از 75 ثانیه')
+        self.assertContains(response,reverse('audio_player',args=[book.id]))
+
+
+class LibraryRecentSortTests(TestCase):
+    def test_default_recent_sort_prefers_latest_activity_over_entitlement_order(self):
+        from reader.models import ReadingProgress
+        user=User.objects.create_user(username='library-recent-sort',password='pass12345')
+        author=Author.objects.create(name='Library Recent Sort Author')
+        active=Book.objects.create(name='Older Owned Active',slug='older-owned-active',author=author,status='published')
+        newer=Book.objects.create(name='Newer Owned Idle',slug='newer-owned-idle',author=author,status='published')
+        Entitlement.objects.create(user=user,book=active)
+        Entitlement.objects.create(user=user,book=newer)
+        ReadingProgress.objects.create(user=user,book=active,progress=20,current_page=2)
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        self.assertEqual(response.context['library_rows'][0]['book'],active)
+
+
+class LibraryLegacyAudioRoutingTests(TestCase):
+    def test_audio_only_progress_uses_audio_resume_kind(self):
+        user=User.objects.create_user(username='legacy-audio-lib',password='pass12345')
+        author=Author.objects.create(name='Legacy Audio Lib Author')
+        book=Book.objects.create(name='Legacy Audio Lib',slug='legacy-audio-lib',author=author,status='published',audio=SimpleUploadedFile('legacy.mp3',b'ID3',content_type='audio/mpeg'))
+        Entitlement.objects.create(user=user,book=book)
+        ReadingProgress.objects.create(user=user,book=book,progress=25,current_page=1)
+        self.client.force_login(user)
+        response=self.client.get(reverse('library'))
+        row=next(item for item in response.context['library_rows'] if item['book'].pk==book.pk)
+        self.assertEqual(row['latest_kind'],'audio')
+
+
+class ProfileAccessAwareActivityTests(TestCase):
+    def test_expired_private_book_is_not_offered_as_recent_resume(self):
+        user=User.objects.create_user(username='profile-expired-access',password='pass12345')
+        author=Author.objects.create(name='Profile Expired Author')
+        book=Book.objects.create(name='Expired Private Activity',slug='expired-private-activity',author=author,status='published',visibility='private')
+        Entitlement.objects.create(user=user,book=book,expires_at=timezone.now()-timedelta(minutes=1))
+        ReadingProgress.objects.create(user=user,book=book,progress=40,current_page=4)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertFalse(any(row['book'].pk==book.pk for row in response.context['recent_progress']))
+
+    def test_expired_private_progress_does_not_inflate_in_progress_count(self):
+        user=User.objects.create_user(username='profile-expired-metric',password='pass12345')
+        author=Author.objects.create(name='Expired Metric Author')
+        book=Book.objects.create(name='Expired Metric',slug='expired-metric',author=author,status='published',visibility='private')
+        Entitlement.objects.create(user=user,book=book,expires_at=timezone.now()-timedelta(minutes=1))
+        ReadingProgress.objects.create(user=user,book=book,progress=40,current_page=4)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.context['in_progress_count'],0)
+
+    def test_audio_only_active_progress_counts_as_in_progress(self):
+        from reader.models import AudioProgress
+        user=User.objects.create_user(username='profile-audio-metric',password='pass12345')
+        author=Author.objects.create(name='Audio Metric Author')
+        book=Book.objects.create(name='Audio Metric',slug='audio-metric',author=author,status='published',visibility='public',price=0,audio=SimpleUploadedFile('metric.mp3',b'ID3',content_type='audio/mpeg'))
+        AudioProgress.objects.create(user=user,book=book,position_seconds=45,duration_seconds=300)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.context['in_progress_count'],1)
+
+
+class DashboardFreePublicResumeTests(TestCase):
+    def test_free_public_book_progress_is_resumable_without_entitlement(self):
+        user=User.objects.create_user(username='dash-free-resume',password='pass12345')
+        author=Author.objects.create(name='Dash Free Author')
+        book=Book.objects.create(name='Dash Free Resume',slug='dash-free-resume',author=author,status='published',visibility='public',price=0,pdf=SimpleUploadedFile('free.pdf',b'%PDF-1.4',content_type='application/pdf'))
+        ReadingProgress.objects.create(user=user,book=book,progress=35,current_page=3)
+        self.client.force_login(user)
+        response=self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['continue_item']['book'],book)
+        self.assertEqual(response.context['continue_item']['kind'],'text')
+        self.assertContains(response,reverse('reader',args=[book.id]))
+
+
+class ProfileAccessAwareLifetimeStatsTests(TestCase):
+    def test_expired_private_book_does_not_inflate_completed_or_reading_time(self):
+        user=User.objects.create_user(username='profile-expired-lifetime',password='pass12345')
+        author=Author.objects.create(name='Expired Lifetime Author')
+        book=Book.objects.create(name='Expired Lifetime',slug='expired-lifetime',author=author,status='published',visibility='private')
+        Entitlement.objects.create(user=user,book=book,expires_at=timezone.now()-timedelta(minutes=1))
+        ReadingProgress.objects.create(user=user,book=book,progress=100,seconds=3600)
+        self.client.force_login(user)
+        response=self.client.get(reverse('profile'))
+        self.assertEqual(response.context['completed_books'],0)
+        self.assertEqual(response.context['total_reading_minutes'],0)
+
+
+class AdminDerivedCounterIntegrityTests(TestCase):
+    def test_admin_edit_preserves_locked_financial_and_gamification_counters(self):
+        from django.contrib.admin.sites import AdminSite
+        from django.test import RequestFactory
+        from unittest.mock import Mock
+        from .admin import UserAdmin
+        user=User.objects.create_user(username='admin-integrity-user',password='pass12345')
+        User.objects.filter(pk=user.pk).update(wallet_balance=321,xp=11,points=12,purchase_points=13,study_points=14)
+        stale=User.objects.get(pk=user.pk)
+        stale.wallet_balance=0
+        stale.xp=0
+        stale.points=0
+        stale.purchase_points=0
+        stale.study_points=0
+        form=Mock()
+        form.cleaned_data={'wallet_topup':0}
+        request=RequestFactory().post('/admin/accounts/user/')
+        request.user=User.objects.create_superuser(username='integrity-admin',password='pass12345')
+        UserAdmin(User,AdminSite()).save_model(request,stale,form,True)
+        user.refresh_from_db()
+        self.assertEqual(user.wallet_balance,321)
+        self.assertEqual((user.xp,user.points,user.purchase_points,user.study_points),(11,12,13,14))
+
+
+class LibraryAccessProvenanceRegressionTests(TestCase):
+    def test_library_distinguishes_purchase_subscription_free_and_granted(self):
+        user=User.objects.create_user(username='library-provenance',password='pass12345')
+        author=Author.objects.create(name='Library Provenance Author')
+        purchased=Book.objects.create(name='Purchased provenance',slug='purchased-provenance',author=author,status='published',price=100)
+        subscribed=Book.objects.create(name='Subscription provenance',slug='subscription-provenance',author=author,status='published',price=100)
+        free=Book.objects.create(name='Free provenance',slug='free-provenance',author=author,status='published',visibility='public',price=0)
+        granted=Book.objects.create(name='Granted provenance',slug='granted-provenance',author=author,status='published',price=100)
+        Entitlement.objects.create(user=user,book=purchased,source='purchase')
+        Entitlement.objects.create(user=user,book=subscribed,source='subscription',expires_at=timezone.now()+timedelta(days=1))
+        Entitlement.objects.create(user=user,book=free,source='promotion')
+        Entitlement.objects.create(user=user,book=granted,source='admin')
+        self.client.force_login(user)
+        rows={row['book'].pk:row['source'] for row in self.client.get(reverse('library')).context['library_rows']}
+        self.assertEqual(rows[purchased.pk],'purchased')
+        self.assertEqual(rows[subscribed.pk],'subscription')
+        self.assertEqual(rows[free.pk],'free')
+        self.assertEqual(rows[granted.pk],'granted')
+
+
+class EmailPasswordAuthTests(TestCase):
+    def test_successful_email_registration_logs_user_in(self):
+        response=self.client.post(reverse('register'),{'email':'new@example.com','password':'Strong-pass-938!','password_confirmation':'Strong-pass-938!','terms':'1'})
+        self.assertEqual(response.status_code,302)
+        user=User.objects.get(email='new@example.com')
+        self.assertTrue(user.check_password('Strong-pass-938!'))
+        self.assertEqual(int(self.client.session['_auth_user_id']),user.pk)
+
+    def test_duplicate_email_is_rejected_case_insensitively(self):
+        User.objects.create_user(username='existing',email='User@Example.com',password='Strong-pass-938!')
+        response=self.client.post(reverse('register'),{'email':'user@example.com','password':'Strong-pass-938!','password_confirmation':'Strong-pass-938!','terms':'1'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(User.objects.filter(email__iexact='user@example.com').count(),1)
+
+    def test_invalid_registration_is_rejected(self):
+        response=self.client.post(reverse('register'),{'email':'bad-email','password':'short','password_confirmation':'different','terms':'1'})
+        self.assertEqual(response.status_code,200)
+        self.assertFalse(User.objects.filter(email='bad-email').exists())
+
+    def test_email_password_login(self):
+        user=User.objects.create_user(username='email-login',email='login@example.com',password='Strong-pass-938!')
+        response=self.client.post(reverse('login'),{'login_method':'password','email':'login@example.com','password':'Strong-pass-938!'})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(int(self.client.session['_auth_user_id']),user.pk)
+
+    def test_wrong_email_password_does_not_login(self):
+        User.objects.create_user(username='wrong-pass',email='wrong@example.com',password='Strong-pass-938!')
+        response=self.client.post(reverse('login'),{'login_method':'password','email':'wrong@example.com','password':'wrong-password'})
+        self.assertEqual(response.status_code,200)
+        self.assertNotIn('_auth_user_id',self.client.session)
+
+    def test_registration_safe_next_redirect(self):
+        response=self.client.post(reverse('register'),{'email':'safe@example.com','password':'Strong-pass-938!','password_confirmation':'Strong-pass-938!','terms':'1','next':'https://evil.example/'})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,'/')
+
+    def test_guest_cart_survives_email_registration(self):
+        author=Author.objects.create(name='Guest Cart Author')
+        book=Book.objects.create(name='Guest Cart Book',slug='guest-cart-book',author=author,status='published',price=100)
+        response=self.client.post(reverse('cart'),{'book_id':book.pk})
+        self.assertIn(reverse('login'),response.url)
+        response=self.client.post(reverse('register'),{'email':'cart@example.com','password':'Strong-pass-938!','password_confirmation':'Strong-pass-938!','terms':'1','next':reverse('cart')})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,reverse('cart'))
+        response=self.client.get(reverse('cart'))
+        self.assertContains(response,'Guest Cart Book')
+        self.assertTrue(CartItem.objects.filter(user__email='cart@example.com',book=book).exists())
+
+    def test_existing_otp_flow_still_works(self):
+        response=self.client.post(reverse('login'),{'login_method':'otp','phone':'09121234567','terms':'1'})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(response.url,reverse('otp'))
+        self.assertTrue(OTPCode.objects.filter(phone='+989121234567',purpose='login').exists())
+
+    def test_logout_ends_email_login_session(self):
+        User.objects.create_user(username='logout-email',email='logout@example.com',password='Strong-pass-938!')
+        self.client.post(reverse('login'),{'login_method':'password','email':'logout@example.com','password':'Strong-pass-938!'})
+        response=self.client.get(reverse('logout'))
+        self.assertEqual(response.status_code,302)
+        self.assertNotIn('_auth_user_id',self.client.session)

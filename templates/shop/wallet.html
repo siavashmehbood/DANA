@@ -2,7 +2,7 @@
 {% block title %}کیف پول | دانا{% endblock %}
 {% block content %}
 <section class="section wallet-page">
-  <div class="cart-head"><div><span class="shelf-label">حساب مالی</span><h1>کیف پول من</h1><p>موجودی و گردش مالی حساب شما</p></div><a class="btn secondary" href="/books/">خرید کتاب</a></div>
+  <div class="cart-head"><div><span class="shelf-label">حساب مالی</span><h1>کیف پول من</h1><p>موجودی و گردش مالی حساب شما</p></div><a class="btn secondary" href="{% url 'books' %}">خرید کتاب</a></div>
   <div class="wallet-hero">
     <div><span>موجودی فعلی</span><strong>{{ user.wallet_balance }} تومان</strong></div>
     <div class="wallet-icon">◈</div>

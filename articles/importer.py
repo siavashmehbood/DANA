@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import requests
 from django.utils.text import slugify
 
-from .models import Article
+from .models import Article, ArticleSource
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ def _openalex(query, limit):
             'provider': 'openalex', 'external_id': work.get('id', ''),
             'title': title, 'authors': _authors(work.get('authorships')),
             'abstract': _abstract(work.get('abstract_inverted_index')),
-            'year': work.get('publication_year'),
+            'year': work.get('publication_year'), 'publication_date': work.get('publication_date'),
             'journal': ((work.get('primary_location') or {}).get('source') or {}).get('display_name', ''),
             'doi': (work.get('doi') or '').strip(), 'source_url': work.get('id', ''),
             'pdf_url': _best_pdf(work.get('locations')),
@@ -126,7 +126,7 @@ def _crossref(query, limit):
         results.append({
             'provider': 'crossref', 'external_id': work.get('DOI', ''), 'title': title,
             'authors': _authors(work.get('author')), 'abstract': re.sub('<[^>]+>', ' ', work.get('abstract', '') or ''),
-            'year': (parts[0] or [None])[0],
+            'year': (parts[0] or [None])[0], 'publication_date': '-'.join(str(x).zfill(2) if i else str(x) for i, x in enumerate(parts[0])) if parts and parts[0] else None,
             'journal': ((work.get('container-title') or [''])[0]), 'doi': work.get('DOI', ''),
             'source_url': work.get('URL', ''), 'pdf_url': pdf_url, 'citation_count': 0,
         })
@@ -146,7 +146,7 @@ def _semantic(query, limit):
         results.append({
             'provider': 'semantic_scholar', 'external_id': work.get('paperId', ''), 'title': title,
             'authors': _authors(work.get('authors')), 'abstract': work.get('abstract') or '',
-            'year': work.get('year'), 'journal': work.get('venue') or '',
+            'year': work.get('year'), 'publication_date': None, 'journal': work.get('venue') or '',
             'doi': ids.get('DOI', ''), 'source_url': work.get('url') or '',
             'pdf_url': oa.get('url') or '', 'citation_count': work.get('citationCount') or 0,
         })
@@ -184,6 +184,7 @@ def discover_articles(query, limit=20, providers=None):
 
 def import_discovered(query, limit=20, category=None, providers=None):
     created = updated = 0
+    source_cache = {}
     discovered = discover_articles(query, limit, providers)
     for item in discovered:
         # Never publish a metadata-only record as a readable article.
@@ -193,14 +194,21 @@ def import_discovered(query, limit=20, category=None, providers=None):
             logger.info('Skipping metadata-only article: %s', item.get('title', ''))
             continue
         identity = item.get('doi') or item.get('external_id') or item['title']
+        provider = item.get('provider', '')
+        if provider not in source_cache:
+            source_cache[provider], _ = ArticleSource.objects.get_or_create(name=provider or 'unknown', defaults={'source_type': 'api', 'is_active': True})
+        if not source_cache[provider].is_active:
+            continue
+        source = source_cache[provider]
+        allow_full = source.allow_full_republish
         defaults = {
             'title': item['title'], 'slug': _slug(item['title'], identity),
             'authors': item.get('authors', ''), 'abstract': item.get('abstract', ''),
-            'year': item.get('year'), 'journal': item.get('journal', ''),
+            'year': item.get('year'), 'publication_date': item.get('publication_date'), 'journal': item.get('journal', ''),
             'doi': item.get('doi', ''), 'source_url': item.get('source_url', ''),
-            'pdf_url': item.get('pdf_url', ''), 'category': category,
-            'access': 'open' if item.get('pdf_url') else 'external', 'published': True,
-            'external_id': item.get('external_id', ''), 'source_provider': item.get('provider', ''),
+            'pdf_url': item.get('pdf_url', '') if allow_full else '', 'category': category,
+            'access': 'open' if (allow_full and item.get('pdf_url')) else 'external', 'published': True,
+            'external_id': item.get('external_id', ''), 'source_provider': provider, 'source': source,
             'citation_count': item.get('citation_count') or 0,
             'relevance_score': item.get('relevance_score') or 0,
         }

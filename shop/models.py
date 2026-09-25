@@ -1,15 +1,17 @@
 from django.db import models
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.utils import timezone
 from accounts.models import User
 from books.models import Book
 
 
 class Coupon(models.Model):
     code = models.CharField(max_length=50, unique=True)
-    percent = models.PositiveSmallIntegerField(default=0)
-    amount = models.DecimalField(max_digits=14, decimal_places=0, default=0)
+    percent = models.PositiveSmallIntegerField(default=0, validators=[MaxValueValidator(100)])
+    amount = models.DecimalField(max_digits=14, decimal_places=0, default=0, validators=[MinValueValidator(0)])
     capacity = models.PositiveIntegerField(default=1)
     used = models.PositiveIntegerField(default=0)
-    min_order = models.DecimalField(max_digits=14, decimal_places=0, default=0)
+    min_order = models.DecimalField(max_digits=14, decimal_places=0, default=0, validators=[MinValueValidator(0)])
     expires_at = models.DateTimeField(null=True, blank=True)
     active = models.BooleanField(default=True)
 
@@ -24,7 +26,7 @@ class CartItem(models.Model):
 
 
 class Order(models.Model):
-    STATUS = [('pending', 'Pending'), ('paid', 'Paid'), ('cancelled', 'Cancelled'), ('gift', 'Gift')]
+    STATUS = [('pending', 'در انتظار پرداخت'), ('paid', 'پرداخت‌شده'), ('cancelled', 'لغوشده'), ('gift', 'هدیه')]
     user = models.ForeignKey(User, on_delete=models.PROTECT)
     subtotal = models.DecimalField(max_digits=14, decimal_places=0)
     discount = models.DecimalField(max_digits=14, decimal_places=0)
@@ -43,20 +45,23 @@ class OrderItem(models.Model):
 
 
 class Entitlement(models.Model):
+    SOURCES = [('purchase','خرید'),('subscription','اشتراک'),('promotion','هدیه/کمپین'),('admin','اعطای مدیر'),('gift','هدیه')]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='entitlements')
     book = models.ForeignKey(Book, on_delete=models.CASCADE)
     order = models.ForeignKey(Order, null=True, blank=True, on_delete=models.SET_NULL)
+    source = models.CharField(max_length=20, choices=SOURCES, default='purchase')
     granted_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['user', 'book'], name='unique_entitlement_user_book')]
+        indexes = [models.Index(fields=['user','expires_at'], name='shop_entitl_user_id_69e5c2_idx')]
 
 
 class WalletTransaction(models.Model):
-    TYPES = [('credit', 'Credit'), ('debit', 'Debit'), ('refund', 'Refund'), ('reward', 'Reward')]
+    TYPES = [('credit', 'واریز'), ('debit', 'برداشت'), ('refund', 'بازپرداخت'), ('reward', 'پاداش')]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='wallet_transactions')
-    amount = models.DecimalField(max_digits=14, decimal_places=0)
+    amount = models.DecimalField(max_digits=14, decimal_places=0, validators=[MinValueValidator(0)])
     type = models.CharField(max_length=20, choices=TYPES)
     reason = models.CharField(max_length=250)
     order = models.ForeignKey(Order, null=True, blank=True, on_delete=models.SET_NULL)
@@ -77,11 +82,12 @@ class CheckoutRequest(models.Model):
 
 
 class Payment(models.Model):
-    STATUS = [('pending', 'Pending'), ('successful', 'Successful'), ('failed', 'Failed'), ('cancelled', 'Cancelled'), ('refunded', 'Refunded')]
+    STATUS = [('pending', 'در انتظار'), ('successful', 'موفق'), ('failed', 'ناموفق'), ('cancelled', 'لغوشده'), ('refunded', 'بازپرداخت‌شده')]
     user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='payments')
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='payments')
     provider = models.CharField(max_length=50, default='wallet')
     authority = models.CharField(max_length=150, blank=True)
+    reference_id = models.CharField(max_length=150, blank=True)
     amount = models.DecimalField(max_digits=14, decimal_places=0)
     status = models.CharField(max_length=20, choices=STATUS, default='pending')
     callback_payload = models.JSONField(default=dict, blank=True)
@@ -95,3 +101,36 @@ class Referral(models.Model):
     invitee = models.OneToOneField(User, on_delete=models.CASCADE, related_name='invited_by')
     rewarded = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class SubscriptionPlan(models.Model):
+    name = models.CharField(max_length=120)
+    slug = models.SlugField(unique=True)
+    price = models.DecimalField(max_digits=14, decimal_places=0, validators=[MinValueValidator(0)])
+    duration_days = models.PositiveIntegerField(default=30, validators=[MinValueValidator(1)])
+    active = models.BooleanField(default=True)
+    grants_catalog_access = models.BooleanField(default=False)
+    featured = models.BooleanField(default=False)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Subscription(models.Model):
+    STATUS = [('active','فعال'),('expired','منقضی'),('cancelled','لغوشده')]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, related_name='subscriptions')
+    status = models.CharField(max_length=20, choices=STATUS, default='active')
+    starts_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def is_active(self):
+        return self.status == 'active' and self.starts_at <= timezone.now() < self.expires_at
+
+    class Meta:
+        indexes = [models.Index(fields=['user','status','expires_at'], name='shop_sub_user_status_idx')]
+        constraints = [models.CheckConstraint(condition=models.Q(expires_at__gt=models.F('starts_at')), name='subscription_expiry_after_start'), models.UniqueConstraint(fields=['user'], condition=models.Q(status='active'), name='unique_active_subscription_per_user')]

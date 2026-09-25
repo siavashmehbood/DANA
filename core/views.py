@@ -1,23 +1,108 @@
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.utils.html import escape
 from django.shortcuts import render, redirect, get_object_or_404
 from books.models import Book, Category
 from articles.models import Article, ArticleCategory
-from shop.models import Entitlement
+from shop.models import Entitlement, Subscription
+from reader.models import ReadingProgress, AudioProgress, Review
+from django.db.models import Q, Count
+from django.db import connection
+from django.utils import timezone
 
 
 def home(request):
-    base = Book.objects.filter(status__in=['published', 'scheduled']).select_related('author', 'category')
-    featured = base.order_by('-created_at')[:6]
+    base = Book.objects.filter(Q(status='published') | Q(status='scheduled', publish_at__lte=timezone.now()),visibility='public').select_related('author', 'category')
+    featured = list(base.filter(featured=True).order_by('-created_at')[:6])
+    if not featured:
+        featured = list(base.order_by('-created_at')[:6])
     newest = base.order_by('-created_at')[:8]
-    popular = base.order_by('-id')[:8]
-    categories = Category.objects.all()[:10]
-    article_base = Article.objects.filter(published=True).select_related('category')
-    return render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
+    popular = base.annotate(approved_reviews=Count('review', filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8]
+    recommendations = base.none()
+    audio_books = base.filter(Q(audio__gt='')|Q(chapters__audio__gt='')).distinct().order_by('-created_at')[:8]
+    public_book_filter=(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())) & Q(book__visibility='public')
+    categories = Category.objects.annotate(book_count=Count('book',filter=public_book_filter)).filter(book_count__gt=0).order_by('-book_count','name')[:10]
+    readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
+    article_base = Article.objects.filter(published=True).filter(readable).select_related('category')
+    continue_reading=[]
+    continue_listening=[]
+    continue_item=None
+    if request.user.is_authenticated:
+        now=timezone.now()
+        valid_entitlements=list(
+            Entitlement.objects.filter(user=request.user)
+            .filter(Q(expires_at__isnull=True)|Q(expires_at__gt=now))
+            .values_list('book_id','book__category_id','source')
+        )
+        valid_books=[book_id for book_id,_,_ in valid_entitlements]
+        subscription_access=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=now,expires_at__gt=now,plan__grants_catalog_access=True).exists()
+        readable_progress=Q(book_id__in=valid_books)|Q(book__visibility='public',book__price=0)
+        if subscription_access:
+            readable_progress |= Q(book__subscription_included=True)
+        continue_reading=ReadingProgress.objects.filter(readable_progress,user=request.user,progress__gt=0,progress__lt=100).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author').order_by('-updated_at')[:6]
+        continue_listening=AudioProgress.objects.filter(readable_progress,user=request.user,position_seconds__gt=0,completed=False).filter(Q(book__status='published')|Q(book__status='scheduled',book__publish_at__lte=timezone.now())).select_related('book__author','chapter').order_by('-updated_at')[:6]
+        latest_reading=continue_reading[0] if continue_reading else None
+        latest_listening=continue_listening[0] if continue_listening else None
+        if latest_listening and (not latest_reading or latest_listening.updated_at > latest_reading.updated_at):
+            continue_item={'book':latest_listening.book,'kind':'audio'}
+        elif latest_reading:
+            has_text=bool(latest_reading.book.pdf) or latest_reading.book.chapters.exclude(text='').exists()
+            has_audio=bool(latest_reading.book.audio) or latest_reading.book.chapters.exclude(audio='').exists()
+            continue_item={'book':latest_reading.book,'kind':'text' if has_text or not has_audio else 'audio'}
+        owned_categories={category_id for _,category_id,source in valid_entitlements if category_id is not None and source != 'subscription'}
+        access_ids={book_id for book_id,_,_ in valid_entitlements}
+        consumed_ids=set()
+        # Subscription access is not ownership. Keep unengaged catalog titles
+        # eligible for recommendations while excluding anything already started.
+        signal_rows=ReadingProgress.objects.filter(user=request.user).values_list('book_id','book__category_id','progress')
+        audio_signal_rows=AudioProgress.objects.filter(user=request.user).values_list('book_id','book__category_id','position_seconds')
+        active_categories=set()
+        for book_id, category_id, progress in signal_rows:
+            if progress > 0: consumed_ids.add(book_id)
+            if progress > 0 and category_id is not None: active_categories.add(category_id)
+        audio_categories=set()
+        for book_id, category_id, position in audio_signal_rows:
+            if position > 0: consumed_ids.add(book_id)
+            if position > 0 and category_id is not None: audio_categories.add(category_id)
+        rated_categories=Review.objects.filter(user=request.user,approved=True,rating__gte=4,book__category__isnull=False).values_list('book__category_id',flat=True)
+        # Recent/completed category queries were strict subsets of the active
+        # reading/listening signals above, so evaluating them separately only
+        # added database round-trips without changing recommendation categories.
+        preferred_categories=set(owned_categories)|set(rated_categories)|set(active_categories)|set(audio_categories)
+        recommendations=list(base.filter(category_id__in=preferred_categories).exclude(id__in=access_ids|consumed_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at').distinct()[:8])
+        if not recommendations:
+            recommendations=list(base.exclude(id__in=access_ids|consumed_ids).annotate(approved_reviews=Count('review',filter=Q(review__approved=True))).order_by('-approved_reviews','-created_at')[:8])
+    response=render(request, 'home.html', {'featured': featured, 'newest': newest, 'popular': popular, 'categories': categories,
         'latest_articles': article_base.order_by('-created_at')[:8], 'featured_articles': article_base.filter(featured=True)[:4],
-        'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count()})
+        'article_categories': ArticleCategory.objects.filter(is_active=True)[:8], 'article_count': article_base.count(), 'continue_reading': continue_reading, 'continue_listening':continue_listening, 'continue_item':continue_item, 'audio_books': audio_books, 'recommendations': recommendations})
+    if request.user.is_authenticated:
+        response['Cache-Control']='private, no-store'
+        response['Vary']='Cookie'
+    else:
+        response['Cache-Control']='public, max-age=60'
+    return response
 
+
+
+def healthz(request):
+    response=JsonResponse({'status':'ok'})
+    response['Cache-Control']='no-store'
+    return response
+
+
+def readyz(request):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+            cursor.fetchone()
+    except Exception:
+        response=JsonResponse({'status':'unavailable'},status=503)
+        response['Cache-Control']='no-store'
+        return response
+    response=JsonResponse({'status':'ready','database':'ok'})
+    response['Cache-Control']='no-store'
+    return response
 
 def admin_logout(request):
     logout(request)
@@ -27,23 +112,72 @@ def admin_logout(request):
 @login_required
 def protected_book_pdf(request, pk):
     book = get_object_or_404(Book, pk=pk)
-    if book.visibility != 'public' and not Entitlement.objects.filter(user=request.user, book=book).exists():
-        return HttpResponse('Access denied', status=403)
-    if not book.pdf or not book.is_published:
+    if not book.is_published:
+        raise Http404
+    free_public = book.visibility == 'public' and book.price == 0
+    if not free_public:
+        entitled=Entitlement.objects.filter(user=request.user, book=book).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).exists()
+        subscribed=book.subscription_included and Subscription.objects.filter(user=request.user,status='active',starts_at__lte=timezone.now(),expires_at__gt=timezone.now(),plan__grants_catalog_access=True).exists()
+        if not entitled and not subscribed:
+            return HttpResponse('Access denied', status=403)
+    if not book.pdf:
+        raise Http404
+    if book.visibility == 'password':
+        return HttpResponse('Password-protected books must be opened through the reader.', status=403)
+    if book.pdf.name and not book.pdf.name.lower().endswith('.pdf'):
+        raise Http404
+    try:
+        size=book.pdf.size
+    except (OSError,ValueError):
         raise Http404
     response = FileResponse(book.pdf.open('rb'), content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="book-{book.pk}.pdf"'
+    response['Accept-Ranges'] = 'none'
     response['X-Content-Type-Options'] = 'nosniff'
+    response['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'self'; sandbox"
+    response['Cache-Control'] = 'private, no-store'
+    response['Referrer-Policy'] = 'same-origin'
+    response['X-Robots-Tag'] = 'noindex, nofollow'
+    response['Content-Length'] = str(size)
     return response
 
 
 def pwa_manifest(request):
-    return JsonResponse({'name': 'دانا | کتابخانه هوشمند', 'short_name': 'دانا', 'lang': 'fa', 'dir': 'rtl', 'start_url': '/', 'scope': '/', 'display': 'standalone', 'background_color': '#0b1020', 'theme_color': '#0b1020', 'icons': [{'src': '/static/img/icon.svg', 'sizes': 'any', 'type': 'image/svg+xml', 'purpose': 'any maskable'}]})
+    response=JsonResponse({'name': 'دانا | کتابخانه هوشمند', 'short_name': 'دانا', 'lang': 'fa', 'dir': 'rtl', 'start_url': '/', 'scope': '/', 'display': 'standalone', 'background_color': '#0b1020', 'theme_color': '#0b1020', 'icons': [{'src': '/static/img/icon.svg', 'sizes': 'any', 'type': 'image/svg+xml', 'purpose': 'any maskable'}]})
+    response['Cache-Control']='public, max-age=3600'
+    response['X-Content-Type-Options']='nosniff'
+    return response
 
 
 def service_worker(request):
-    js = """const CACHE='dana-v3'; const CORE=['/','/books/','/articles/'];
+    js = """const CACHE='dana-v7'; const OFFLINE='/static/offline.html'; const CORE=[OFFLINE];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;event.respondWith(fetch(event.request).then(response=>{if(response.ok&&new URL(event.request.url).origin===location.origin){const copy=response.clone();caches.open(CACHE).then(c=>c.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request).then(r=>r||caches.match('/'))));});"""
-    return HttpResponse(js, content_type='application/javascript')
+self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const url=new URL(event.request.url);if(event.request.mode==='navigate'){event.respondWith(fetch(event.request,{credentials:'same-origin'}).catch(()=>caches.match(OFFLINE)));return;}const cacheable=url.origin===location.origin&&url.pathname.startsWith('/static/');if(!cacheable)return;event.respondWith(fetch(event.request,{credentials:'same-origin'}).then(response=>{if(response.ok&&response.type==='basic'&&!response.headers.get('Cache-Control')?.includes('private')){const copy=response.clone();caches.open(CACHE).then(c=>c.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request)));});"""
+    response=HttpResponse(js, content_type='application/javascript')
+    response['Cache-Control']='no-cache'
+    response['Service-Worker-Allowed']='/'
+    response['X-Content-Type-Options']='nosniff'
+    return response
+
+
+def robots_txt(request):
+    body = "User-agent: *\nDisallow: /admin/\nDisallow: /protected/\nDisallow: /reader/\nSitemap: " + request.build_absolute_uri('/sitemap.xml') + "\n"
+    response=HttpResponse(body, content_type='text/plain')
+    response['Cache-Control']='public, max-age=3600'
+    response['X-Content-Type-Options']='nosniff'
+    return response
+
+
+def sitemap_xml(request):
+    base=request.build_absolute_uri('/').rstrip('/')
+    urls=[base+'/',base+'/books/',base+'/articles/',base+'/shop/subscriptions/']
+    urls += [base+'/books/'+slug+'/' for slug in Book.objects.filter(Q(status='published')|Q(status='scheduled',publish_at__lte=timezone.now()),visibility='public').values_list('slug',flat=True)[:5000]]
+    readable = Q(full_text__gt='') | Q(full_text_fa__gt='') | Q(abstract__gt='') | Q(abstract_fa__gt='') | Q(pdf_url__gt='') | Q(pdf__gt='')
+    urls += [base+'/articles/'+slug+'/' for slug in Article.objects.filter(published=True).filter(readable).values_list('slug',flat=True)[:5000]]
+    urls=list(dict.fromkeys(urls))
+    body='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(f'<url><loc>{escape(url)}</loc></url>' for url in urls) + '</urlset>'
+    response=HttpResponse(body, content_type='application/xml')
+    response['Cache-Control']='public, max-age=900'
+    response['X-Content-Type-Options']='nosniff'
+    return response

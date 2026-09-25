@@ -5,14 +5,17 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
 from django.db.models import F
+from django.db import models
 from django.shortcuts import get_object_or_404, render, redirect
+from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 
 from accounts.models import User
 from books.models import Book
 from gamification.models import PointLedger
 from gamification.services import add_points, purchase_points_for_amount
-from .models import CartItem, CheckoutRequest, Coupon, Entitlement, Order, OrderItem, Payment, Referral, WalletTransaction
+from .models import CartItem, CheckoutRequest, Coupon, Entitlement, Order, OrderItem, Payment, Referral, WalletTransaction, SubscriptionPlan, Subscription
 
 REFERRAL_REWARD = Decimal('50000')
 
@@ -67,15 +70,29 @@ def reward_referral(invitee):
     return True
 
 
-@login_required
 def cart(request):
     if request.method == 'POST':
-        book = Book.objects.filter(pk=request.POST.get('book_id'), status='published').first()
-        if book and not Entitlement.objects.filter(user=request.user, book=book).exists():
+        book = Book.objects.filter(pk=request.POST.get('book_id')).filter(models.Q(status='published')|models.Q(status='scheduled',publish_at__lte=timezone.now())).first()
+        if not request.user.is_authenticated:
+            if book:
+                request.session['pending_cart_book_id'] = book.pk
+            return redirect(f"{reverse('login')}?next={reverse('cart')}")
+        if book and not Entitlement.objects.filter(user=request.user, book=book).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).exists():
             CartItem.objects.get_or_create(user=request.user, book=book)
         return redirect('cart')
+    if not request.user.is_authenticated:
+        return redirect(f"{reverse('login')}?next={reverse('cart')}")
+    pending_book_id=request.session.pop('pending_cart_book_id',None)
+    if pending_book_id:
+        pending_book=Book.objects.filter(pk=pending_book_id).filter(models.Q(status='published')|models.Q(status='scheduled',publish_at__lte=timezone.now())).first()
+        if pending_book and not Entitlement.objects.filter(user=request.user,book=pending_book).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).exists():
+            CartItem.objects.get_or_create(user=request.user,book=pending_book)
     items = CartItem.objects.filter(user=request.user).select_related('book')
-    owned_ids = list(Entitlement.objects.filter(user=request.user, book__in=[i.book for i in items]).values_list('book_id', flat=True))
+    stale_ids=[i.pk for i in items if not i.book.is_published]
+    if stale_ids:
+        CartItem.objects.filter(pk__in=stale_ids).delete()
+        items = CartItem.objects.filter(user=request.user).select_related('book')
+    owned_ids = list(Entitlement.objects.filter(user=request.user, book__in=[i.book for i in items]).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).values_list('book_id', flat=True))
     if owned_ids:
         CartItem.objects.filter(user=request.user, book_id__in=owned_ids).delete()
         items = CartItem.objects.filter(user=request.user).select_related('book')
@@ -92,8 +109,10 @@ def remove_cart_item(request, pk):
 
 @login_required
 def checkout(request):
-    items = list(CartItem.objects.filter(user=request.user).select_related('book'))
-    items = [i for i in items if not Entitlement.objects.filter(user=request.user, book=i.book).exists()]
+    items = [i for i in CartItem.objects.filter(user=request.user).select_related('book') if i.book.is_published]
+    now=timezone.now()
+    owned_ids=set(Entitlement.objects.filter(user=request.user,book_id__in=[i.book_id for i in items]).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=now)).values_list('book_id',flat=True))
+    items = [i for i in items if i.book_id not in owned_ids]
     if not items:
         CartItem.objects.filter(user=request.user).delete()
         return redirect('cart')
@@ -134,7 +153,8 @@ def checkout(request):
                     return render(request, 'shop/success.html', {'order': order})
 
                 locked_items = list(CartItem.objects.select_for_update().filter(user=user).select_related('book'))
-                owned = set(Entitlement.objects.filter(user=user, book_id__in=[i.book_id for i in locked_items]).values_list('book_id', flat=True))
+                locked_items = [i for i in locked_items if i.book.is_published]
+                owned = set(Entitlement.objects.filter(user=user, book_id__in=[i.book_id for i in locked_items]).filter(models.Q(expires_at__isnull=True)|models.Q(expires_at__gt=timezone.now())).values_list('book_id', flat=True))
                 items = [i for i in locked_items if i.book_id not in owned]
                 if not items:
                     CartItem.objects.filter(user=user).delete()
@@ -156,7 +176,8 @@ def checkout(request):
 
                 order = Order.objects.create(user=user, subtotal=subtotal, discount=discount, tax=tax, total=total, status='paid', tracking_code=_tracking_code())
                 OrderItem.objects.bulk_create([OrderItem(order=order, book=i.book, price=i.book.price) for i in items])
-                Entitlement.objects.bulk_create([Entitlement(user=user, book=i.book, order=order) for i in items], ignore_conflicts=True)
+                for i in items:
+                    Entitlement.objects.update_or_create(user=user, book=i.book, defaults={'order':order,'source':'purchase','expires_at':None})
                 ref = f'order:{order.pk}:debit'
                 _wallet_transaction(user, total, 'debit', 'Book purchase', order=order, reference=ref)
                 Payment.objects.create(user=user, order=order, provider='wallet', amount=total, status='successful', idempotency_key=f'payment:{order.pk}')
@@ -176,12 +197,91 @@ def checkout(request):
 
 
 @login_required
+@never_cache
 def order_detail(request, tracking_code):
     order = get_object_or_404(Order.objects.prefetch_related('items__book'), tracking_code=tracking_code, user=request.user)
     return render(request, 'shop/order_detail.html', {'order': order})
 
 
 @login_required
+@never_cache
 def wallet(request):
     transactions = WalletTransaction.objects.filter(user=request.user).select_related('order').order_by('-created_at')[:50]
     return render(request, 'shop/wallet.html', {'transactions': transactions})
+
+
+@login_required
+@never_cache
+def orders(request):
+    rows=Order.objects.filter(user=request.user).prefetch_related('items__book').order_by('-created_at')[:100]
+    return render(request,'shop/orders.html',{'orders':rows})
+
+
+@login_required
+@never_cache
+def subscribe(request, slug):
+    if request.method != 'POST':
+        return redirect('subscriptions')
+    activation_key=request.POST.get('activation_key','')
+    expected_key=request.session.pop('subscription_activation_key',None)
+    if not activation_key or activation_key != expected_key:
+        messages.error(request,'درخواست فعال‌سازی نامعتبر یا تکراری است؛ صفحه را دوباره باز کنید.')
+        return redirect('subscriptions')
+    with transaction.atomic():
+        user=User.objects.select_for_update().get(pk=request.user.pk)
+        plan=get_object_or_404(SubscriptionPlan,slug=slug,active=True)
+
+        now=timezone.now()
+        Subscription.objects.select_for_update().filter(user=user,status='active',expires_at__lte=now).update(status='expired')
+        queued=Subscription.objects.select_for_update().filter(user=user,status='active',starts_at__gt=now,expires_at__gt=now).only('id').first()
+        if queued:
+            messages.info(request,'یک اشتراک زمان‌بندی‌شده از قبل برای شما ثبت شده است و تا شروع آن خرید اشتراک دیگری ممکن نیست.')
+            return redirect('subscriptions')
+        active_now=Subscription.objects.select_for_update().filter(user=user,status='active',starts_at__lte=now,expires_at__gt=now).select_related('plan').order_by('-expires_at').first()
+        if active_now and active_now.plan_id != plan.id:
+            messages.info(request,'برای جلوگیری از از دست رفتن اعتبار، تغییر پلن تا پایان اشتراک فعلی غیرفعال است.')
+            return redirect('subscriptions')
+        if plan.price > 0 and user.wallet_balance < plan.price:
+            messages.error(request,'موجودی کیف پول برای فعال‌سازی این اشتراک کافی نیست.')
+            return redirect('subscriptions')
+        current=active_now
+        if current and current.plan_id == plan.id:
+            current.expires_at=current.expires_at+timezone.timedelta(days=plan.duration_days)
+            current.save(update_fields=['expires_at'])
+            subscription=current
+        else:
+            if current:
+                current.status='cancelled'
+                current.save(update_fields=['status'])
+            start=now
+            subscription=Subscription.objects.create(user=user,plan=plan,starts_at=start,expires_at=start+timezone.timedelta(days=plan.duration_days))
+        if plan.price > 0:
+            reference=f'subscription:{subscription.pk}:debit'
+            if WalletTransaction.objects.filter(reference=reference).exists():
+                reference=f'{reference}:{secrets.token_hex(8)}'
+            _wallet_transaction(user,plan.price,'debit','Subscription purchase',reference=reference)
+            messages.success(request,'اشتراک با موفقیت از کیف پول فعال شد.')
+        else:
+            messages.success(request,'اشتراک رایگان فعال شد.')
+    return redirect('subscriptions')
+
+
+@never_cache
+def subscriptions(request):
+    if request.method != 'GET':
+        return redirect('subscriptions')
+    if request.user.is_authenticated:
+        request.session['subscription_activation_key']=secrets.token_urlsafe(24)
+    plans=SubscriptionPlan.objects.filter(active=True).order_by('-featured','price','duration_days','id')
+    current=None
+    if request.user.is_authenticated:
+        now=timezone.now()
+        Subscription.objects.filter(user=request.user,status='active',expires_at__lte=now).update(status='expired')
+        current=Subscription.objects.filter(user=request.user,status='active',starts_at__lte=now,expires_at__gt=now).select_related('plan').order_by('-expires_at').first()
+        if current and not current.plan.active:
+            messages.info(request,'این پلن دیگر برای خرید جدید ارائه نمی‌شود، اما اشتراک فعلی شما تا پایان اعتبار فعال است.')
+    response=render(request,'shop/subscriptions.html',{'plans':plans,'current_subscription':current,'activation_key':request.session.get('subscription_activation_key','')})
+    if request.user.is_authenticated:
+        response['Cache-Control']='private, no-store'
+        response['X-Robots-Tag']='noindex, nofollow'
+    return response

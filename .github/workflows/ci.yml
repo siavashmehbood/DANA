@@ -8,8 +8,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: pip
@@ -26,4 +26,107 @@ jobs:
           DEBUG: '0'
           SECRET_KEY: 'ci-only-random-secret-key-012345678901234567890123456789'
           ALLOWED_HOSTS: 'localhost'
+          CSRF_TRUSTED_ORIGINS: 'https://localhost'
         run: python manage.py check --deploy
+
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: dana_ci
+          POSTGRES_USER: dana
+          POSTGRES_PASSWORD: dana_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dana -d dana_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DB_ENGINE: postgresql
+      DB_NAME: dana_ci
+      DB_USER: dana
+      DB_PASSWORD: dana_ci_password
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_CONN_MAX_AGE: '0'
+      DB_SSLMODE: disable
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Migration check
+        run: python manage.py makemigrations --check
+      - name: Apply migrations
+        run: python manage.py migrate --noinput
+      - name: PostgreSQL regression suite
+        run: python manage.py test
+
+
+  browser-production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install browser test dependencies
+        run: |
+          pip install playwright==1.55.0
+          playwright install --with-deps chromium
+      - name: Wait for staging deploy with manifest-versioned assets
+        env:
+          DANA_E2E_BASE_URL: https://dana-staging-web.onrender.com
+        run: |
+          python - <<'PY'
+          import re,time,urllib.request
+          url='https://dana-staging-web.onrender.com/'
+          expected=re.compile(r'/static/css/app\.[0-9a-f]{12}\.css')
+          for attempt in range(30):
+              try:
+                  req=urllib.request.Request(
+                      url,
+                      headers={
+                          'Cache-Control':'no-cache',
+                          'Pragma':'no-cache',
+                          'User-Agent':'DANA-CI-deploy-readiness',
+                      },
+                  )
+                  html=urllib.request.urlopen(req,timeout=30).read().decode('utf-8','replace')
+                  match=expected.search(html)
+                  if match:
+                      asset=match.group(0)
+                      asset_req=urllib.request.Request(
+                          'https://dana-staging-web.onrender.com'+asset,
+                          headers={'Cache-Control':'no-cache','User-Agent':'DANA-CI-deploy-readiness'},
+                      )
+                      response=urllib.request.urlopen(asset_req,timeout=30)
+                      if response.status == 200:
+                          print('staging manifest asset is live:',asset)
+                          break
+                  print('waiting for staging manifest asset',attempt+1)
+              except Exception as exc:
+                  print('staging probe failed',repr(exc))
+              time.sleep(20)
+          else:
+              raise SystemExit('staging did not expose a live WhiteNoise manifest asset in time')
+          PY
+      - name: Real browser mobile acceptance
+        env:
+          DANA_E2E_BASE_URL: https://dana-staging-web.onrender.com
+        run: python e2e/test_mobile_production.py
+      - name: Upload mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-production-screenshots
+          path: artifacts/mobile/
+          if-no-files-found: warn
