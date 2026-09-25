@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 from django.contrib import auth, messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.sessions.models import Session
 from django.core.cache import cache
@@ -40,6 +42,48 @@ def _rate_limited(key,limit,timeout):
 def _safe_next(request, value):
     return value if value and url_has_allowed_host_and_scheme(value,allowed_hosts={request.get_host()},require_https=request.is_secure()) else '/'
 
+def _apply_referral(request, user):
+    referral_code=request.session.pop('referral_code','')
+    inviter=User.objects.filter(referral_code=referral_code).exclude(pk=user.pk).first()
+    if inviter: Referral.objects.get_or_create(inviter=inviter,invitee=user)
+
+def register_view(request):
+    if request.GET.get('ref') and not request.user.is_authenticated:
+        code=request.GET.get('ref','').strip().upper()
+        if User.objects.filter(referral_code=code).exists(): request.session['referral_code']=code
+    next_url=_safe_next(request,request.POST.get('next') if request.method=='POST' else request.GET.get('next'))
+    if request.method=='POST':
+        ip=request.META.get('REMOTE_ADDR','unknown')
+        if _rate_limited(f'dana-register:{ip}',10,300):
+            messages.error(request,'تعداد تلاش‌ها زیاد است؛ چند دقیقه بعد دوباره امتحان کنید.')
+            return render(request,'auth/register.html',{'next_url':next_url})
+        email=request.POST.get('email','').strip().lower()
+        password=request.POST.get('password','')
+        confirmation=request.POST.get('password_confirmation','')
+        if not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+',email):
+            messages.error(request,'ایمیل معتبر وارد کنید.')
+        elif User.objects.filter(email__iexact=email).exists():
+            messages.error(request,'حسابی با این ایمیل وجود دارد.')
+        elif password != confirmation:
+            messages.error(request,'تکرار رمز عبور با رمز عبور یکسان نیست.')
+        elif not request.POST.get('terms'):
+            messages.error(request,'پذیرش قوانین الزامی است.')
+        else:
+            candidate=User(username=email,email=email,terms_accepted_at=timezone.now())
+            try:
+                validate_password(password,user=candidate)
+            except ValidationError as exc:
+                messages.error(request,' '.join(exc.messages))
+            else:
+                candidate.set_password(password)
+                candidate.save()
+                _apply_referral(request,candidate)
+                user=auth.authenticate(request,username=candidate.username,password=password)
+                auth.login(request,user); _session_record(request,user)
+                return redirect(next_url)
+        return render(request,'auth/register.html',{'next_url':next_url,'email':email})
+    return render(request,'auth/register.html',{'next_url':next_url})
+
 def login_view(request):
     if request.GET.get('ref') and not request.user.is_authenticated:
         code=request.GET.get('ref','').strip().upper()
@@ -48,9 +92,9 @@ def login_view(request):
         method=request.POST.get('login_method','otp'); ip=request.META.get('REMOTE_ADDR','unknown')
         if method=='password':
             if _rate_limited(f'dana-login:{ip}',10,300): messages.error(request,'تعداد تلاش‌ها زیاد است؛ چند دقیقه بعد دوباره امتحان کنید.'); return redirect('login')
-            username=request.POST.get('username','').strip(); password=request.POST.get('password',''); user=auth.authenticate(request,username=username,password=password)
+            identifier=request.POST.get('email',request.POST.get('username','')).strip(); password=request.POST.get('password',''); account=User.objects.filter(email__iexact=identifier).first(); auth_username=account.username if account else identifier; user=auth.authenticate(request,username=auth_username,password=password)
             if user is not None and user.is_active: auth.login(request,user); _session_record(request,user); return redirect(_safe_next(request,request.POST.get('next')))
-            messages.error(request,'نام کاربری یا رمز عبور نادرست است.'); return render(request,'auth/login.html',{'next_url':_safe_next(request,request.POST.get('next'))})
+            messages.error(request,'ایمیل یا رمز عبور نادرست است.'); return render(request,'auth/login.html',{'next_url':_safe_next(request,request.POST.get('next'))})
         phone=_phone(request.POST.get('phone'))
         if not phone: messages.error(request,'شماره موبایل معتبر نیست.'); return redirect('login')
         if not request.POST.get('terms'): messages.error(request,'پذیرش قوانین الزامی است.'); return redirect('login')
@@ -75,8 +119,7 @@ def otp(request):
             if not user.is_active: messages.error(request,'این حساب غیرفعال است.'); return redirect('login')
             if not user.terms_accepted_at:user.terms_accepted_at=timezone.now(); user.save(update_fields=['terms_accepted_at'])
             if created:
-                referral_code=request.session.pop('referral_code',''); inviter=User.objects.filter(referral_code=referral_code).exclude(pk=user.pk).first()
-                if inviter: Referral.objects.get_or_create(inviter=inviter,invitee=user)
+                _apply_referral(request,user)
             auth.login(request,user); _session_record(request,user); request.session.pop('otp_phone',None); return redirect(request.session.pop('login_next','/'))
         if row: row.attempts+=1; row.save(update_fields=['attempts'])
         messages.error(request,'کد واردشده صحیح نیست یا منقضی شده است.')
