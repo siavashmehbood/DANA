@@ -1,4 +1,5 @@
 from unittest.mock import patch
+import requests
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
