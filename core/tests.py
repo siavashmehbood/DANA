@@ -147,8 +147,8 @@ class HeaderMoreNavigationTests(TestCase):
         self.assertContains(response,reverse('logout'))
 
     def test_header_more_interaction_script_supports_toggle_outside_click_and_escape(self):
-        response=self.client.get('/static/js/app.js')
-        body=response.content.decode()
+        from pathlib import Path
+        body=(Path(settings.BASE_DIR)/'static/js/app.js').read_text(encoding='utf-8')
         self.assertIn("root.classList.toggle('is-open',open)",body)
         self.assertIn("menu.hidden=!open",body)
         self.assertIn("toggle.setAttribute('aria-expanded',String(open))",body)
