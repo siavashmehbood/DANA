@@ -52,9 +52,15 @@ document.addEventListener('click',(event)=>{
  window.DANA={toast,csrf};
  function loading(button,on){if(!button)return;button.classList.toggle('is-loading',on);button.disabled=on}
  qsa('button[type="submit"],.btn[type="submit"]').forEach(btn=>{const form=btn.closest('form');if(!form)return;form.addEventListener('submit',()=>{if(form.checkValidity())loading(btn,true)})});
- qsa('[data-animate]').forEach(el=>{if(!('IntersectionObserver' in window)){el.classList.add('is-visible');return}const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('is-visible');io.unobserve(e.target)}}),{threshold:.08});io.observe(el)});
+ // Enhancement only: content is visible by default; JS adds motion without gating usability.
+ qsa('[data-animate]').forEach(el=>{
+  el.classList.add('is-visible');
+  if(!('IntersectionObserver' in window)||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('is-visible');io.unobserve(e.target)}}),{threshold:.08});
+  io.observe(el);
+ });
  document.addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(!b)return;const text=b.dataset.copy;if(!text)return;navigator.clipboard?.writeText(text).then(()=>{const old=b.textContent;b.textContent='کپی شد ✓';toast('کد دعوت با موفقیت کپی شد.','success');setTimeout(()=>b.textContent=old,1600)}).catch(()=>toast('کپی خودکار در دسترس نیست.','error'))});
- qsa('.book-card,.pro-book,.category-pro-grid a').forEach(c=>c.setAttribute('data-animate',''));
+ qsa('.book-card,.pro-book,.category-pro-grid a').forEach(card=>{card.setAttribute('data-animate','');card.classList.add('is-visible')});
 })();
 
 
