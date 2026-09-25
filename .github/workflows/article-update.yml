@@ -1,0 +1,52 @@
+name: Production Article Update
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      per_topic:
+        description: "Maximum imported candidates per topic"
+        required: false
+        default: "4"
+
+concurrency:
+  group: production-article-update
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DANA_ARTICLE_DATABASE_URL: ${{ secrets.DANA_ARTICLE_DATABASE_URL }}
+      DEBUG: "1"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: dana-2.0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Verify production database configuration
+        shell: bash
+        run: |
+          test -n "$DANA_ARTICLE_DATABASE_URL" || { echo "::error::DANA_ARTICLE_DATABASE_URL is not configured"; exit 1; }
+          python manage.py check
+      - name: Capture before counts
+        run: |
+          python manage.py shell -c "from django.db.models import Q; from articles.models import Article; r=Q(full_text__gt='')|Q(full_text_fa__gt='')|Q(abstract__gt='')|Q(abstract_fa__gt='')|Q(pdf_url__gt='')|Q(pdf__gt=''); print('BEFORE published_readable='+str(Article.objects.filter(published=True).filter(r).count())+' pending='+str(Article.objects.filter(published=True,translation_status__in=['pending','retry_pending']).count()))"
+      - name: Discover all article categories
+        run: python manage.py auto_discover_all --limit "${{ inputs.per_topic || '4' }}"
+      - name: Process translation queue
+        run: python manage.py process_article_queue --limit 40
+      - name: Capture production result
+        run: |
+          python manage.py shell -c "from django.db.models import Q; from articles.models import Article; r=Q(full_text__gt='')|Q(full_text_fa__gt='')|Q(abstract__gt='')|Q(abstract_fa__gt='')|Q(pdf_url__gt='')|Q(pdf__gt=''); q=Article.objects.filter(published=True); print('AFTER published_readable='+str(q.filter(r).count())+' pending='+str(q.filter(translation_status__in=['pending','retry_pending']).count())+' translated='+str(q.filter(translation_status__in=['translated','reviewed','original_only']).count())+' failed='+str(q.filter(translation_status__in=['failed','provider_failed','validation_failed']).count())+' homepage='+str(q.filter(r).order_by('-created_at')[:8].count()))"
