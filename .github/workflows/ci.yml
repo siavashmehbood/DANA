@@ -18,6 +18,7 @@ jobs:
         run: pip install -r requirements.txt
       - name: Argos real en-to-fa smoke
         env:
+          DJANGO_SETTINGS_MODULE: core.settings
           ARGOS_DEVICE_TYPE: cpu
           ARGOS_CHUNK_TYPE: MINISBD
         run: |
