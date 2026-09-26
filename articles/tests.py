@@ -311,6 +311,10 @@ class ArticleLanguageFallbackTests(TestCase):
 
 
 class TranslationPipelineRegressionTests(TestCase):
+    def setUp(self):
+        from . import translation
+        translation._PROVIDER_COOLDOWN.clear()
+
     @patch('articles.translation.time.sleep',return_value=None)
     @patch('articles.translation.requests.get')
     def test_translation_provider_retries_then_uses_success(self,get,sleep):
