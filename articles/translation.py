@@ -198,6 +198,15 @@ def _normalize_translation(text):
     return value
 
 
+def _looks_english(text):
+    letters = re.findall(r'[A-Za-zÀ-ÿ]', text or '')
+    if not letters:
+        return False
+    ascii_letters = len(re.findall(r'[A-Za-z]', text or ''))
+    common = len(re.findall(r'\\b(the|and|of|to|in|for|with|on|is|are|this|that|from|by|as|we|a|an)\\b', text or '', re.I))
+    return ascii_letters / len(letters) >= 0.98 and (common >= 1 or len(letters) <= 80)
+
+
 def _translation_quality(source, translated):
     translated = _normalize_translation(translated)
     if not source or not translated:
@@ -221,6 +230,8 @@ def _translation_quality(source, translated):
 
 
 def translate_text(text, delay=0.1, retries=3, return_provider=False):
+    if text and not _looks_english(text):
+        raise RuntimeError('Unsupported source language for en-to-fa translation')
     result, providers = [], []
     for chunk in _chunks(text):
         translated_chunk, used_provider = '', ''
