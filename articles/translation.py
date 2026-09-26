@@ -244,8 +244,10 @@ def translate_text(text, delay=0.1, retries=3, return_provider=False):
                         translated_chunk, used_provider = candidate, 'mymemory'; break
                     if attempt + 1 < retries: time.sleep(min(2 ** attempt, 4))
                 except (requests.Timeout, requests.ConnectionError):
-                    if attempt + 1 < retries: time.sleep(min(2 ** attempt, 4))
-                    else: _cooldown('mymemory', 60)
+                    if attempt + 1 < retries:
+                        time.sleep(min(2 ** attempt, 4))
+                    else:
+                        _cooldown('mymemory', 60)
                 except (requests.RequestException, ValueError):
                     break
         if not translated_chunk:
