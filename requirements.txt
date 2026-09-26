@@ -11,4 +11,4 @@ psycopg[binary]==3.3.5
 django-unfold==0.106.1
 gunicorn==23.0.0
 
-argostranslate==1.11.1
+argostranslate @ git+https://github.com/argosopentech/argos-translate.git@f48cf32b27c985c3434e58035d62733c82d41c4a
