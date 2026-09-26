@@ -577,6 +577,14 @@ class ScientificTranslationQualityTests(TestCase):
             'ما GPT-5 را در تاخوردگی پروتئین ارزیابی می‌کنیم و بهبود دقت را گزارش می‌کنیم.',
         ))
 
+    def test_non_english_source_is_rejected_before_en_fa_provider_chain(self):
+        from .translation import translate_text
+        with patch('articles.translation.requests.get') as get, patch('articles.translation._argos_translate') as argos:
+            with self.assertRaisesRegex(RuntimeError, 'Unsupported source language'):
+                translate_text('Wat hebben de broers Lumière gemeenschappelijk met de broers Wachowski?', delay=0)
+        get.assert_not_called()
+        argos.assert_not_called()
+
     def test_untranslated_english_is_rejected(self):
         from .translation import _translation_quality
         self.assertFalse(_translation_quality(
