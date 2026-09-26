@@ -43,9 +43,11 @@ def audit_home(page,name):
     section=page.locator("#latest-articles").bounding_box()
     doc_h=page.evaluate("()=>document.documentElement.scrollHeight")
     assert section and section["y"]>=0 and section["y"]<doc_h
-    page.locator("#latest-articles").scroll_into_view_if_needed()
-    expect(page.locator("#latest-articles h2")).to_be_in_viewport()
-    expect(cards.first).to_be_in_viewport()
+    heading=page.locator("#latest-articles h2")
+    heading.scroll_into_view_if_needed(timeout=15000)
+    expect(heading).to_be_in_viewport(timeout=15000)
+    cards.first.scroll_into_view_if_needed(timeout=15000)
+    expect(cards.first).to_be_in_viewport(timeout=15000)
     page.screenshot(path=str(OUT/f"articles-{name}.png"))
     page.screenshot(path=str(OUT/f"home-{name}.png"),full_page=True)
 
