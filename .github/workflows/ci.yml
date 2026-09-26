@@ -23,6 +23,8 @@ jobs:
           ARGOS_CHUNK_TYPE: MINISBD
         run: |
           python - <<'PY'
+          import django
+          django.setup()
           from articles.translation import _argos_translate, _translation_quality
           source = 'Artificial intelligence improves scientific research.'
           translated = _argos_translate(source)
