@@ -577,6 +577,13 @@ class ScientificTranslationQualityTests(TestCase):
             'ما GPT-5 را در تاخوردگی پروتئین ارزیابی می‌کنیم و بهبود دقت را گزارش می‌کنیم.',
         ))
 
+    def test_long_scientific_english_source_is_accepted(self):
+        from .translation import _looks_english
+        self.assertTrue(_looks_english(
+            'Biomedical text mining is becoming increasingly important as the number of biomedical documents rapidly grows. '
+            'With progress in natural language processing, researchers use deep learning for effective biomedical models.'
+        ))
+
     def test_non_english_source_is_rejected_before_en_fa_provider_chain(self):
         from .translation import translate_text
         with patch('articles.translation.requests.get') as get, patch('articles.translation._argos_translate') as argos:
