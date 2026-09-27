@@ -164,25 +164,25 @@ def extract_pdf_text(article):
 
 
 def _chunks(text, limit=450):
-    chunks, current = [], ''
-    for paragraph in (part.strip() for part in (text or '').split('\n')):
-        if not paragraph:
-            continue
-        for word in paragraph.split():
-            if len(word) > limit:
-                if current:
-                    chunks.append(current); current = ''
-                chunks.extend(word[i:i + limit] for i in range(0, len(word), limit))
-                continue
-            candidate = f'{current} {word}'.strip()
-            if current and len(candidate) > limit:
-                chunks.append(current); current = word
-            else:
-                current = candidate
-        if current:
-            chunks.append(current); current = ''
+    value = re.sub(r'\s+', ' ', (text or '')).strip()
+    if not value:
+        return []
+    chunks = []
+    while len(value) > limit:
+        window = value[:limit + 1]
+        # Prefer semantic boundaries so providers do not receive sentence fragments.
+        cut = max(window.rfind('. '), window.rfind('? '), window.rfind('! '), window.rfind('; '))
+        if cut < int(limit * 0.55):
+            cut = window.rfind(' ')
+        if cut <= 0:
+            cut = limit
+        else:
+            cut += 1
+        chunks.append(value[:cut].strip())
+        value = value[cut:].strip()
+    if value:
+        chunks.append(value)
     return chunks
-
 
 def rough_translate(text):
     value = (text or '').strip()
