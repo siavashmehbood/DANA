@@ -203,14 +203,19 @@ def _looks_english(text):
     letters = re.findall(r'[A-Za-zÀ-ÿ]', value)
     if not letters:
         return False
-    english_hits = len(re.findall(r'\\b(the|and|of|to|in|for|with|on|is|are|this|that|from|by|as|we|a|an|using|between|into|than|can|their|which|our)\\b', value, re.I))
-    dutch_hits = len(re.findall(r'\b(de|het|een|van|met|voor|zijn|ze|hun|maar|ook|over|uit|als|wordt|werden|hebben|deze|die|dat)\b', value, re.I))
-    if dutch_hits >= 2 and dutch_hits > english_hits:
+    english_hits = len(re.findall(
+        r'\b(the|and|of|to|in|for|with|on|is|are|this|that|from|by|as|we|a|an|using|between|into|than|can|their|which|our)\b',
+        value, re.I,
+    ))
+    dutch_hits = len(re.findall(
+        r'\b(de|het|een|van|met|voor|zijn|ze|hun|maar|ook|over|uit|als|wordt|werden|hebben|deze|die|dat)\b',
+        value, re.I,
+    ))
+    # Reject only when there is strong positive evidence for Dutch. Scientific
+    # English often contains acronyms, names and terminology with few function words.
+    if dutch_hits >= 3 and dutch_hits >= english_hits + 2:
         return False
-    words = re.findall(r"[A-Za-zÀ-ÿ]+", value)
-    if len(words) <= 14:
-        return True
-    return english_hits >= 2 and english_hits >= dutch_hits
+    return True
 
 def _translation_quality(source, translated):
     translated = _normalize_translation(translated)
