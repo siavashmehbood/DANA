@@ -581,11 +581,12 @@ class ScientificTranslationQualityTests(TestCase):
         from unittest.mock import patch
         from .translation import translate_text
         source = 'The scientific method improves research reliability. ' * 20
-        with patch('articles.translation.requests.get', side_effect=Exception('offline')), \
+        with patch('articles.translation._cooldown_active', return_value=True), \
              patch('articles.translation._argos_translate', return_value=''):
-            with self.assertRaisesRegex(RuntimeError, r'chunk 1/'):
+            with self.assertRaises(RuntimeError) as raised:
                 translate_text(source, retries=0)
-        self.assertNotIn(source[:40], str(self.exception) if hasattr(self, 'exception') else '')
+        self.assertRegex(str(raised.exception), r'chunk 1/')
+        self.assertNotIn(source[:40], str(raised.exception))
 
     def test_long_scientific_english_source_is_accepted(self):
         from .translation import _looks_english
