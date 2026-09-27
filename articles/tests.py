@@ -577,6 +577,16 @@ class ScientificTranslationQualityTests(TestCase):
             'ما GPT-5 را در تاخوردگی پروتئین ارزیابی می‌کنیم و بهبود دقت را گزارش می‌کنیم.',
         ))
 
+    def test_translation_failure_reports_chunk_position_without_source_text(self):
+        from unittest.mock import patch
+        from .translation import translate_text
+        source = 'The scientific method improves research reliability. ' * 20
+        with patch('articles.translation.requests.get', side_effect=Exception('offline')), \
+             patch('articles.translation._argos_translate', return_value=''):
+            with self.assertRaisesRegex(RuntimeError, r'chunk 1/'):
+                translate_text(source, retries=0)
+        self.assertNotIn(source[:40], str(self.exception) if hasattr(self, 'exception') else '')
+
     def test_long_scientific_english_source_is_accepted(self):
         from .translation import _looks_english
         self.assertTrue(_looks_english(
