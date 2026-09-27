@@ -234,8 +234,8 @@ def _translation_quality(source, translated):
     return True
 
 
-def translate_text(text, delay=0.1, retries=3, return_provider=False):
-    if text and not _looks_english(text):
+def translate_text(text, delay=0.1, retries=3, return_provider=False, validate_language=True):
+    if validate_language and text and not _looks_english(text):
         raise RuntimeError('Unsupported source language for en-to-fa translation')
     result, providers = [], []
     for chunk in _chunks(text):
@@ -307,9 +307,13 @@ def translate_article(article, full_text=False, force=False, provider=None, crea
     model.objects.filter(pk=article.pk).update(translation_status='translating',translation_error='')
     try:
         used_providers=[]
+        source_fields = [value for value in (source_title, source_abstract, source_text if full_text else '') if value]
+        language_sample = ' '.join(source_fields)
+        if language_sample and not _looks_english(language_sample):
+            raise RuntimeError('Unsupported source language for en-to-fa translation')
         def translated_value(source, existing, needed=True):
             if not needed or (existing and not force): return existing
-            response = translate_text(source, return_provider=True)
+            response = translate_text(source, return_provider=True, validate_language=False)
             value, used = response if isinstance(response, tuple) else (response, provider or 'mock-or-legacy')
             if used: used_providers.extend(used.split('+'))
             return value
