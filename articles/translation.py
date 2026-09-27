@@ -255,7 +255,14 @@ def _translation_quality_reason(source, translated):
         re.I,
     )
     persian_words = re.findall(r'[\u0600-\u06FF]{2,}', translated)
-    if len(english_prose_words) >= 4 and len(english_prose_words) > len(persian_words):
+    latin_tokens = re.findall(r'\b[A-Za-z][A-Za-z-]{2,}\b', translated)
+    # Lowercase Latin runs are usually untranslated prose. Title-case names,
+    # institutions and all-caps scientific acronyms are intentionally excluded.
+    lowercase_latin = [token for token in latin_tokens if token == token.lower()]
+    if (
+        (len(english_prose_words) >= 4 and len(english_prose_words) > len(persian_words))
+        or (len(lowercase_latin) >= 4 and len(lowercase_latin) > len(persian_words))
+    ):
         return 'latin-dominant'
     if len(words) < max(1, min(4, len(source_words) // 4)):
         return 'too-short'
