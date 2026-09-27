@@ -243,7 +243,8 @@ def translate_text(text, delay=0.1, retries=3, return_provider=False, validate_l
     if validate_language and text and not _looks_english(text):
         raise RuntimeError('Unsupported source language for en-to-fa translation')
     result, providers = [], []
-    for chunk in _chunks(text):
+    chunks = _chunks(text)
+    for chunk_index, chunk in enumerate(chunks, start=1):
         translated_chunk, used_provider = '', ''
         if not _cooldown_active('mymemory'):
             for attempt in range(retries):
@@ -280,7 +281,7 @@ def translate_text(text, delay=0.1, retries=3, return_provider=False, validate_l
         if not translated_chunk:
             fallback = _normalize_translation(rough_translate(chunk))
             if fallback != _normalize_translation(chunk) and _translation_quality(chunk, fallback): translated_chunk, used_provider = fallback, 'rough-glossary'
-            else: raise RuntimeError('Translation providers exhausted without a valid Persian translation')
+            else: raise RuntimeError(f'Translation providers exhausted without a valid Persian translation (chunk {chunk_index}/{len(chunks)})')
         result.append(translated_chunk); providers.append(used_provider); time.sleep(delay)
     value = '\n\n'.join(result)
     provenance = '+'.join(dict.fromkeys(providers))
