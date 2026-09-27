@@ -335,7 +335,7 @@ def translate_article(article, full_text=False, force=False, provider=None, crea
             raise RuntimeError('Unsupported source language for en-to-fa translation')
         def translated_value(source, existing, needed=True):
             if not needed or (existing and not force): return existing
-            response = translate_text(source, return_provider=True, validate_language=False)
+            response = translate_text(_clean_translation_source(source), return_provider=True, validate_language=False)
             value, used = response if isinstance(response, tuple) else (response, provider or 'mock-or-legacy')
             if used: used_providers.extend(used.split('+'))
             return value
