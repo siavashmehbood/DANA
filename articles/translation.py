@@ -182,7 +182,23 @@ def _chunks(text, limit=450):
         value = value[cut:].strip()
     if value:
         chunks.append(value)
+    # A very small tail often contains citations, names or a sentence fragment.
+    # Merge it back when possible so quality validation sees enough context.
+    if len(chunks) > 1 and len(chunks[-1]) < 90 and len(chunks[-2]) + 1 + len(chunks[-1]) <= limit + 90:
+        chunks[-2] = f'{chunks[-2]} {chunks[-1]}'
+        chunks.pop()
     return chunks
+
+
+def _clean_translation_source(text):
+    value = (text or '').strip()
+    if not value:
+        return ''
+    value = re.sub(r'Search for other works by this author on:\s*GSW\s*Google Scholar', ' ', value, flags=re.I)
+    value = re.sub(r'\bResearch Article\|\s*[A-Z][a-z]+\s+\d{1,2},\s+\d{4}\b', ' ', value)
+    value = re.sub(r'\s+', ' ', value).strip()
+    return value
+
 
 def rough_translate(text):
     value = (text or '').strip()
