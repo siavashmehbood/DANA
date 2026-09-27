@@ -201,12 +201,23 @@ def import_discovered(query, limit=20, category=None, providers=None):
             continue
         source = source_cache[provider]
         allow_full = source.allow_full_republish
+        # Rights policy can remove the only readable asset (for example a PDF).
+        # Re-check effective content after applying that policy so metadata-only
+        # rows are never published merely because the provider exposed a PDF.
+        effective_pdf = item.get('pdf_url', '') if allow_full else ''
+        has_effective_content = any(
+            (item.get(field) or '').strip()
+            for field in ('abstract', 'full_text', 'full_text_fa')
+        ) or bool((effective_pdf or '').strip())
+        if not has_effective_content:
+            logger.info('Skipping article with no publishable content after rights policy: %s', item.get('title', ''))
+            continue
         defaults = {
             'title': item['title'], 'slug': _slug(item['title'], identity),
             'authors': item.get('authors', ''), 'abstract': item.get('abstract', ''),
             'year': item.get('year'), 'publication_date': item.get('publication_date'), 'journal': item.get('journal', ''),
             'doi': item.get('doi', ''), 'source_url': item.get('source_url', ''),
-            'pdf_url': item.get('pdf_url', '') if allow_full else '', 'category': category,
+            'pdf_url': effective_pdf, 'category': category,
             'access': 'open' if (allow_full and item.get('pdf_url')) else 'external', 'published': True,
             'external_id': item.get('external_id', ''), 'source_provider': provider, 'source': source,
             'citation_count': item.get('citation_count') or 0,
