@@ -18,6 +18,13 @@ def _process_article(article_id):
             return
         if article.source_id and not article.source.allow_full_republish:
             result=translate_article(article, full_text=False)
+            if result.translation_status == 'provider_failed' and result.translation_error == 'Unsupported source language for en-to-fa translation':
+                Article.objects.filter(pk=article_id).update(
+                    translation_status='original_only',
+                    translation_error='Source language is not supported by the en-to-fa translation pipeline.',
+                    updated_at=timezone.now(),
+                )
+                return
             if result.translation_status in {'failed','provider_failed','validation_failed'}:
                 logger.warning('Automatic translation failed for article %s: %s', article_id, result.translation_error)
             return
@@ -36,6 +43,13 @@ def _process_article(article_id):
                 logger.info('PDF extraction failed for article %s: %s', article_id, exc)
         article.refresh_from_db(fields=['full_text'])
         result=translate_article(article, full_text=bool(article.full_text))
+        if result.translation_status == 'provider_failed' and result.translation_error == 'Unsupported source language for en-to-fa translation':
+            Article.objects.filter(pk=article_id).update(
+                translation_status='original_only',
+                translation_error='Source language is not supported by the en-to-fa translation pipeline.',
+                updated_at=timezone.now(),
+            )
+            return
         if result.translation_status in {'failed','provider_failed','validation_failed'}:
             logger.warning('Automatic translation failed for article %s: %s', article_id, result.translation_error)
     except Article.DoesNotExist:
