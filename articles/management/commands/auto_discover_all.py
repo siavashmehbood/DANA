@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from articles.importer import import_discovered
 from articles.models import ArticleCategory
 
@@ -58,7 +58,7 @@ class Command(BaseCommand):
                 if name.lower() in wanted or query.lower() in wanted
                 or query.replace(' ', '-').lower() in wanted
             ]
-        total_new = total_updated = total_found = 0
+        total_new = total_updated = total_found = failed_topics = 0
         for name, query in catalog:
             category, _ = ArticleCategory.objects.get_or_create(
                 slug=query.replace(' ', '-'), defaults={'name': name}
@@ -69,6 +69,7 @@ class Command(BaseCommand):
             try:
                 result = import_discovered(query, options['limit'], category)
             except Exception as exc:
+                failed_topics += 1
                 self.stderr.write(f'{name}: ERROR {type(exc).__name__}: {exc}')
                 continue
             total_found += result['discovered']
@@ -80,6 +81,8 @@ class Command(BaseCommand):
             )
         self._write_safe(
             f'TOTAL found={total_found} new={total_new} updated={total_updated} '
-            f'categories={len(catalog)}',
+            f'categories={len(catalog)} failed_topics={failed_topics}',
             style='success',
         )
+        if catalog and failed_topics == len(catalog):
+            raise CommandError('Article discovery failed for every selected topic')
