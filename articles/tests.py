@@ -442,6 +442,24 @@ class AutomaticArticleProcessingRegressionTests(TestCase):
         self.assertFalse(translate.call_args.kwargs['full_text'])
 
 
+    def test_unsupported_source_language_becomes_original_only(self):
+        from articles.services import _process_article
+        article=Article.objects.create(
+            title='Nederlandse bron', slug='nederlandse-bron',
+            abstract='Wat hebben de broers Lumière gemeenschappelijk met de broers Wachowski? De film heeft een lange geschiedenis.',
+            published=True,
+        )
+        with patch('articles.services.translate_article') as translate:
+            translate.return_value=type('Result',(),{
+                'translation_status':'provider_failed',
+                'translation_error':'Unsupported source language for en-to-fa translation',
+            })()
+            _process_article(article.pk)
+        article.refresh_from_db()
+        self.assertEqual(article.translation_status, 'original_only')
+        self.assertIn('not supported', article.translation_error)
+
+
 class ArticleProcessingSignalRegressionTests(TestCase):
     def test_internal_translation_status_save_does_not_requeue_processing(self):
         article=Article.objects.create(title='Signal guard',slug='signal-guard',abstract='Readable',published=False)
