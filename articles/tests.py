@@ -175,6 +175,16 @@ class ArticleSourcePolicyTests(TestCase):
         self.assertEqual(article.access,'external')
         self.assertEqual(article.source,source)
 
+    def test_pdf_only_restricted_source_is_not_imported_as_metadata_only(self):
+        from unittest.mock import patch
+        from .importer import import_discovered
+        ArticleSource.objects.create(name='pdf-only-restricted',source_type='api',allow_full_republish=False)
+        row={'provider':'pdf-only-restricted','external_id':'pdf-1','title':'PDF only paper','authors':'A','abstract':'','year':2026,'publication_date':None,'journal':'J','doi':'10.1/pdf-only','source_url':'https://example.test/paper','pdf_url':'https://example.test/paper.pdf','citation_count':1,'relevance_score':1}
+        with patch('articles.importer.discover_articles',return_value=[row]):
+            result=import_discovered('policy')
+        self.assertEqual(result['created'],0)
+        self.assertFalse(Article.objects.filter(doi='10.1/pdf-only').exists())
+
 
 class ArticleFallbackTests(TestCase):
     def test_detail_defaults_to_original_when_persian_is_unavailable(self):
