@@ -233,10 +233,10 @@ def _looks_english(text):
         return False
     return True
 
-def _translation_quality(source, translated):
+def _translation_quality_reason(source, translated):
     translated = _normalize_translation(translated)
     if not source or not translated:
-        return False
+        return 'empty'
     # Scientific titles legitimately retain acronyms, model names, formulae and proper nouns.
     # Require meaningful Persian rather than an unrealistically high Persian-letter ratio.
     persian = len(re.findall(r'[\u0600-\u06FF]', translated))
@@ -245,14 +245,18 @@ def _translation_quality(source, translated):
     source_words = re.findall(r"[A-Za-z]+", source)
     min_persian = 2 if len(source_words) <= 4 else max(3, min(12, len(source_words) // 3))
     if persian < min_persian:
-        return False
+        return 'too-little-persian'
     # Mixed scientific Persian may retain acronyms/proper nouns, but prose that
     # remains predominantly English is not a usable translation.
     if latin > persian and latin > 8:
-        return False
+        return 'latin-dominant'
     if len(words) < max(1, min(4, len(source_words) // 4)):
-        return False
-    return True
+        return 'too-short'
+    return None
+
+
+def _translation_quality(source, translated):
+    return _translation_quality_reason(source, translated) is None
 
 
 def translate_text(text, delay=0.1, retries=3, return_provider=False, validate_language=True):
@@ -262,11 +266,13 @@ def translate_text(text, delay=0.1, retries=3, return_provider=False, validate_l
     chunks = _chunks(text)
     for chunk_index, chunk in enumerate(chunks, start=1):
         translated_chunk, used_provider = '', ''
+        diagnostics = {'mymemory': 'not-used', 'argos': 'not-used', 'rough': 'not-used'}
         if not _cooldown_active('mymemory'):
             for attempt in range(retries):
                 try:
                     response = requests.get(MYMEMORY_URL, params={'q': chunk, 'langpair': 'en|fa'}, timeout=8, headers={'User-Agent': 'DANA/2.0'})
                     if response.status_code == 429:
+                        diagnostics['mymemory'] = 'rate-limited'
                         _cooldown('mymemory', 300); break
                     if response.status_code >= 500:
                         if attempt + 1 < retries:
@@ -278,6 +284,7 @@ def translate_text(text, delay=0.1, retries=3, return_provider=False, validate_l
                     if response_status and int(response_status) >= 400:
                         _cooldown('mymemory', 300 if int(response_status) == 429 else 120); break
                     candidate = _normalize_translation(payload.get('responseData', {}).get('translatedText', ''))
+                    diagnostics['mymemory'] = _translation_quality_reason(chunk, candidate) or 'valid'
                     if candidate and _translation_quality(chunk, candidate):
                         translated_chunk, used_provider = candidate, 'mymemory'; break
                     if attempt + 1 < retries: time.sleep(min(2 ** attempt, 4))
@@ -291,13 +298,17 @@ def translate_text(text, delay=0.1, retries=3, return_provider=False, validate_l
         if not translated_chunk:
             try:
                 candidate = _argos_translate(chunk)
+                diagnostics['argos'] = _translation_quality_reason(chunk, candidate) or 'valid'
                 if candidate and _translation_quality(chunk, candidate): translated_chunk, used_provider = candidate, 'argos-offline'
             except Exception:
-                pass
+                diagnostics['argos'] = 'error'
         if not translated_chunk:
             fallback = _normalize_translation(rough_translate(chunk))
+            diagnostics['rough'] = 'unchanged' if fallback == _normalize_translation(chunk) else (_translation_quality_reason(chunk, fallback) or 'valid')
             if fallback != _normalize_translation(chunk) and _translation_quality(chunk, fallback): translated_chunk, used_provider = fallback, 'rough-glossary'
-            else: raise RuntimeError(f'Translation providers exhausted without a valid Persian translation (chunk {chunk_index}/{len(chunks)})')
+            else:
+                detail = ', '.join(f'{name}={reason}' for name, reason in diagnostics.items())
+                raise RuntimeError(f'Translation providers exhausted without a valid Persian translation (chunk {chunk_index}/{len(chunks)}; {detail})')
         result.append(translated_chunk); providers.append(used_provider); time.sleep(delay)
     value = '\n\n'.join(result)
     provenance = '+'.join(dict.fromkeys(providers))
