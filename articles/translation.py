@@ -204,7 +204,7 @@ def _looks_english(text):
     if not letters:
         return False
     english_hits = len(re.findall(r'\\b(the|and|of|to|in|for|with|on|is|are|this|that|from|by|as|we|a|an|using|between|into|than|can|their|which|our)\\b', value, re.I))
-    dutch_hits = len(re.findall(r'\\b(de|het|een|van|met|voor|zijn|ze|hun|maar|ook|over|uit|als|wordt|werden|hebben|deze|die|dat)\\b', value, re.I))
+    dutch_hits = len(re.findall(r'\b(de|het|een|van|met|voor|zijn|ze|hun|maar|ook|over|uit|als|wordt|werden|hebben|deze|die|dat)\b', value, re.I))
     if dutch_hits >= 2 and dutch_hits > english_hits:
         return False
     words = re.findall(r"[A-Za-zÀ-ÿ]+", value)
