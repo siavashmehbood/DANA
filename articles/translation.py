@@ -246,9 +246,16 @@ def _translation_quality_reason(source, translated):
     min_persian = 2 if len(source_words) <= 4 else max(3, min(12, len(source_words) // 3))
     if persian < min_persian:
         return 'too-little-persian'
-    # Mixed scientific Persian may retain acronyms/proper nouns, but prose that
-    # remains predominantly English is not a usable translation.
-    if latin > persian and latin > 8:
+    # Scientific Persian legitimately keeps acronyms, model names, people and
+    # institutions in Latin script. Reject only when ordinary English prose
+    # remains dominant; raw Latin character counts over-penalize those terms.
+    english_prose_words = re.findall(
+        r'\b(?:the|and|of|to|in|for|with|on|is|are|this|that|from|by|as|we|a|an|using|between|into|than|can|their|which|our|was|were|be|been|has|have|had|it|its|these|those|but|or|not|results?|study|article|research)\b',
+        translated,
+        re.I,
+    )
+    persian_words = re.findall(r'[\u0600-\u06FF]{2,}', translated)
+    if len(english_prose_words) >= 4 and len(english_prose_words) > len(persian_words):
         return 'latin-dominant'
     if len(words) < max(1, min(4, len(source_words) // 4)):
         return 'too-short'
