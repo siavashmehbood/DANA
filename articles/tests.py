@@ -595,6 +595,14 @@ class ScientificTranslationQualityTests(TestCase):
             'ما GPT-5 را در تاخوردگی پروتئین ارزیابی می‌کنیم و بهبود دقت را گزارش می‌کنیم.',
         ))
 
+    def test_translation_chunks_prefer_sentence_boundaries(self):
+        from .translation import _chunks
+        text = ('This is a complete scientific sentence with useful context. ' * 12).strip()
+        chunks = _chunks(text, limit=180)
+        self.assertGreater(len(chunks), 1)
+        self.assertTrue(all(chunk.endswith('.') for chunk in chunks[:-1]))
+        self.assertTrue(all(len(chunk) <= 180 for chunk in chunks))
+
     def test_translation_failure_reports_chunk_position_without_source_text(self):
         from unittest.mock import patch
         from .translation import translate_text
