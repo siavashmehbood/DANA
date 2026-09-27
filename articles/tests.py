@@ -584,6 +584,20 @@ class ScientificTranslationQualityTests(TestCase):
             'روش‌های BERT و CRISPR در پژوهش آلزایمر',
         ))
 
+    def test_scientific_translation_with_many_latin_names_is_valid(self):
+        from .translation import _translation_quality
+        self.assertTrue(_translation_quality(
+            'Alley and Mayewski studied Holocene climate at Pennsylvania State University.',
+            'Alley و Mayewski اقلیم Holocene را در Pennsylvania State University بررسی کردند و نتایج مهمی گزارش کردند.',
+        ))
+
+    def test_english_prose_with_a_few_persian_words_is_rejected(self):
+        from .translation import _translation_quality
+        self.assertFalse(_translation_quality(
+            'The study results show significant climate change.',
+            'The study results are important and the research is useful پژوهش اقلیم',
+        ))
+
     def test_short_scientific_title_is_valid(self):
         from .translation import _translation_quality
         self.assertTrue(_translation_quality('AI Safety', 'ایمنی هوش مصنوعی'))
