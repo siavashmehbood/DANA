@@ -638,7 +638,8 @@ class ScientificTranslationQualityTests(TestCase):
         from .translation import translate_text
         source = 'The scientific method improves research reliability. ' * 20
         with patch('articles.translation._cooldown_active', return_value=True), \
-             patch('articles.translation._argos_translate', return_value=''):
+             patch('articles.translation._argos_translate', return_value=''), \
+             patch('articles.translation.rough_translate', side_effect=lambda value: value):
             with self.assertRaises(RuntimeError) as raised:
                 translate_text(source, retries=0)
         self.assertRegex(str(raised.exception), r'chunk 1/')
