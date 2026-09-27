@@ -595,6 +595,22 @@ class ScientificTranslationQualityTests(TestCase):
             'ما GPT-5 را در تاخوردگی پروتئین ارزیابی می‌کنیم و بهبود دقت را گزارش می‌کنیم.',
         ))
 
+    def test_translation_source_cleaner_removes_provider_metadata(self):
+        from .translation import _clean_translation_source
+        source = 'Research Article| June 01, 1997 Climate study. Search for other works by this author on: GSW Google Scholar Results remain significant.'
+        cleaned = _clean_translation_source(source)
+        self.assertNotIn('Research Article|', cleaned)
+        self.assertNotIn('Google Scholar', cleaned)
+        self.assertIn('Climate study.', cleaned)
+        self.assertIn('Results remain significant.', cleaned)
+
+    def test_translation_chunks_merge_tiny_tail(self):
+        from .translation import _chunks
+        source = ('Scientific evidence supports this conclusion and provides useful context. ' * 6) + 'Short final note.'
+        chunks = _chunks(source, limit=180)
+        self.assertGreater(len(chunks), 1)
+        self.assertGreaterEqual(len(chunks[-1]), 90)
+
     def test_translation_chunks_prefer_sentence_boundaries(self):
         from .translation import _chunks
         text = ('This is a complete scientific sentence with useful context. ' * 12).strip()
