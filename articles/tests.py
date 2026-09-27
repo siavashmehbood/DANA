@@ -395,6 +395,28 @@ class ArticleDiscoveryCommandReliabilityTests(TestCase):
             )
 
 
+class ArticleImporterIdentityTests(TestCase):
+    def test_reimport_same_doi_updates_without_duplicate(self):
+        from .importer import import_discovered
+        row={'provider':'identity-provider','external_id':'identity-1','title':'Identity paper','authors':'A','abstract':'Readable abstract','year':2026,'publication_date':None,'journal':'J','doi':'10.1/identity','source_url':'https://example.test/paper','pdf_url':'','citation_count':1,'relevance_score':1}
+        with patch('articles.importer.discover_articles', return_value=[row]):
+            first=import_discovered('identity')
+            second=import_discovered('identity')
+        self.assertEqual(first['created'],1)
+        self.assertEqual(second['updated'],1)
+        self.assertEqual(Article.objects.filter(doi='10.1/identity').count(),1)
+
+    def test_nonempty_doi_and_provider_identity_are_database_unique(self):
+        from django.db import IntegrityError, transaction
+        Article.objects.create(title='One',slug='identity-one',abstract='Readable',doi='10.1/db-unique',source_provider='provider',external_id='external-1')
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Article.objects.create(title='Two',slug='identity-two',abstract='Readable',doi='10.1/db-unique')
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Article.objects.create(title='Three',slug='identity-three',abstract='Readable',source_provider='provider',external_id='external-1')
+
+
 class ArticleImporterTranslationTriggerTests(TestCase):
     def test_importer_triggers_translation_processing_for_existing_untranslated_article(self):
         from .importer import import_discovered
