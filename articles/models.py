@@ -125,6 +125,18 @@ class Article(models.Model):
         verbose_name = 'مقاله'
         verbose_name_plural = 'مقالات'
         indexes = [models.Index(fields=['year']), models.Index(fields=['published']), models.Index(fields=['translation_status']), models.Index(fields=['source_provider','external_id'], name='articles_ar_source__dcb879_idx')]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['doi'],
+                condition=~models.Q(doi=''),
+                name='unique_article_nonempty_doi',
+            ),
+            models.UniqueConstraint(
+                fields=['source_provider', 'external_id'],
+                condition=~models.Q(source_provider='') & ~models.Q(external_id=''),
+                name='unique_article_provider_external_id',
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.slug:
