@@ -373,6 +373,28 @@ class TranslationPipelineRegressionTests(TestCase):
         self.assertEqual(article.translation_status,'validation_failed')
 
 
+class ArticleDiscoveryCommandReliabilityTests(TestCase):
+    def test_auto_discover_all_fails_when_every_selected_topic_fails(self):
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        with patch('articles.management.commands.auto_discover_all.import_discovered', side_effect=RuntimeError('provider down')):
+            with self.assertRaisesRegex(CommandError, 'every selected topic'):
+                call_command('auto_discover_all', topic=['artificial intelligence machine learning'], limit=1)
+
+    def test_auto_discover_all_tolerates_partial_topic_failure(self):
+        from django.core.management import call_command
+        results = [
+            RuntimeError('one provider path down'),
+            {'discovered': 1, 'created': 1, 'updated': 0},
+        ]
+        with patch('articles.management.commands.auto_discover_all.import_discovered', side_effect=results):
+            call_command(
+                'auto_discover_all',
+                topic=['artificial intelligence machine learning', 'computer science software engineering'],
+                limit=1,
+            )
+
+
 class ArticleImporterTranslationTriggerTests(TestCase):
     def test_importer_triggers_translation_processing_for_existing_untranslated_article(self):
         from .importer import import_discovered
