@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timezone
 
 import requests
+from django.db import IntegrityError, transaction
 from django.utils.text import slugify
 
 from .models import Article, ArticleSource
@@ -237,8 +238,26 @@ def import_discovered(query, limit=20, category=None, providers=None):
             updated += 1
         else:
             defaults['last_discovered_at'] = datetime.now(timezone.utc)
-            Article.objects.create(**defaults)
-            created += 1
+            try:
+                with transaction.atomic():
+                    Article.objects.create(**defaults)
+                created += 1
+            except IntegrityError:
+                # Another discovery worker may have inserted the same DOI/provider
+                # identity after our lookup. Treat that race as an idempotent update.
+                obj = Article.objects.filter(doi=defaults['doi']).first() if defaults['doi'] else None
+                if not obj and defaults['external_id']:
+                    obj = Article.objects.filter(
+                        external_id=defaults['external_id'],
+                        source_provider=defaults['source_provider'],
+                    ).first()
+                if not obj:
+                    raise
+                for key, value in defaults.items():
+                    if value not in ('', None):
+                        setattr(obj, key, value)
+                obj.save()
+                updated += 1
     return {'created': created, 'updated': updated, 'discovered': len(discovered)}
 
 
