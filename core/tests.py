@@ -25,6 +25,17 @@ class HealthEndpointTests(TestCase):
         self.assertEqual(ready['Cache-Control'],'no-store')
 
 
+class ReleaseMarkerTests(TestCase):
+    def test_deployed_release_falls_back_to_git_head(self):
+        from unittest.mock import patch
+        from core.views import _deployed_release
+        with patch.dict('os.environ', {'RENDER_GIT_COMMIT': ''}), \
+             patch('pathlib.Path.read_text', side_effect=FileNotFoundError), \
+             patch('subprocess.check_output', return_value='abc123\n') as git_head:
+            self.assertEqual(_deployed_release(), 'abc123')
+            git_head.assert_called_once()
+
+
 class DatabaseUrlParsingTests(TestCase):
     def test_postgres_url_decodes_credentials_and_database_name(self):
         from core.settings import parse_postgres_database_url
