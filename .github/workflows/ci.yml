@@ -82,6 +82,8 @@ jobs:
         run: python manage.py makemigrations --check
       - name: Apply migrations
         run: python manage.py migrate --noinput
+      - name: Audit migration history
+        run: python manage.py audit_migration_history
       - name: PostgreSQL regression suite
         run: python manage.py test
 
