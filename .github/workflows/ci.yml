@@ -98,15 +98,30 @@ jobs:
         run: |
           pip install playwright==1.55.0
           playwright install --with-deps chromium
-      - name: Wait for staging deploy with manifest-versioned assets
+      - name: Wait for exact staging commit and manifest-versioned assets
         env:
           DANA_E2E_BASE_URL: https://dana-staging-web.onrender.com
+          EXPECTED_DEPLOY_SHA: ${{ github.sha }}
         run: |
           python - <<'PY'
-          import re,time,urllib.request
-          url='https://dana-staging-web.onrender.com/'
+          import json,os,re,time,urllib.request
+          base='https://dana-staging-web.onrender.com'
+          url=base+'/'
+          ready_url=base+'/readyz/'
+          expected_sha=os.environ['EXPECTED_DEPLOY_SHA']
           expected=re.compile(r'/static/css/app\.[0-9a-f]{12}\.css')
-          for attempt in range(30):
+          for attempt in range(45):
+              try:
+                  ready_req=urllib.request.Request(
+                      ready_url,
+                      headers={'Cache-Control':'no-cache','Pragma':'no-cache','User-Agent':'DANA-CI-deploy-readiness'},
+                  )
+                  ready=json.loads(urllib.request.urlopen(ready_req,timeout=30).read().decode('utf-8'))
+                  deployed_sha=ready.get('release','')
+                  if deployed_sha != expected_sha:
+                      print('waiting for exact staging commit',attempt+1,'deployed=',deployed_sha[:12] or '<unknown>','expected=',expected_sha[:12])
+                      time.sleep(20)
+                      continue
               try:
                   req=urllib.request.Request(
                       url,
@@ -121,7 +136,7 @@ jobs:
                   if match:
                       asset=match.group(0)
                       asset_req=urllib.request.Request(
-                          'https://dana-staging-web.onrender.com'+asset,
+                          base+asset,
                           headers={'Cache-Control':'no-cache','User-Agent':'DANA-CI-deploy-readiness'},
                       )
                       response=urllib.request.urlopen(asset_req,timeout=30)
@@ -133,7 +148,7 @@ jobs:
                   print('staging probe failed',repr(exc))
               time.sleep(20)
           else:
-              raise SystemExit('staging did not expose a live WhiteNoise manifest asset in time')
+              raise SystemExit('staging did not expose the exact expected commit with a live WhiteNoise manifest asset in time')
           PY
       - name: Real browser mobile acceptance
         env:
