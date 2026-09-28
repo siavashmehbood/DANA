@@ -742,7 +742,9 @@ class ObservabilityEndpointTests(TestCase):
     def test_readiness_reports_database_dependency(self):
         response=self.client.get(reverse('readyz'))
         self.assertEqual(response.status_code,200)
-        self.assertEqual(response.json(),{'status':'ready','database':'ok'})
+        self.assertEqual(response.json()['status'],'ready')
+        self.assertEqual(response.json()['database'],'ok')
+        self.assertIn('release',response.json())
         self.assertEqual(response['Cache-Control'],'no-store')
 
 
