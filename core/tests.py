@@ -24,6 +24,25 @@ class HealthEndpointTests(TestCase):
         self.assertEqual(ready['Cache-Control'],'no-store')
 
 
+class DatabaseUrlParsingTests(TestCase):
+    def test_postgres_url_decodes_credentials_and_database_name(self):
+        from core.settings import parse_postgres_database_url
+        config=parse_postgres_database_url(
+            'postgresql://user%40name:p%40ss%2Fword@db.example.test:5433/dana%20articles?sslmode=verify-full'
+        )
+        self.assertEqual(config['USER'],'user@name')
+        self.assertEqual(config['PASSWORD'],'p@ss/word')
+        self.assertEqual(config['NAME'],'dana articles')
+        self.assertEqual(config['HOST'],'db.example.test')
+        self.assertEqual(config['PORT'],'5433')
+        self.assertEqual(config['OPTIONS']['sslmode'],'verify-full')
+
+    def test_postgres_url_uses_default_sslmode_when_query_omits_it(self):
+        from core.settings import parse_postgres_database_url
+        config=parse_postgres_database_url('postgres://user:pass@db.example.test/dana', 'require')
+        self.assertEqual(config['OPTIONS']['sslmode'],'require')
+
+
 class PrivateMediaConfigurationTests(TestCase):
     def test_private_media_root_rejects_public_media_root_or_children(self):
         from core.settings import validate_private_media_root
