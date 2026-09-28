@@ -122,7 +122,6 @@ jobs:
                       print('waiting for exact staging commit',attempt+1,'deployed=',deployed_sha[:12] or '<unknown>','expected=',expected_sha[:12])
                       time.sleep(20)
                       continue
-              try:
                   req=urllib.request.Request(
                       url,
                       headers={
