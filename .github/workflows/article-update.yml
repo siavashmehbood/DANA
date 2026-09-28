@@ -49,6 +49,8 @@ jobs:
         run: |
           test -n "$DANA_ARTICLE_DATABASE_URL" || { echo "::error::DANA_ARTICLE_DATABASE_URL is not configured"; exit 1; }
           python manage.py check
+      - name: Audit production migration history
+        run: python manage.py audit_migration_history
       - name: Capture before counts
         run: |
           python manage.py shell -c "from django.db.models import Q; from articles.models import Article; r=Q(full_text__gt='')|Q(full_text_fa__gt='')|Q(abstract__gt='')|Q(abstract_fa__gt='')|Q(pdf_url__gt='')|Q(pdf__gt=''); print('BEFORE published_readable='+str(Article.objects.filter(published=True).filter(r).count())+' pending='+str(Article.objects.filter(published=True,translation_status__in=['pending','retry_pending']).count()))"
