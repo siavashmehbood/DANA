@@ -19,11 +19,22 @@ WSGI_APPLICATION='core.wsgi.application'; ASGI_APPLICATION='core.asgi.applicatio
 DATABASE_URL=os.getenv('DANA_ARTICLE_DATABASE_URL','').strip()
 DB_ENGINE=os.getenv('DB_ENGINE','sqlite3')
 if DATABASE_URL:
-    from urllib.parse import urlparse
+    from urllib.parse import parse_qs, unquote, urlparse
     _db=urlparse(DATABASE_URL)
     if _db.scheme not in {'postgres','postgresql'} or not _db.hostname or not _db.path.strip('/'):
         raise RuntimeError('DANA_ARTICLE_DATABASE_URL must be a PostgreSQL URL')
-    DATABASES={'default':{'ENGINE':'django.db.backends.postgresql','NAME':_db.path.lstrip('/'),'USER':_db.username or '','PASSWORD':_db.password or '','HOST':_db.hostname,'PORT':str(_db.port or 5432),'CONN_MAX_AGE':0,'OPTIONS':{'sslmode':os.getenv('DB_SSLMODE','require')}}}
+    _query=parse_qs(_db.query)
+    _sslmode=(_query.get('sslmode') or [os.getenv('DB_SSLMODE','require')])[-1]
+    DATABASES={'default':{
+        'ENGINE':'django.db.backends.postgresql',
+        'NAME':unquote(_db.path.lstrip('/')),
+        'USER':unquote(_db.username or ''),
+        'PASSWORD':unquote(_db.password or ''),
+        'HOST':_db.hostname,
+        'PORT':str(_db.port or 5432),
+        'CONN_MAX_AGE':0,
+        'OPTIONS':{'sslmode':_sslmode},
+    }}
 elif DB_ENGINE=='postgresql':
     DATABASES={'default':{'ENGINE':'django.db.backends.postgresql','NAME':os.getenv('DB_NAME',''),'USER':os.getenv('DB_USER',''),'PASSWORD':os.getenv('DB_PASSWORD',''),'HOST':os.getenv('DB_HOST','localhost'),'PORT':os.getenv('DB_PORT','5432'),'CONN_MAX_AGE':int(os.getenv('DB_CONN_MAX_AGE','60')),'OPTIONS':{'sslmode':os.getenv('DB_SSLMODE','require')}}}
 else: DATABASES={'default':{'ENGINE':'django.db.backends.sqlite3','NAME':BASE_DIR/'db.sqlite3'}}
