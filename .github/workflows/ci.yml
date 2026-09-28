@@ -86,7 +86,27 @@ jobs:
         run: python manage.py test
 
 
+  deploy-staging:
+    needs: [test, postgres]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dana-2.0' }}
+    runs-on: ubuntu-latest
+    env:
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+    steps:
+      - name: Trigger Render deploy when hook is configured
+        shell: bash
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::notice::RENDER_DEPLOY_HOOK_URL is not configured; relying on Render native auto-deploy."
+            exit 0
+          fi
+          curl --fail --silent --show-error --retry 3 --retry-all-errors \
+            --request POST "$RENDER_DEPLOY_HOOK_URL" >/dev/null
+          echo "Render deploy hook accepted."
+
   browser-production:
+    needs: [test, postgres, deploy-staging]
+    if: ${{ always() && needs.test.result == 'success' && needs.postgres.result == 'success' && (needs.deploy-staging.result == 'success' || needs.deploy-staging.result == 'skipped') && (github.event_name == 'push' && github.ref == 'refs/heads/dana-2.0') }}
     concurrency:
       group: browser-production-${{ github.ref }}
       cancel-in-progress: true
