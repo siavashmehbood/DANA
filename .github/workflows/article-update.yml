@@ -9,6 +9,10 @@ on:
         description: "Maximum imported candidates per topic"
         required: false
         default: "4"
+      max_new:
+        description: "Global maximum number of newly created articles"
+        required: false
+        default: "2"
 
 concurrency:
   group: production-article-update
@@ -44,7 +48,7 @@ jobs:
         run: |
           python manage.py shell -c "from django.db.models import Q; from articles.models import Article; r=Q(full_text__gt='')|Q(full_text_fa__gt='')|Q(abstract__gt='')|Q(abstract_fa__gt='')|Q(pdf_url__gt='')|Q(pdf__gt=''); print('BEFORE published_readable='+str(Article.objects.filter(published=True).filter(r).count())+' pending='+str(Article.objects.filter(published=True,translation_status__in=['pending','retry_pending']).count()))"
       - name: Discover all article categories
-        run: python manage.py auto_discover_all --limit "${{ inputs.per_topic || '4' }}"
+        run: python manage.py auto_discover_all --limit "${{ inputs.per_topic || '4' }}" --max-new "${{ inputs.max_new || '2' }}"
       - name: Process translation queue
         run: python manage.py process_article_queue --limit 40 --retry-failed
       - name: Capture production result
