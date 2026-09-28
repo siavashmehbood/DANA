@@ -87,6 +87,9 @@ jobs:
 
 
   browser-production:
+    concurrency:
+      group: browser-production-${{ github.ref }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
