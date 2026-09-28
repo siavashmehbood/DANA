@@ -45,6 +45,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--limit', type=int, default=4)
+        parser.add_argument('--max-new', type=int, default=2, help='Global cap for newly created articles; existing articles may still be updated.')
         parser.add_argument('--topic', action='append', dest='topics')
         parser.add_argument('--only', nargs='+', help='Run selected category slugs/names only.')
 
@@ -67,7 +68,8 @@ class Command(BaseCommand):
                 category.name = name
                 category.save(update_fields=['name'])
             try:
-                result = import_discovered(query, options['limit'], category)
+                remaining_new = max(0, options['max_new'] - total_new)
+                result = import_discovered(query, options['limit'], category, max_new=remaining_new)
             except Exception as exc:
                 failed_topics += 1
                 self.stderr.write(f'{name}: ERROR {type(exc).__name__}: {exc}')
@@ -81,7 +83,7 @@ class Command(BaseCommand):
             )
         self._write_safe(
             f'TOTAL found={total_found} new={total_new} updated={total_updated} '
-            f'categories={len(catalog)} failed_topics={failed_topics}',
+            f'categories={len(catalog)} failed_topics={failed_topics} max_new={options["max_new"]}',
             style='success',
         )
         if catalog and failed_topics == len(catalog):
