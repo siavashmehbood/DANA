@@ -381,6 +381,22 @@ class ArticleDiscoveryCommandReliabilityTests(TestCase):
             with self.assertRaisesRegex(CommandError, 'every selected topic'):
                 call_command('auto_discover_all', topic=['artificial intelligence machine learning'], limit=1)
 
+    def test_auto_discover_all_shares_one_global_new_article_budget(self):
+        from django.core.management import call_command
+        calls = []
+        def fake_import(query, limit, category, max_new=None):
+            calls.append(max_new)
+            return {'discovered': 1, 'created': 1 if max_new else 0, 'updated': 0}
+        with patch('articles.management.commands.auto_discover_all.import_discovered', side_effect=fake_import):
+            call_command(
+                'auto_discover_all',
+                topic=['artificial intelligence machine learning', 'computer science software engineering'],
+                limit=1,
+                max_new=1,
+            )
+        self.assertEqual(calls, [1, 0])
+
+
     def test_auto_discover_all_tolerates_partial_topic_failure(self):
         from django.core.management import call_command
         results = [
