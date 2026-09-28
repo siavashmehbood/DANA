@@ -20,6 +20,7 @@ class HealthEndpointTests(TestCase):
         self.assertEqual(ready.status_code,200)
         self.assertEqual(health.json()['status'],'ok')
         self.assertEqual(ready.json()['status'],'ready')
+        self.assertIn('release',ready.json())
         self.assertEqual(health['Cache-Control'],'no-store')
         self.assertEqual(ready['Cache-Control'],'no-store')
 
