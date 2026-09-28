@@ -183,7 +183,7 @@ def discover_articles(query, limit=20, providers=None):
     return rows[: int(limit)]
 
 
-def import_discovered(query, limit=20, category=None, providers=None):
+def import_discovered(query, limit=20, category=None, providers=None, max_new=None):
     created = updated = 0
     source_cache = {}
     discovered = discover_articles(query, limit, providers)
@@ -237,6 +237,9 @@ def import_discovered(query, limit=20, category=None, providers=None):
             obj.save()
             updated += 1
         else:
+            if max_new is not None and created >= max(0, int(max_new)):
+                logger.info('Skipping new article because global creation budget is exhausted: %s', item.get('title', ''))
+                continue
             defaults['last_discovered_at'] = datetime.now(timezone.utc)
             try:
                 with transaction.atomic():
