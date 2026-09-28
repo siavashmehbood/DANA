@@ -1,0 +1,37 @@
+name: Production Database Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/production-db-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DANA_ARTICLE_DATABASE_URL: ${{ secrets.DANA_ARTICLE_DATABASE_URL }}
+      DEBUG: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: dana-2.0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Verify production database configuration
+        run: |
+          test -n "$DANA_ARTICLE_DATABASE_URL" || { echo "::error::DANA_ARTICLE_DATABASE_URL is not configured"; exit 1; }
+          python manage.py check
+      - name: Audit production migration history
+        run: python manage.py audit_migration_history
+      - name: Identify legacy seeded article without mutation
+        run: |
+          python manage.py shell -c "from articles.models import Article; q=Article.objects.filter(title='راهنمای عملی مطالعه عمیق'); print('LEGACY_SEED_MATCH_COUNT='+str(q.count())); [(print('LEGACY_SEED_MATCH', a.id, repr(a.title), 'provider='+repr(a.source_provider), 'external_id='+repr(a.external_id), 'source_url='+repr(a.source_url), 'created_at='+str(a.created_at))) for a in q]"
