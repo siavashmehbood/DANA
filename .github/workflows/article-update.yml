@@ -6,9 +6,14 @@ on:
   workflow_dispatch:
     inputs:
       per_topic:
-        description: "Maximum imported candidates per topic"
+        description: "Maximum imported candidates per topic (0 = diagnostic only)"
         required: false
         default: "4"
+      run_discovery:
+        description: "Discover new articles before processing (manual runs)"
+        required: false
+        type: boolean
+        default: false
       max_new:
         description: "Global maximum number of newly created articles"
         required: false
@@ -47,9 +52,14 @@ jobs:
       - name: Capture before counts
         run: |
           python manage.py shell -c "from django.db.models import Q; from articles.models import Article; r=Q(full_text__gt='')|Q(full_text_fa__gt='')|Q(abstract__gt='')|Q(abstract_fa__gt='')|Q(pdf_url__gt='')|Q(pdf__gt=''); print('BEFORE published_readable='+str(Article.objects.filter(published=True).filter(r).count())+' pending='+str(Article.objects.filter(published=True,translation_status__in=['pending','retry_pending']).count()))"
+      - name: Diagnose failed translations
+        run: |
+          python manage.py shell -c "from articles.models import Article; q=Article.objects.filter(published=True,translation_status__in=['failed','provider_failed','validation_failed']).order_by('id'); [(print('FAIL',a.id,'status='+a.translation_status,'title='+repr(a.title),'abstract='+repr((a.abstract or '')[:700]),'error='+repr(a.translation_error))) for a in q]"
       - name: Discover all article categories
+        if: ${{ github.event_name == 'schedule' || inputs.run_discovery == true }}
         run: python manage.py auto_discover_all --limit "${{ inputs.per_topic || '4' }}" --max-new "${{ inputs.max_new || '2' }}"
       - name: Process translation queue
+        if: ${{ github.event_name == 'schedule' || inputs.per_topic != '0' }}
         run: python manage.py process_article_queue --limit 40 --retry-failed
       - name: Capture production result
         run: |
