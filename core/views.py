@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
@@ -92,6 +93,16 @@ def healthz(request):
     return response
 
 
+def _deployed_release():
+    release = os.getenv('RENDER_GIT_COMMIT', '').strip()
+    if release:
+        return release
+    try:
+        return (Path(__file__).resolve().parent.parent / '.dana-release').read_text(encoding='utf-8').strip()
+    except (OSError, UnicodeError):
+        return ''
+
+
 def readyz(request):
     try:
         with connection.cursor() as cursor:
@@ -104,7 +115,7 @@ def readyz(request):
     response=JsonResponse({
         'status':'ready',
         'database':'ok',
-        'release':os.getenv('RENDER_GIT_COMMIT',''),
+        'release':_deployed_release(),
     })
     response['Cache-Control']='no-store'
     return response
