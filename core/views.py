@@ -1,3 +1,4 @@
+import os
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
@@ -100,7 +101,11 @@ def readyz(request):
         response=JsonResponse({'status':'unavailable'},status=503)
         response['Cache-Control']='no-store'
         return response
-    response=JsonResponse({'status':'ready','database':'ok'})
+    response=JsonResponse({
+        'status':'ready',
+        'database':'ok',
+        'release':os.getenv('RENDER_GIT_COMMIT',''),
+    })
     response['Cache-Control']='no-store'
     return response
 
