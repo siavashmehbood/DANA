@@ -14,6 +14,10 @@ on:
         required: false
         type: boolean
         default: false
+      max_new:
+        description: "Global maximum number of newly created articles"
+        required: false
+        default: "2"
 
 concurrency:
   group: production-article-update
@@ -53,7 +57,7 @@ jobs:
           python manage.py shell -c "from articles.models import Article; q=Article.objects.filter(published=True,translation_status__in=['failed','provider_failed','validation_failed']).order_by('id'); [(print('FAIL',a.id,'status='+a.translation_status,'title='+repr(a.title),'abstract='+repr((a.abstract or '')[:700]),'error='+repr(a.translation_error))) for a in q]"
       - name: Discover all article categories
         if: ${{ github.event_name == 'schedule' || inputs.run_discovery == true }}
-        run: python manage.py auto_discover_all --limit "${{ inputs.per_topic || '4' }}"
+        run: python manage.py auto_discover_all --limit "${{ inputs.per_topic || '4' }}" --max-new "${{ inputs.max_new || '2' }}"
       - name: Process translation queue
         if: ${{ github.event_name == 'schedule' || inputs.per_topic != '0' }}
         run: python manage.py process_article_queue --limit 40 --retry-failed
