@@ -417,6 +417,23 @@ class ArticleImporterIdentityTests(TestCase):
                 Article.objects.create(title='Three',slug='identity-three',abstract='Readable',source_provider='provider',external_id='external-1')
 
 
+class ArticleDiscoveryBudgetTests(TestCase):
+    def test_importer_respects_new_article_budget_but_updates_existing(self):
+        from .importer import import_discovered
+        Article.objects.create(title='Existing budget paper',slug='existing-budget',abstract='Old abstract',doi='10.1/existing-budget',source_provider='budget-provider',external_id='old')
+        rows=[
+            {'provider':'budget-provider','external_id':'existing','title':'Existing budget paper','authors':'A','abstract':'Updated abstract','year':2026,'publication_date':None,'journal':'J','doi':'10.1/existing-budget','source_url':'','pdf_url':'','citation_count':2,'relevance_score':2},
+            {'provider':'budget-provider','external_id':'new-1','title':'New budget one','authors':'A','abstract':'Readable','year':2026,'publication_date':None,'journal':'J','doi':'10.1/new-budget-1','source_url':'','pdf_url':'','citation_count':1,'relevance_score':1},
+            {'provider':'budget-provider','external_id':'new-2','title':'New budget two','authors':'A','abstract':'Readable','year':2026,'publication_date':None,'journal':'J','doi':'10.1/new-budget-2','source_url':'','pdf_url':'','citation_count':1,'relevance_score':1},
+        ]
+        with patch('articles.importer.discover_articles',return_value=rows):
+            result=import_discovered('budget',limit=3,max_new=1)
+        self.assertEqual(result['created'],1)
+        self.assertEqual(result['updated'],1)
+        self.assertEqual(Article.objects.get(doi='10.1/existing-budget').abstract,'Updated abstract')
+        self.assertEqual(Article.objects.filter(doi__startswith='10.1/new-budget').count(),1)
+
+
 class ArticleImporterTranslationTriggerTests(TestCase):
     def test_importer_triggers_translation_processing_for_existing_untranslated_article(self):
         from .importer import import_discovered
