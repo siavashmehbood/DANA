@@ -98,8 +98,20 @@ def _deployed_release():
     if release:
         return release
     try:
-        return (Path(__file__).resolve().parent.parent / '.dana-release').read_text(encoding='utf-8').strip()
+        marker = (Path(__file__).resolve().parent.parent / '.dana-release').read_text(encoding='utf-8').strip()
+        if marker and marker != 'git':
+            return marker
     except (OSError, UnicodeError):
+        pass
+    try:
+        import subprocess
+        return subprocess.check_output(
+            ['git', 'rev-parse', 'HEAD'],
+            cwd=Path(__file__).resolve().parent.parent,
+            text=True,
+            timeout=2,
+        ).strip()
+    except (OSError, subprocess.SubprocessError):
         return ''
 
 
